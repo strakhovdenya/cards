@@ -1,0 +1,8 @@
+# Проверка TypeScript
+npx tsc --noEmit
+
+# Lint-staged для измененных файлов
+npx lint-staged
+
+# Дополнительная проверка на warnings для всего проекта
+npm run lint -- --max-warnings 0
