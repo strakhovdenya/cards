@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Box, Button, Typography, Stack, Chip } from '@mui/material';
+import {
+  Box,
+  Button,
+  Typography,
+  Stack,
+  Chip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+} from '@mui/material';
 import {
   ArrowBack,
   ArrowForward,
@@ -23,6 +32,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [shuffledCards, setShuffledCards] = useState<CardType[]>([]);
+  const [frontSide, setFrontSide] = useState<'german' | 'russian'>('german');
 
   useEffect(() => {
     if (cards.length > 0) {
@@ -106,6 +116,19 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
     }
   }, [currentCard, onCardUpdate, shuffledCards]);
 
+  const handleChangeFrontSide = useCallback(
+    (
+      _event: React.MouseEvent<HTMLElement>,
+      newFrontSide: 'german' | 'russian' | null
+    ) => {
+      if (newFrontSide !== null) {
+        setFrontSide(newFrontSide);
+        setIsFlipped(false); // Сбрасываем флип при смене режима
+      }
+    },
+    []
+  );
+
   // Клавиатурные сокращения для быстрой навигации
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -144,6 +167,12 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         case 'Enter':
           event.preventDefault();
           void handleToggleLearned();
+          break;
+        case 'f':
+        case 'F':
+          event.preventDefault();
+          setFrontSide((prev) => (prev === 'german' ? 'russian' : 'german'));
+          setIsFlipped(false);
           break;
       }
     };
@@ -204,9 +233,30 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         />
       </Box>
 
+      {/* Переключатель лицевой стороны */}
+      <Box sx={{ mb: 3, textAlign: 'center' }}>
+        <Tooltip title="Выберите какую сторону показывать первой">
+          <ToggleButtonGroup
+            value={frontSide}
+            exclusive
+            onChange={handleChangeFrontSide}
+            size="small"
+            color="primary"
+          >
+            <ToggleButton value="german">de → ru</ToggleButton>
+            <ToggleButton value="russian">ru → de</ToggleButton>
+          </ToggleButtonGroup>
+        </Tooltip>
+      </Box>
+
       {/* Карточка */}
       <Box sx={{ mb: 4 }}>
-        <Card card={currentCard} isFlipped={isFlipped} onFlip={handleFlip} />
+        <Card
+          card={currentCard}
+          isFlipped={isFlipped}
+          onFlip={handleFlip}
+          frontSide={frontSide}
+        />
       </Box>
 
       {/* Теги */}
@@ -232,11 +282,13 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         color="text.secondary"
         sx={{ mb: 3, textAlign: 'center' }}
       >
-        {isFlipped ? 'Нажмите для возврата' : 'Нажмите для перевода'}
+        {isFlipped
+          ? 'Нажмите для возврата'
+          : `Нажмите для показа ${frontSide === 'german' ? 'русского перевода' : 'немецкого слова'}`}
         <br />
         <Typography component="span" variant="caption" color="text.disabled">
           Горячие клавиши: ← → (навигация), Пробел (перевернуть), Enter
-          (выучено), S (перемешать)
+          (выучено), S (перемешать), F (сменить режим)
         </Typography>
       </Typography>
 

@@ -9,6 +9,7 @@ interface CardProps {
   card: CardType;
   isFlipped: boolean;
   onFlip: () => void;
+  frontSide: 'german' | 'russian'; // Новый проп для выбора лицевой стороны
 }
 
 const FlipCard = styled(Box)(({ theme }) => ({
@@ -97,15 +98,24 @@ const TranslationText = styled(Typography)(({ theme }) => ({
   },
 }));
 
-export const Card = memo(function Card({ card, isFlipped, onFlip }: CardProps) {
+export const Card = memo(function Card({
+  card,
+  isFlipped,
+  onFlip,
+  frontSide,
+}: CardProps) {
+  // Определяем что показывать на лицевой и обратной стороне
+  const frontText = frontSide === 'german' ? card.germanWord : card.translation;
+  const backText = frontSide === 'german' ? card.translation : card.germanWord;
+
   return (
     <FlipCard onClick={onFlip}>
       <CardInner isFlipped={isFlipped}>
         <CardFront>
-          <CardText variant="h4">{card.germanWord}</CardText>
+          <CardText variant="h4">{frontText}</CardText>
         </CardFront>
         <CardBack>
-          <TranslationText variant="h5">{card.translation}</TranslationText>
+          <TranslationText variant="h5">{backText}</TranslationText>
         </CardBack>
       </CardInner>
     </FlipCard>
