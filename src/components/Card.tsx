@@ -3,6 +3,7 @@
 import { Card as MUICard, Typography, Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { Card as CardType } from '@/types';
+import { memo } from 'react';
 
 interface CardProps {
   card: CardType;
@@ -32,13 +33,14 @@ const CardInner = styled(Box, {
   width: '100%',
   height: '100%',
   textAlign: 'center',
-  transition: 'transform 0.8s',
+  transition: 'transform 0.4s ease-out', // Уменьшили время анимации
   transformStyle: 'preserve-3d',
   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+  willChange: 'transform', // Оптимизация для GPU
   '&:hover': {
     transform: isFlipped
-      ? 'rotateY(180deg) translateY(-8px)'
-      : 'rotateY(0deg) translateY(-8px)',
+      ? 'rotateY(180deg) translateY(-4px)' // Уменьшили смещение
+      : 'rotateY(0deg) translateY(-4px)',
   },
 }));
 
@@ -53,6 +55,7 @@ const CardSide = styled(MUICard)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: 16,
   boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+  willChange: 'transform', // Оптимизация для GPU
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(2),
   },
@@ -94,7 +97,7 @@ const TranslationText = styled(Typography)(({ theme }) => ({
   },
 }));
 
-export function Card({ card, isFlipped, onFlip }: CardProps) {
+export const Card = memo(function Card({ card, isFlipped, onFlip }: CardProps) {
   return (
     <FlipCard onClick={onFlip}>
       <CardInner isFlipped={isFlipped}>
@@ -107,4 +110,4 @@ export function Card({ card, isFlipped, onFlip }: CardProps) {
       </CardInner>
     </FlipCard>
   );
-}
+});

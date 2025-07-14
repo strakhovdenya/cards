@@ -19,7 +19,14 @@ import {
   Divider,
   Paper,
 } from '@mui/material';
-import { Add, Edit, Delete, Save, Cancel } from '@mui/icons-material';
+import {
+  Add,
+  Edit,
+  Delete,
+  Save,
+  Cancel,
+  LocalOffer,
+} from '@mui/icons-material';
 import { Card as CardType, CardFormData } from '@/types';
 
 interface CardEditorProps {
@@ -40,6 +47,7 @@ export function CardEditor({
   const [formData, setFormData] = useState<CardFormData>({
     germanWord: '',
     translation: '',
+    tags: [],
   });
   const [errors, setErrors] = useState<Partial<CardFormData>>({});
 
@@ -49,12 +57,14 @@ export function CardEditor({
       setFormData({
         germanWord: card.germanWord,
         translation: card.translation,
+        tags: card.tags || [],
       });
     } else {
       setEditingCard(null);
       setFormData({
         germanWord: '',
         translation: '',
+        tags: [],
       });
     }
     setErrors({});
@@ -67,6 +77,7 @@ export function CardEditor({
     setFormData({
       germanWord: '',
       translation: '',
+      tags: [],
     });
     setErrors({});
   };
@@ -101,9 +112,19 @@ export function CardEditor({
   const handleInputChange =
     (field: keyof CardFormData) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
+      let value: string | string[] = event.target.value;
+
+      // Специальная обработка для тегов
+      if (field === 'tags') {
+        value = value
+          .split(',')
+          .map((tag: string) => tag.trim())
+          .filter((tag: string) => tag.length > 0);
+      }
+
       setFormData((prev) => ({
         ...prev,
-        [field]: event.target.value,
+        [field]: value,
       }));
 
       // Очищаем ошибку при изменении
@@ -236,6 +257,22 @@ export function CardEditor({
             onChange={handleInputChange('translation')}
             error={!!errors.translation}
             helperText={errors.translation}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Теги (через запятую)"
+            fullWidth
+            variant="outlined"
+            value={formData.tags?.join(', ') || ''}
+            onChange={handleInputChange('tags')}
+            placeholder="животные, базовый, урок1"
+            helperText="Введите теги через запятую для категоризации карточки"
+            InputProps={{
+              startAdornment: (
+                <LocalOffer sx={{ mr: 1, color: 'text.secondary' }} />
+              ),
+            }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
