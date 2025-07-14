@@ -23,6 +23,10 @@ export interface CreateCardRequest {
   user_id?: string; // Пока опциональный
 }
 
+export interface BulkCreateCardsRequest {
+  cards: CreateCardRequest[];
+}
+
 export interface UpdateCardRequest {
   germanWord?: string;
   translation?: string;

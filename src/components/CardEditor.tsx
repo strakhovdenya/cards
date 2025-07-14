@@ -26,14 +26,18 @@ import {
   Save,
   Cancel,
   LocalOffer,
+  Upload,
 } from '@mui/icons-material';
 import type { Card as CardType, CardFormData } from '@/types';
+import { BulkImport } from './BulkImport';
+import { ClientCardService } from '@/services/cardService';
 
 interface CardEditorProps {
   cards: CardType[];
   onAddCard: (card: CardFormData) => void;
   onUpdateCard: (id: string, card: CardFormData) => void;
   onDeleteCard: (id: string) => void;
+  onBulkImport?: () => void; // Для обновления списка карточек после импорта
 }
 
 export function CardEditor({
@@ -41,8 +45,10 @@ export function CardEditor({
   onAddCard,
   onUpdateCard,
   onDeleteCard,
+  onBulkImport,
 }: CardEditorProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
   const [formData, setFormData] = useState<CardFormData>({
     germanWord: '',
@@ -142,11 +148,46 @@ export function CardEditor({
     }
   };
 
+  const handleBulkImport = async (cards: CardFormData[]) => {
+    try {
+      await ClientCardService.createBulkCards(cards);
+      // Обновляем список карточек
+      if (onBulkImport) {
+        onBulkImport();
+      }
+    } catch (error) {
+      console.error('Ошибка массового импорта:', error);
+      throw error; // Пробрасываем ошибку для обработки в BulkImport
+    }
+  };
+
   return (
     <Box sx={{ padding: 3, maxWidth: 800, margin: '0 auto' }}>
-      <Typography variant="h4" gutterBottom align="center">
-        Редактор карточек
-      </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
+        <Typography
+          variant="h4"
+          gutterBottom
+          align="center"
+          sx={{ mb: 0, flexGrow: 1 }}
+        >
+          Редактор карточек
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<Upload />}
+          onClick={() => { setIsBulkImportOpen(true); }}
+          sx={{ ml: 2 }}
+        >
+          Массовый импорт
+        </Button>
+      </Box>
 
       {cards.length === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center', mt: 3 }}>
@@ -298,6 +339,13 @@ export function CardEditor({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Компонент массового импорта */}
+      <BulkImport
+        open={isBulkImportOpen}
+        onClose={() => { setIsBulkImportOpen(false); }}
+        onImport={handleBulkImport}
+      />
     </Box>
   );
 }

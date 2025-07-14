@@ -1,8 +1,10 @@
 import type {
   Card,
   CreateCardRequest,
+  BulkCreateCardsRequest,
   UpdateCardRequest,
   ApiResponse,
+  CardFormData,
 } from '@/types';
 
 // Базовый URL для API
@@ -55,6 +57,29 @@ export class ClientCardService {
       body: JSON.stringify(cardData),
     });
     return handleApiResponse<Card>(response);
+  }
+
+  // Массовое создание карточек
+  static async createBulkCards(cards: CardFormData[]): Promise<Card[]> {
+    const cardsData: CreateCardRequest[] = cards.map((card) => ({
+      germanWord: card.germanWord,
+      translation: card.translation,
+      tags: card.tags ?? [],
+    }));
+
+    const bulkRequest: BulkCreateCardsRequest = {
+      cards: cardsData,
+    };
+
+    const response = await fetch(`${API_BASE_URL}/bulk`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(bulkRequest),
+    });
+
+    return handleApiResponse<Card[]>(response);
   }
 
   // Получить карточку по ID
