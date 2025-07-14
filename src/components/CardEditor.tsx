@@ -27,7 +27,7 @@ import {
   Cancel,
   LocalOffer,
 } from '@mui/icons-material';
-import { Card as CardType, CardFormData } from '@/types';
+import type { Card as CardType, CardFormData } from '@/types';
 
 interface CardEditorProps {
   cards: CardType[];
@@ -57,7 +57,7 @@ export function CardEditor({
       setFormData({
         germanWord: card.germanWord,
         translation: card.translation,
-        tags: card.tags || [],
+        tags: card.tags ?? [],
       });
     } else {
       setEditingCard(null);
@@ -186,7 +186,9 @@ export function CardEditor({
                 <ListItemSecondaryAction>
                   <IconButton
                     edge="end"
-                    onClick={() => handleOpenModal(card)}
+                    onClick={() => {
+                      handleOpenModal(card);
+                    }}
                     color="primary"
                     sx={{ mr: 1 }}
                   >
@@ -194,7 +196,9 @@ export function CardEditor({
                   </IconButton>
                   <IconButton
                     edge="end"
-                    onClick={() => handleDelete(card.id)}
+                    onClick={() => {
+                      handleDelete(card.id);
+                    }}
                     color="error"
                   >
                     <Delete />
@@ -210,7 +214,9 @@ export function CardEditor({
       {/* Кнопка добавления */}
       <Fab
         color="primary"
-        onClick={() => handleOpenModal()}
+        onClick={() => {
+          handleOpenModal();
+        }}
         sx={{
           position: 'fixed',
           bottom: 16,
@@ -264,7 +270,7 @@ export function CardEditor({
             label="Теги (через запятую)"
             fullWidth
             variant="outlined"
-            value={formData.tags?.join(', ') || ''}
+            value={formData.tags?.join(', ') ?? ''}
             onChange={handleInputChange('tags')}
             placeholder="животные, базовый, урок1"
             helperText="Введите теги через запятую для категоризации карточки"

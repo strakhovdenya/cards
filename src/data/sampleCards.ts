@@ -1,4 +1,4 @@
-import { Card } from '@/types';
+import type { Card } from '@/types';
 
 // Используем константную дату для избежания проблем с гидратацией
 const SAMPLE_DATE = '2024-01-01T00:00:00.000Z';

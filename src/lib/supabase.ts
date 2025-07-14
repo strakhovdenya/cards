@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Card, CreateCardRequest, UpdateCardRequest } from '@/types';
+import type { Card, CreateCardRequest, UpdateCardRequest } from '@/types';
 
 // Создаем серверный клиент с Service Role Key для полного доступа к базе данных
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -52,7 +52,7 @@ export const fromDatabaseCard = (dbCard: DatabaseCard): Card => ({
 
 // Сервис для работы с карточками
 export class CardService {
-  private static tableName = 'cards';
+  private static readonly tableName = 'cards';
 
   // Получить все карточки (без фильтрации по пользователю)
   static async getAllCards(): Promise<Card[]> {
@@ -65,7 +65,7 @@ export class CardService {
       throw new Error(`Failed to fetch cards: ${error.message}`);
     }
 
-    return data.map(fromDatabaseCard);
+    return (data as DatabaseCard[]).map(fromDatabaseCard);
   }
 
   // Получить все карточки пользователя
@@ -80,7 +80,7 @@ export class CardService {
       throw new Error(`Failed to fetch cards: ${error.message}`);
     }
 
-    return data.map(fromDatabaseCard);
+    return (data as DatabaseCard[]).map(fromDatabaseCard);
   }
 
   // Создать новую карточку
@@ -88,11 +88,12 @@ export class CardService {
     const dbCard = toDatabaseCard({
       germanWord: cardData.germanWord,
       translation: cardData.translation,
-      user_id: cardData.user_id || '00000000-0000-0000-0000-000000000000', // Временный default user_id
-      tags: cardData.tags || [],
+      user_id: cardData.user_id ?? '00000000-0000-0000-0000-000000000000', // Временный default user_id
+      tags: cardData.tags ?? [],
       learned: false,
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { data, error } = await supabase
       .from(this.tableName)
       .insert(dbCard)
@@ -103,7 +104,7 @@ export class CardService {
       throw new Error(`Failed to create card: ${error.message}`);
     }
 
-    return fromDatabaseCard(data);
+    return fromDatabaseCard(data as DatabaseCard);
   }
 
   // Обновить карточку
@@ -122,6 +123,7 @@ export class CardService {
 
     updateData.updated_at = new Date().toISOString();
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { data, error } = await supabase
       .from(this.tableName)
       .update(updateData)
@@ -133,7 +135,7 @@ export class CardService {
       throw new Error(`Failed to update card: ${error.message}`);
     }
 
-    return fromDatabaseCard(data);
+    return fromDatabaseCard(data as DatabaseCard);
   }
 
   // Удалить карточку
@@ -150,6 +152,7 @@ export class CardService {
 
   // Получить карточку по ID
   static async getCardById(cardId: string): Promise<Card | null> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { data, error } = await supabase
       .from(this.tableName)
       .select('*')
@@ -163,7 +166,7 @@ export class CardService {
       throw new Error(`Failed to fetch card: ${error.message}`);
     }
 
-    return fromDatabaseCard(data);
+    return fromDatabaseCard(data as DatabaseCard);
   }
 
   // Получить карточки по тегам
@@ -179,7 +182,7 @@ export class CardService {
       throw new Error(`Failed to fetch cards by tags: ${error.message}`);
     }
 
-    return data.map(fromDatabaseCard);
+    return (data as DatabaseCard[]).map(fromDatabaseCard);
   }
 
   // Получить только выученные/не выученные карточки
@@ -200,6 +203,6 @@ export class CardService {
       );
     }
 
-    return data.map(fromDatabaseCard);
+    return (data as DatabaseCard[]).map(fromDatabaseCard);
   }
 }

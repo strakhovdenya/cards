@@ -16,7 +16,7 @@ import {
 import { School, Edit } from '@mui/icons-material';
 import { CardViewer } from './CardViewer';
 import { CardEditor } from './CardEditor';
-import { Card as CardType, CardFormData, ViewMode } from '@/types';
+import type { Card as CardType, CardFormData, ViewMode } from '@/types';
 import { ClientCardService } from '@/services/cardService';
 import { migrateSampleData } from '@/utils/migrateData';
 
@@ -28,7 +28,7 @@ export function App() {
 
   // Загрузка карточек при инициализации
   useEffect(() => {
-    loadCards();
+    void loadCards();
   }, []);
 
   const loadCards = async () => {
@@ -129,7 +129,9 @@ export function App() {
             <Alert
               severity="error"
               sx={{ mb: 2 }}
-              onClose={() => setError(null)}
+              onClose={() => {
+                setError(null);
+              }}
             >
               {error}
             </Alert>
@@ -158,9 +160,11 @@ export function App() {
           ) : (
             <CardEditor
               cards={cards}
-              onAddCard={handleAddCard}
-              onUpdateCard={handleUpdateCard}
-              onDeleteCard={handleDeleteCard}
+              onAddCard={(cardData) => void handleAddCard(cardData)}
+              onUpdateCard={(id, cardData) =>
+                void handleUpdateCard(id, cardData)
+              }
+              onDeleteCard={(id) => void handleDeleteCard(id)}
             />
           )}
         </Container>
@@ -179,7 +183,9 @@ export function App() {
       >
         <BottomNavigation
           value={viewMode}
-          onChange={(event, newValue) => handleViewModeChange(newValue)}
+          onChange={(event, newValue) => {
+            handleViewModeChange(newValue as ViewMode);
+          }}
           sx={{
             '& .MuiBottomNavigationAction-root': {
               minWidth: 'auto',

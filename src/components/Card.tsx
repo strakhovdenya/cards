@@ -2,7 +2,7 @@
 
 import { Card as MUICard, Typography, Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { Card as CardType } from '@/types';
+import type { Card as CardType } from '@/types';
 import { memo } from 'react';
 
 interface CardProps {

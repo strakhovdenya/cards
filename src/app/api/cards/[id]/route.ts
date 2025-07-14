@@ -1,14 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { CardService } from '@/lib/supabase';
-import { UpdateCardRequest, ApiResponse, Card } from '@/types';
+import type { UpdateCardRequest, ApiResponse, Card } from '@/types';
 
 // GET /api/cards/[id] - получить карточку по ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cardId = params.id;
+    const { id: cardId } = await params;
 
     const card = await CardService.getCardById(cardId);
 
@@ -39,10 +40,10 @@ export async function GET(
 // PUT /api/cards/[id] - обновить карточку
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cardId = params.id;
+    const { id: cardId } = await params;
     const body = (await request.json()) as UpdateCardRequest;
 
     // Проверяем, что есть хотя бы одно поле для обновления
@@ -80,10 +81,10 @@ export async function PUT(
 // DELETE /api/cards/[id] - удалить карточку
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cardId = params.id;
+    const { id: cardId } = await params;
 
     await CardService.deleteCard(cardId);
 

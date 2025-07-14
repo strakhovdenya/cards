@@ -12,6 +12,8 @@
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,md,json}\"",
     "check": "npm run lint:strict && npm run format:check && npx tsc --noEmit",
+    "type-check": "npx tsc --noEmit --strict",
+    "type-check:watch": "npx tsc --noEmit --strict --watch",
     "fix": "npm run lint:fix && npm run format",
     "pre-commit": "npm run check",
     "prepare": "husky"
@@ -35,6 +37,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.5",
     "eslint-config-prettier": "^10.1.5",

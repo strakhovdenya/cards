@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { CardService } from '@/lib/supabase';
-import { CreateCardRequest, ApiResponse, Card } from '@/types';
+import type { CreateCardRequest, ApiResponse, Card } from '@/types';
 
 // GET /api/cards - получить все карточки (пока без фильтрации по user_id)
 export async function GET(request: NextRequest) {

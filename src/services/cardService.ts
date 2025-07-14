@@ -1,4 +1,4 @@
-import {
+import type {
   Card,
   CreateCardRequest,
   UpdateCardRequest,
@@ -12,7 +12,7 @@ const API_BASE_URL = '/api/cards';
 async function handleApiResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorData = (await response.json()) as ApiResponse<null>;
-    throw new Error(errorData.error || 'Ошибка API');
+    throw new Error(errorData.error ?? 'Ошибка API');
   }
 
   const data = (await response.json()) as ApiResponse<T>;
@@ -44,7 +44,7 @@ export class ClientCardService {
     const cardData: CreateCardRequest = {
       germanWord,
       translation,
-      tags: tags || [],
+      tags: tags ?? [],
     };
 
     const response = await fetch(API_BASE_URL, {

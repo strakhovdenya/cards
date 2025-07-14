@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import { ClientCardService } from '@/services/cardService';
 import { Card } from './Card';
-import { Card as CardType } from '@/types';
+import type { Card as CardType } from '@/types';
 
 interface CardViewerProps {
   cards: CardType[];
@@ -143,13 +143,15 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
           break;
         case 'Enter':
           event.preventDefault();
-          handleToggleLearned();
+          void handleToggleLearned();
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [
     handleNext,
     handlePrevious,
@@ -215,7 +217,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         <Button
           variant={currentCard.learned ? 'contained' : 'outlined'}
           color={currentCard.learned ? 'success' : 'primary'}
-          onClick={handleToggleLearned}
+          onClick={() => void handleToggleLearned()}
           startIcon={
             currentCard.learned ? <CheckCircle /> : <RadioButtonUnchecked />
           }
