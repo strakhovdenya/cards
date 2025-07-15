@@ -1,14 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
   Typography,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   IconButton,
   Fab,
   Dialog,
@@ -18,6 +16,9 @@ import {
   TextField,
   Divider,
   Paper,
+  Autocomplete,
+  Chip,
+  Stack,
 } from '@mui/material';
 import {
   Add,
@@ -28,9 +29,10 @@ import {
   LocalOffer,
   Upload,
 } from '@mui/icons-material';
-import type { Card as CardType, CardFormData } from '@/types';
+import type { Card as CardType, CardFormData, Tag } from '@/types';
 import { BulkImport } from './BulkImport';
-import { ClientCardService } from '@/services/cardService';
+import { TagManager } from './TagManager';
+import { ClientCardService, ClientTagService } from '@/services/cardService';
 
 interface CardEditorProps {
   cards: CardType[];
@@ -38,6 +40,7 @@ interface CardEditorProps {
   onUpdateCard: (id: string, card: CardFormData) => void;
   onDeleteCard: (id: string) => void;
   onBulkImport?: () => void; // Для обновления списка карточек после импорта
+  onCardsUpdate?: () => void; // Для обновления списка карточек после изменения тегов
 }
 
 export function CardEditor({
@@ -46,16 +49,33 @@ export function CardEditor({
   onUpdateCard,
   onDeleteCard,
   onBulkImport,
+  onCardsUpdate,
 }: CardEditorProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
   const [formData, setFormData] = useState<CardFormData>({
     germanWord: '',
     translation: '',
     tags: [],
   });
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [errors, setErrors] = useState<Partial<CardFormData>>({});
+
+  // Загружаем доступные теги при инициализации
+  useEffect(() => {
+    void loadTags();
+  }, []);
+
+  const loadTags = async () => {
+    try {
+      const tags = await ClientTagService.getTags();
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error('Ошибка загрузки тегов:', error);
+    }
+  };
 
   const handleOpenModal = (card?: CardType) => {
     if (card) {
@@ -63,7 +83,7 @@ export function CardEditor({
       setFormData({
         germanWord: card.germanWord,
         translation: card.translation,
-        tags: card.tags ?? [],
+        tags: card.tags?.map((tag) => tag.name) ?? [],
       });
     } else {
       setEditingCard(null);
@@ -103,30 +123,49 @@ export function CardEditor({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    if (editingCard) {
-      onUpdateCard(editingCard.id, formData);
-    } else {
-      onAddCard(formData);
-    }
+    try {
+      // Преобразуем названия тегов в tagIds
+      const tagIds: string[] = [];
+      const tagMap = new Map(availableTags.map((tag) => [tag.name, tag.id]));
 
-    handleCloseModal();
+      for (const tagName of formData.tags ?? []) {
+        let tagId = tagMap.get(tagName);
+        if (!tagId) {
+          // Создаем новый тег
+          const newTag = await ClientTagService.createTag(tagName);
+          tagId = newTag.id;
+          tagMap.set(tagName, tagId);
+          // Обновляем список доступных тегов
+          setAvailableTags((prev) => [...prev, newTag]);
+        }
+        tagIds.push(tagId);
+      }
+
+      const cardDataWithTags: CardFormData = {
+        ...formData,
+        tagIds,
+      };
+
+      if (editingCard) {
+        onUpdateCard(editingCard.id, cardDataWithTags);
+      } else {
+        onAddCard(cardDataWithTags);
+      }
+
+      handleCloseModal();
+    } catch (error) {
+      console.error('Ошибка сохранения карточки:', error);
+      // Можно показать уведомление об ошибке
+    }
   };
 
   const handleInputChange =
     (field: keyof CardFormData) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      let value: string | string[] = event.target.value;
-
-      // Специальная обработка для тегов
-      if (field === 'tags') {
-        value = value
-          .split(',')
-          .map((tag: string) => tag.trim())
-          .filter((tag: string) => tag.length > 0);
-      }
+      const value = event.target.value;
 
       setFormData((prev) => ({
         ...prev,
@@ -181,9 +220,21 @@ export function CardEditor({
         </Typography>
         <Button
           variant="outlined"
-          startIcon={<Upload />}
-          onClick={() => { setIsBulkImportOpen(true); }}
+          startIcon={<LocalOffer />}
+          onClick={() => {
+            setIsTagManagerOpen(true);
+          }}
           sx={{ ml: 2 }}
+        >
+          Управление тегами
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<Upload />}
+          onClick={() => {
+            setIsBulkImportOpen(true);
+          }}
+          sx={{ ml: 1 }}
         >
           Массовый импорт
         </Button>
@@ -210,41 +261,76 @@ export function CardEditor({
                   '&:hover': {
                     bgcolor: 'action.hover',
                   },
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  py: 2,
                 }}
               >
-                <ListItemText
-                  primary={
-                    <Typography variant="subtitle1" fontWeight="medium">
+                <Box
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="medium"
+                      gutterBottom
+                    >
                       {card.germanWord}
                     </Typography>
-                  }
-                  secondary={
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
                       {card.translation}
                     </Typography>
-                  }
-                />
-                <ListItemSecondaryAction>
-                  <IconButton
-                    edge="end"
-                    onClick={() => {
-                      handleOpenModal(card);
-                    }}
-                    color="primary"
-                    sx={{ mr: 1 }}
-                  >
-                    <Edit />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    onClick={() => {
-                      handleDelete(card.id);
-                    }}
-                    color="error"
-                  >
-                    <Delete />
-                  </IconButton>
-                </ListItemSecondaryAction>
+                    {card.tags && card.tags.length > 0 && (
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                        {card.tags.map((tag) => (
+                          <Chip
+                            key={tag.id}
+                            label={tag.name}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              fontSize: '0.75rem',
+                              height: 20,
+                              borderColor: tag.color,
+                              color: tag.color,
+                              '&:hover': {
+                                backgroundColor: `${tag.color}20`,
+                              },
+                            }}
+                          />
+                        ))}
+                      </Stack>
+                    )}
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                    <IconButton
+                      onClick={() => {
+                        handleOpenModal(card);
+                      }}
+                      color="primary"
+                      size="small"
+                    >
+                      <Edit />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => {
+                        handleDelete(card.id);
+                      }}
+                      color="error"
+                      size="small"
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Box>
+                </Box>
               </ListItem>
               {index < cards.length - 1 && <Divider />}
             </div>
@@ -306,20 +392,57 @@ export function CardEditor({
             helperText={errors.translation}
             sx={{ mb: 2 }}
           />
-          <TextField
-            margin="dense"
-            label="Теги (через запятую)"
-            fullWidth
-            variant="outlined"
-            value={formData.tags?.join(', ') ?? ''}
-            onChange={handleInputChange('tags')}
-            placeholder="животные, базовый, урок1"
-            helperText="Введите теги через запятую для категоризации карточки"
-            InputProps={{
-              startAdornment: (
-                <LocalOffer sx={{ mr: 1, color: 'text.secondary' }} />
-              ),
+          <Autocomplete
+            multiple
+            freeSolo
+            options={availableTags.map((tag) => tag.name)}
+            value={formData.tags ?? []}
+            onChange={(_, newValue) => {
+              setFormData((prev) => ({
+                ...prev,
+                tags: newValue,
+              }));
             }}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const tag = availableTags.find((t) => t.name === option);
+                return (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={index}
+                    label={option}
+                    size="small"
+                    sx={{
+                      backgroundColor: tag?.color
+                        ? `${tag.color}20`
+                        : undefined,
+                      borderColor: tag?.color,
+                      color: tag?.color,
+                    }}
+                  />
+                );
+              })
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                margin="dense"
+                label="Теги"
+                variant="outlined"
+                placeholder="Выберите теги или введите новые"
+                helperText="Выберите из списка или введите новые теги для категоризации карточки"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <LocalOffer sx={{ mr: 1, color: 'text.secondary' }} />
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+            sx={{ mb: 2 }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -331,7 +454,7 @@ export function CardEditor({
             Отмена
           </Button>
           <Button
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
             startIcon={<Save />}
             variant="contained"
           >
@@ -343,8 +466,24 @@ export function CardEditor({
       {/* Компонент массового импорта */}
       <BulkImport
         open={isBulkImportOpen}
-        onClose={() => { setIsBulkImportOpen(false); }}
+        onClose={() => {
+          setIsBulkImportOpen(false);
+        }}
         onImport={handleBulkImport}
+      />
+
+      {/* Компонент управления тегами */}
+      <TagManager
+        open={isTagManagerOpen}
+        onClose={() => {
+          setIsTagManagerOpen(false);
+        }}
+        onTagsUpdate={() => {
+          void loadTags();
+          if (onCardsUpdate) {
+            onCardsUpdate();
+          }
+        }}
       />
     </Box>
   );

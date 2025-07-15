@@ -1,5 +1,17 @@
 import { sampleCards } from '@/data/sampleCards';
-import { ClientCardService } from '@/services/cardService';
+import { ClientCardService, ClientTagService } from '@/services/cardService';
+
+// Интерфейс для sample карточек (с тегами как строки)
+interface SampleCard {
+  id: string;
+  germanWord: string;
+  translation: string;
+  user_id: string;
+  tags: string[];
+  learned: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Предопределенные теги для разных типов слов
 const generateTags = (germanWord: string, translation: string): string[] => {
@@ -68,17 +80,34 @@ export async function migrateSampleData(): Promise<void> {
 
     console.log(`Мигрирую ${sampleCards.length} карточек...`);
 
-    for (const oldCard of sampleCards) {
-      const tags = generateTags(oldCard.germanWord, oldCard.translation);
+    // Получаем существующие теги
+    const existingTags = await ClientTagService.getTags();
+    const tagMap = new Map(existingTags.map((tag) => [tag.name, tag.id]));
+
+    for (const oldCard of sampleCards as SampleCard[]) {
+      const tagNames = generateTags(oldCard.germanWord, oldCard.translation);
+
+      // Создаем отсутствующие теги и получаем их ID
+      const tagIds: string[] = [];
+      for (const tagName of tagNames) {
+        let tagId = tagMap.get(tagName);
+        if (!tagId) {
+          // Создаем новый тег
+          const newTag = await ClientTagService.createTag(tagName);
+          tagId = newTag.id;
+          tagMap.set(tagName, tagId);
+        }
+        tagIds.push(tagId);
+      }
 
       await ClientCardService.createCard(
         oldCard.germanWord,
         oldCard.translation,
-        tags
+        tagIds
       );
 
       console.log(
-        `Мигрирована карточка: ${oldCard.germanWord} -> ${oldCard.translation}`
+        `Мигрирована карточка: ${oldCard.germanWord} -> ${oldCard.translation} (теги: ${tagNames.join(', ')})`
       );
     }
 

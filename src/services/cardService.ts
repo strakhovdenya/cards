@@ -5,6 +5,9 @@ import type {
   UpdateCardRequest,
   ApiResponse,
   CardFormData,
+  Tag,
+  CreateTagRequest,
+  UpdateTagRequest,
 } from '@/types';
 
 // Базовый URL для API
@@ -41,12 +44,12 @@ export class ClientCardService {
   static async createCard(
     germanWord: string,
     translation: string,
-    tags?: string[]
+    tagIds?: string[]
   ): Promise<Card> {
     const cardData: CreateCardRequest = {
       germanWord,
       translation,
-      tags: tags ?? [],
+      tagIds: tagIds ?? [],
     };
 
     const response = await fetch(API_BASE_URL, {
@@ -64,7 +67,7 @@ export class ClientCardService {
     const cardsData: CreateCardRequest[] = cards.map((card) => ({
       germanWord: card.germanWord,
       translation: card.translation,
-      tags: card.tags ?? [],
+      tagIds: card.tagIds ?? [],
     }));
 
     const bulkRequest: BulkCreateCardsRequest = {
@@ -133,5 +136,66 @@ export class ClientCardService {
       learned,
       unlearned: cards.length - learned,
     };
+  }
+}
+
+// Клиентский сервис для работы с тегами
+export class ClientTagService {
+  private static readonly API_BASE_URL = '/api/tags';
+
+  // Получить все теги пользователя
+  static async getTags(userId?: string): Promise<Tag[]> {
+    const url = userId
+      ? `${this.API_BASE_URL}?user_id=${encodeURIComponent(userId)}`
+      : this.API_BASE_URL;
+
+    const response = await fetch(url);
+    return handleApiResponse<Tag[]>(response);
+  }
+
+  // Создать новый тег
+  static async createTag(name: string, color?: string): Promise<Tag> {
+    const tagData: CreateTagRequest = {
+      name,
+      color: color ?? '#2196f3',
+    };
+
+    const response = await fetch(this.API_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tagData),
+    });
+    return handleApiResponse<Tag>(response);
+  }
+
+  // Получить тег по ID
+  static async getTagById(tagId: string): Promise<Tag> {
+    const response = await fetch(`${this.API_BASE_URL}/${tagId}`);
+    return handleApiResponse<Tag>(response);
+  }
+
+  // Обновить тег
+  static async updateTag(
+    tagId: string,
+    updates: UpdateTagRequest
+  ): Promise<Tag> {
+    const response = await fetch(`${this.API_BASE_URL}/${tagId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+    return handleApiResponse<Tag>(response);
+  }
+
+  // Удалить тег
+  static async deleteTag(tagId: string): Promise<void> {
+    const response = await fetch(`${this.API_BASE_URL}/${tagId}`, {
+      method: 'DELETE',
+    });
+    await handleApiResponse<null>(response);
   }
 }

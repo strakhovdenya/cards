@@ -50,7 +50,7 @@ export async function PUT(
     if (
       !body.germanWord &&
       !body.translation &&
-      !body.tags &&
+      !body.tagIds &&
       body.learned === undefined
     ) {
       return NextResponse.json<ApiResponse<null>>(

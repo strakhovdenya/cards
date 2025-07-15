@@ -61,7 +61,7 @@ export function App() {
       const newCard = await ClientCardService.createCard(
         cardData.germanWord.trim(),
         cardData.translation.trim(),
-        cardData.tags
+        cardData.tagIds
       );
       setCards((prev) => [newCard, ...prev]);
     } catch (err) {
@@ -75,7 +75,7 @@ export function App() {
       const updatedCard = await ClientCardService.updateCard(id, {
         germanWord: cardData.germanWord.trim(),
         translation: cardData.translation.trim(),
-        tags: cardData.tags,
+        tagIds: cardData.tagIds,
       });
       setCards((prev) =>
         prev.map((card) => (card.id === id ? updatedCard : card))
@@ -166,6 +166,7 @@ export function App() {
               }
               onDeleteCard={(id) => void handleDeleteCard(id)}
               onBulkImport={() => void loadCards()}
+              onCardsUpdate={() => void loadCards()}
             />
           )}
         </Container>

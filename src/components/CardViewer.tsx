@@ -54,13 +54,19 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
           justifyContent="center"
           flexWrap="wrap"
         >
-          {currentCard.tags.map((tag, index) => (
+          {currentCard.tags.map((tag) => (
             <Chip
-              key={index}
-              label={tag}
+              key={tag.id}
+              label={tag.name}
               size="small"
               variant="outlined"
-              color="secondary"
+              sx={{
+                borderColor: tag.color,
+                color: tag.color,
+                '&:hover': {
+                  backgroundColor: `${tag.color}20`, // 20% прозрачность
+                },
+              }}
             />
           ))}
         </Stack>

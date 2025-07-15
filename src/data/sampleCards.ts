@@ -1,4 +1,14 @@
-import type { Card } from '@/types';
+// Интерфейс для sample карточек (с тегами как строки для миграции)
+interface SampleCard {
+  id: string;
+  germanWord: string;
+  translation: string;
+  user_id: string;
+  tags: string[]; // Массив строк для миграции
+  learned: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Используем константную дату для избежания проблем с гидратацией
 const SAMPLE_DATE = '2024-01-01T00:00:00.000Z';
@@ -6,7 +16,7 @@ const SAMPLE_DATE = '2024-01-01T00:00:00.000Z';
 // Временный UUID для sample данных
 const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-export const sampleCards: Card[] = [
+export const sampleCards: SampleCard[] = [
   {
     id: '1',
     germanWord: 'der Hund',
