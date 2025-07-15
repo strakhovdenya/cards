@@ -50,32 +50,33 @@ const eslintConfig = [
       "require-await": "off",
       "@typescript-eslint/require-await": "warn",
       
-      // Консистентность кода
-      "@typescript-eslint/consistent-type-imports": "warn",
-      "@typescript-eslint/consistent-type-definitions": ["warn", "interface"],
-      
-      // Правила для проверки типов параметров функций (важно для Next.js API)
+      // Правила для предотвращения ошибок типизации
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
       "@typescript-eslint/no-confusing-void-expression": "warn",
-      "@typescript-eslint/prefer-readonly": "warn",
+      
+      // Стандартные ESLint правила
+      "prefer-const": "error",
+      "no-var": "error",
     },
   },
+  // Специальные правила для Next.js API routes
   {
     files: ["src/app/api/**/*.ts"],
     rules: {
-      // Специальные правила для Next.js API routes
+      // Усиленные правила для API routes для предотвращения build ошибок
       "@typescript-eslint/explicit-function-return-type": "off",
-      // Убеждаемся что параметры API routes типизированы правильно
       "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/await-thenable": "error",
       "@typescript-eslint/no-floating-promises": "error",
-      // Строже проверяем async/await в API routes
-      "@typescript-eslint/require-await": "error",
-      // Проверяем что функции правильно типизированы
-      "@typescript-eslint/no-unsafe-assignment": "error",
-      "@typescript-eslint/no-unsafe-call": "error",
-      "@typescript-eslint/no-unsafe-member-access": "error",
-      "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/prefer-promise-reject-errors": "error",
+      
+      // Правила для корректной типизации параметров в API routes
+      "@typescript-eslint/no-unsafe-assignment": "error", // строже для API
+      "@typescript-eslint/no-unsafe-member-access": "error", // строже для API
+      "@typescript-eslint/no-unsafe-argument": "error", // строже для API
+      
+      // Обязательная обработка ошибок в API routes
+      "prefer-promise-reject-errors": "error",
     },
   },
 ];

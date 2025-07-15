@@ -6,10 +6,11 @@ import type { UpdateTagRequest, ApiResponse, Tag } from '@/types';
 // GET /api/tags/[id] - получить тег по ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tagId = params.id;
+    const { id } = await params;
+    const tagId = id;
 
     const tag = await TagService.getTagById(tagId);
 
@@ -40,10 +41,11 @@ export async function GET(
 // PUT /api/tags/[id] - обновить тег
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tagId = params.id;
+    const { id } = await params;
+    const tagId = id;
     const body = (await request.json()) as UpdateTagRequest;
 
     // Валидация
@@ -111,10 +113,11 @@ export async function PUT(
 // DELETE /api/tags/[id] - удалить тег
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const tagId = params.id;
+    const { id } = await params;
+    const tagId = id;
 
     // Сначала проверяем существует ли тег
     const existingTag = await TagService.getTagById(tagId);
