@@ -355,7 +355,9 @@ export function CardEditor({
                   fullWidth
                   placeholder="Поиск по немецкому слову или переводу..."
                   value={searchText}
-                  onChange={(e) => { setSearchText(e.target.value); }}
+                  onChange={(e) => {
+                    setSearchText(e.target.value);
+                  }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -365,7 +367,9 @@ export function CardEditor({
                     endAdornment: searchText && (
                       <InputAdornment position="end">
                         <IconButton
-                          onClick={() => { setSearchText(''); }}
+                          onClick={() => {
+                            setSearchText('');
+                          }}
                           edge="end"
                           size="small"
                         >
@@ -688,6 +692,7 @@ export function CardEditor({
           setIsBulkImportOpen(false);
         }}
         onImport={handleBulkImport}
+        availableTags={availableTags}
       />
 
       {/* Компонент управления тегами */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -19,6 +19,9 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import {
   Upload,
@@ -26,13 +29,17 @@ import {
   SmartToy,
   ContentCopy,
   Close,
+  LocalOffer,
+  ExpandMore,
 } from '@mui/icons-material';
-import type { CardFormData } from '@/types';
+import type { CardFormData, Tag } from '@/types';
+import { TagFilter } from './TagFilter';
 
 interface BulkImportProps {
   open: boolean;
   onClose: () => void;
   onImport: (cards: CardFormData[]) => Promise<void>;
+  availableTags?: Tag[]; // Доступные теги для выбора
 }
 
 interface ParsedCard {
@@ -46,13 +53,42 @@ interface ParseResult {
   errors: string[];
 }
 
-export function BulkImport({ open, onClose, onImport }: BulkImportProps) {
+export function BulkImport({
+  open,
+  onClose,
+  onImport,
+  availableTags = [],
+}: BulkImportProps) {
   const [inputText, setInputText] = useState('');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isGptPromptOpen, setIsGptPromptOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  // Состояние для выбора тегов
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+
+  // Функции для управления выбором тегов
+  const handleTagToggle = useCallback((tagId: string) => {
+    setSelectedTagIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(tagId)) {
+        newSet.delete(tagId);
+      } else {
+        newSet.add(tagId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleSelectAllTags = useCallback(() => {
+    setSelectedTagIds(new Set(availableTags.map((tag) => tag.id)));
+  }, [availableTags]);
+
+  const handleClearTagSelection = useCallback(() => {
+    setSelectedTagIds(new Set());
+  }, []);
 
   // Парсинг текста в карточки
   const parseCards = (text: string): ParseResult => {
@@ -117,7 +153,7 @@ export function BulkImport({ open, onClose, onImport }: BulkImportProps) {
       const cardsToImport: CardFormData[] = parseResult.cards.map((card) => ({
         germanWord: card.germanWord,
         translation: card.translation,
-        tags: [], // Массовый импорт без тегов
+        tagIds: Array.from(selectedTagIds), // Добавляем выбранные теги
       }));
 
       await onImport(cardsToImport);
@@ -126,6 +162,7 @@ export function BulkImport({ open, onClose, onImport }: BulkImportProps) {
       setInputText('');
       setParseResult(null);
       setShowPreview(false);
+      setSelectedTagIds(new Set()); // Очищаем выбранные теги
       onClose();
     } catch (error) {
       console.error('Ошибка импорта:', error);
@@ -138,6 +175,7 @@ export function BulkImport({ open, onClose, onImport }: BulkImportProps) {
     setInputText('');
     setParseResult(null);
     setShowPreview(false);
+    setSelectedTagIds(new Set()); // Очищаем выбранные теги
     onClose();
   };
 
@@ -152,7 +190,9 @@ die Tasche, die Taschen - Сумка
     try {
       await navigator.clipboard.writeText(gptPromptText);
       setCopySuccess(true);
-      setTimeout(() => { setCopySuccess(false); }, 2000);
+      setTimeout(() => {
+        setCopySuccess(false);
+      }, 2000);
     } catch (err) {
       console.error('Ошибка копирования:', err);
     }
@@ -221,10 +261,86 @@ laufen - бегать`;
             rows={8}
             fullWidth
             value={inputText}
-            onChange={(e) => { setInputText(e.target.value); }}
+            onChange={(e) => {
+              setInputText(e.target.value);
+            }}
             placeholder="das Haus - дом&#10;die Katze - кошка&#10;der Hund - собака"
             sx={{ mb: 2 }}
           />
+
+          {/* Выбор тегов для массового импорта */}
+          {availableTags.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Accordion>
+                <AccordionSummary
+                  expandIcon={<ExpandMore />}
+                  aria-controls="bulk-import-tags-content"
+                  id="bulk-import-tags-header"
+                  sx={{
+                    background:
+                      'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+                    color: 'white',
+                    '&:hover': {
+                      background:
+                        'linear-gradient(135deg, #f57c00 0%, #e65100 100%)',
+                    },
+                    borderRadius: '12px 12px 0 0',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocalOffer />
+                    <Typography fontWeight="500">
+                      Теги для новых карточек
+                    </Typography>
+                    {selectedTagIds.size > 0 && (
+                      <Box
+                        sx={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {selectedTagIds.size}
+                      </Box>
+                    )}
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails
+                  sx={{
+                    background:
+                      'linear-gradient(145deg, #fff3e0 0%, #ffe0b2 100%)',
+                    borderRadius: '0 0 12px 12px',
+                    border: '1px solid #e0e0e0',
+                    borderTop: 'none',
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
+                      Выберите теги, которые будут добавлены ко всем
+                      импортируемым карточкам:
+                    </Typography>
+
+                    <TagFilter
+                      availableTags={availableTags}
+                      selectedTagIds={selectedTagIds}
+                      onTagToggle={handleTagToggle}
+                      onSelectAllTags={handleSelectAllTags}
+                      onClearTagSelection={handleClearTagSelection}
+                      showStatsChip={false}
+                    />
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+          )}
 
           <Box sx={{ mb: 2, textAlign: 'center' }}>
             <Button
@@ -264,9 +380,54 @@ laufen - бегать`;
               {/* Успешно распарсенные карточки */}
               {parseResult.cards.length > 0 && (
                 <Box>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Будет добавлено карточек: {parseResult.cards.length}
-                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <Typography variant="h6" color="primary">
+                      Будет добавлено карточек: {parseResult.cards.length}
+                    </Typography>
+
+                    {selectedTagIds.size > 0 && (
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          с тегами:
+                        </Typography>
+                        <Box
+                          sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}
+                        >
+                          {Array.from(selectedTagIds).map((tagId) => {
+                            const tag = availableTags.find(
+                              (t) => t.id === tagId
+                            );
+                            return tag ? (
+                              <Box
+                                key={tag.id}
+                                sx={{
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: '8px',
+                                  backgroundColor: tag.color + '20',
+                                  border: `1px solid ${tag.color}`,
+                                  color: tag.color,
+                                  fontSize: '0.75rem',
+                                  fontWeight: '500',
+                                }}
+                              >
+                                {tag.name}
+                              </Box>
+                            ) : null;
+                          })}
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
 
                   <Paper sx={{ maxHeight: 300, overflow: 'auto', p: 1 }}>
                     <List dense>
@@ -303,7 +464,11 @@ laufen - бегать`;
           >
             {isImporting
               ? 'Импорт...'
-              : `Импортировать (${parseResult?.cards.length ?? 0})`}
+              : `Импортировать (${parseResult?.cards.length ?? 0}${
+                  selectedTagIds.size > 0
+                    ? ` + ${selectedTagIds.size} тег${selectedTagIds.size === 1 ? '' : selectedTagIds.size < 5 ? 'а' : 'ов'}`
+                    : ''
+                })`}
           </Button>
         </DialogActions>
       </Dialog>
