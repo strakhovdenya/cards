@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -19,6 +19,10 @@ import {
   Autocomplete,
   Chip,
   Stack,
+  InputAdornment,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import {
   Add,
@@ -28,10 +32,14 @@ import {
   Cancel,
   LocalOffer,
   Upload,
+  Search,
+  ExpandMore,
+  Clear,
 } from '@mui/icons-material';
 import type { Card as CardType, CardFormData, Tag } from '@/types';
 import { BulkImport } from './BulkImport';
 import { TagManager } from './TagManager';
+import { TagFilter } from './TagFilter';
 import { ClientCardService, ClientTagService } from '@/services/cardService';
 
 interface CardEditorProps {
@@ -63,6 +71,10 @@ export function CardEditor({
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [errors, setErrors] = useState<Partial<CardFormData>>({});
 
+  // Состояние для фильтрации
+  const [searchText, setSearchText] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+
   // Загружаем доступные теги при инициализации
   useEffect(() => {
     void loadTags();
@@ -75,6 +87,56 @@ export function CardEditor({
     } catch (error) {
       console.error('Ошибка загрузки тегов:', error);
     }
+  };
+
+  // Фильтрация карточек
+  const filteredCards = useMemo(() => {
+    let filtered = cards;
+
+    // Фильтрация по тексту
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase().trim();
+      filtered = filtered.filter(
+        (card) =>
+          card.germanWord.toLowerCase().includes(searchLower) ||
+          card.translation.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Фильтрация по тегам
+    if (selectedTagIds.size > 0) {
+      filtered = filtered.filter((card) =>
+        card.tags.some((tag) => selectedTagIds.has(tag.id))
+      );
+    }
+
+    return filtered;
+  }, [cards, searchText, selectedTagIds]);
+
+  // Функции для управления фильтрацией по тегам
+  const handleTagToggle = (tagId: string) => {
+    setSelectedTagIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(tagId)) {
+        newSet.delete(tagId);
+      } else {
+        newSet.add(tagId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllTags = () => {
+    setSelectedTagIds(new Set(availableTags.map((tag) => tag.id)));
+  };
+
+  const handleClearTagSelection = () => {
+    setSelectedTagIds(new Set());
+  };
+
+  const handleClearSearch = () => {
+    setSearchText('');
+    setSelectedTagIds(new Set());
   };
 
   const handleOpenModal = (card?: CardType) => {
@@ -240,18 +302,174 @@ export function CardEditor({
         </Button>
       </Box>
 
-      {cards.length === 0 ? (
+      {/* Поиск и фильтрация */}
+      <Box sx={{ mb: 3 }}>
+        <Accordion>
+          <AccordionSummary
+            expandIcon={<ExpandMore />}
+            aria-controls="search-filter-content"
+            id="search-filter-header"
+            sx={{
+              background: 'linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #29b6f6 0%, #0288d1 100%)',
+              },
+              borderRadius: '12px 12px 0 0',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Search />
+              <Typography fontWeight="500">Поиск и фильтрация</Typography>
+              {(searchText.trim() || selectedTagIds.size > 0) && (
+                <Chip
+                  label={
+                    searchText.trim() && selectedTagIds.size > 0
+                      ? 'Текст + Теги'
+                      : searchText.trim()
+                        ? 'Текст'
+                        : 'Теги'
+                  }
+                  size="small"
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontWeight: 'bold',
+                  }}
+                />
+              )}
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails
+            sx={{
+              background: 'linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%)',
+              borderRadius: '0 0 12px 12px',
+              border: '1px solid #e0e0e0',
+              borderTop: 'none',
+            }}
+          >
+            <Stack spacing={3}>
+              {/* Текстовый поиск */}
+              <Box>
+                <TextField
+                  fullWidth
+                  placeholder="Поиск по немецкому слову или переводу..."
+                  value={searchText}
+                  onChange={(e) => { setSearchText(e.target.value); }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchText && (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => { setSearchText(''); }}
+                          edge="end"
+                          size="small"
+                        >
+                          <Clear />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      backgroundColor: 'white',
+                      '&:hover fieldset': {
+                        borderColor: '#4fc3f7',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#29b6f6',
+                      },
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* Фильтрация по тегам */}
+              {availableTags.length > 0 && (
+                <TagFilter
+                  availableTags={availableTags}
+                  selectedTagIds={selectedTagIds}
+                  onTagToggle={handleTagToggle}
+                  onSelectAllTags={handleSelectAllTags}
+                  onClearTagSelection={handleClearTagSelection}
+                  showStatsChip={false}
+                />
+              )}
+
+              {/* Кнопка очистки всех фильтров */}
+              {(searchText.trim() || selectedTagIds.size > 0) && (
+                <Box sx={{ textAlign: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleClearSearch}
+                    startIcon={<Clear />}
+                    sx={{
+                      borderRadius: '20px',
+                      textTransform: 'none',
+                      fontWeight: '500',
+                      borderColor: '#ff6b6b',
+                      color: '#ff6b6b',
+                      '&:hover': {
+                        borderColor: '#ee5a52',
+                        backgroundColor: '#ff6b6b20',
+                      },
+                    }}
+                  >
+                    Очистить все фильтры
+                  </Button>
+                </Box>
+              )}
+
+              {/* Статистика */}
+              <Box
+                sx={{
+                  textAlign: 'center',
+                  p: 1.5,
+                  background:
+                    'linear-gradient(135deg, #4fc3f722 0%, #29b6f622 100%)',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontWeight: '500' }}
+                >
+                  📊 Показано <strong>{filteredCards.length}</strong> из{' '}
+                  <strong>{cards.length}</strong> карточек
+                </Typography>
+              </Box>
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+      </Box>
+
+      {filteredCards.length === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center', mt: 3 }}>
           <Typography variant="h6" color="text.secondary">
-            Карточки не найдены
+            {cards.length === 0
+              ? 'Карточки не найдены'
+              : searchText.trim() || selectedTagIds.size > 0
+                ? 'Нет карточек, соответствующих фильтрам'
+                : 'Карточки не найдены'}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-            Добавьте первую карточку для изучения
+            {cards.length === 0
+              ? 'Добавьте первую карточку для изучения'
+              : searchText.trim() || selectedTagIds.size > 0
+                ? 'Попробуйте изменить критерии поиска или очистить фильтры'
+                : 'Добавьте первую карточку для изучения'}
           </Typography>
         </Paper>
       ) : (
         <List>
-          {cards.map((card, index) => (
+          {filteredCards.map((card, index) => (
             <div key={card.id}>
               <ListItem
                 sx={{
@@ -332,7 +550,7 @@ export function CardEditor({
                   </Box>
                 </Box>
               </ListItem>
-              {index < cards.length - 1 && <Divider />}
+              {index < filteredCards.length - 1 && <Divider />}
             </div>
           ))}
         </List>
