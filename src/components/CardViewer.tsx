@@ -10,6 +10,10 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
+  IconButton,
+  Collapse,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -18,6 +22,8 @@ import {
   Flip,
   CheckCircle,
   RadioButtonUnchecked,
+  KeyboardHide,
+  Keyboard,
 } from '@mui/icons-material';
 import { ClientCardService } from '@/services/cardService';
 import { ClientTagService } from '@/services/tagService';
@@ -35,11 +41,20 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [shuffledCards, setShuffledCards] = useState<CardType[]>([]);
   const [frontSide, setFrontSide] = useState<'german' | 'russian'>('german');
+  const [showKeyboardHints, setShowKeyboardHints] = useState(false);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Состояние для фильтрации по тегам
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [filteredCards, setFilteredCards] = useState<CardType[]>([]);
+
+  // На десктопе показываем подсказки по умолчанию, на мобильном - скрываем
+  useEffect(() => {
+    setShowKeyboardHints(!isMobile);
+  }, [isMobile]);
 
   // Загрузка доступных тегов
   useEffect(() => {
@@ -194,6 +209,10 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
     []
   );
 
+  const toggleKeyboardHints = useCallback(() => {
+    setShowKeyboardHints((prev) => !prev);
+  }, []);
+
   // Клавиатурные сокращения для быстрой навигации
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -331,10 +350,10 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
               ml: 1,
               fontWeight: '500',
               fontSize: '0.875rem',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundColor: 'primary.main',
               color: 'white',
               border: 'none',
-              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+              boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
             }}
           />
         )}
@@ -392,48 +411,109 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         </Button>
       </Box>
 
-      {/* Подсказка */}
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ mb: 3, textAlign: 'center' }}
-      >
-        {isFlipped
-          ? 'Нажмите для возврата'
-          : `Нажмите для показа ${frontSide === 'german' ? 'русского перевода' : 'немецкого слова'}`}
-        <br />
-        <Typography component="span" variant="caption" color="text.disabled">
-          ⌨️ Горячие клавиши: ← → (навигация), Пробел (перевернуть), Enter
-          (выучено), S (перемешать), F (сменить режим)
+      {/* Основная подсказка */}
+      <Box sx={{ mb: 2, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          {isFlipped
+            ? 'Нажмите для возврата'
+            : `Нажмите для показа ${frontSide === 'german' ? 'русского перевода' : 'немецкого слова'}`}
         </Typography>
-        {selectedTagIds.size > 0 && (
-          <>
-            <br />
-            <Box
-              component="span"
+
+        {/* Кнопка для показа/скрытия горячих клавиш */}
+        <Box
+          sx={{
+            mt: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <Tooltip
+            title={
+              showKeyboardHints
+                ? 'Скрыть горячие клавиши'
+                : 'Показать горячие клавиши'
+            }
+          >
+            <IconButton
+              size="small"
+              onClick={toggleKeyboardHints}
               sx={{
-                display: 'inline-block',
-                mt: 1,
-                px: 2,
-                py: 0.5,
-                background:
-                  'linear-gradient(135deg, #667eea22 0%, #764ba222 100%)',
-                borderRadius: '12px',
-                border: '1px solid #e0e0e0',
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                },
               }}
             >
-              <Typography
-                component="span"
-                variant="caption"
-                sx={{ fontWeight: '500', color: '#667eea' }}
-              >
-                📊 Показано {shuffledCards.length} из {cards.length} карточек
-                (фильтр активен)
-              </Typography>
-            </Box>
-          </>
+              {showKeyboardHints ? <KeyboardHide /> : <Keyboard />}
+            </IconButton>
+          </Tooltip>
+          {!isMobile && (
+            <Typography variant="caption" color="text.disabled">
+              {showKeyboardHints ? 'Скрыть' : 'Горячие клавиши'}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Горячие клавиши */}
+        <Collapse in={showKeyboardHints}>
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              backgroundColor: 'grey.50',
+              borderRadius: '8px',
+              border: '1px solid',
+              borderColor: 'grey.200',
+            }}
+          >
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ fontWeight: '500' }}
+            >
+              ⌨️ Горячие клавиши:
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+              <Chip label="← →" size="small" variant="outlined" />
+              <Chip label="Пробел" size="small" variant="outlined" />
+              <Chip label="Enter" size="small" variant="outlined" />
+              <Chip label="S" size="small" variant="outlined" />
+              <Chip label="F" size="small" variant="outlined" />
+            </Stack>
+            <Typography
+              variant="caption"
+              color="text.disabled"
+              sx={{ mt: 1, display: 'block' }}
+            >
+              Навигация • Перевернуть • Выучено • Перемешать • Сменить режим
+            </Typography>
+          </Box>
+        </Collapse>
+
+        {/* Статистика фильтра */}
+        {selectedTagIds.size > 0 && (
+          <Box
+            sx={{
+              mt: 2,
+              px: 2,
+              py: 1,
+              backgroundColor: 'primary.50',
+              borderRadius: '12px',
+              border: '1px solid',
+              borderColor: 'primary.200',
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: '500', color: 'primary.main' }}
+            >
+              📊 Показано {shuffledCards.length} из {cards.length} карточек
+            </Typography>
+          </Box>
         )}
-      </Typography>
+      </Box>
 
       {/* Кнопки управления */}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>

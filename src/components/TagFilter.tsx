@@ -45,18 +45,43 @@ export function TagFilter({
 
   return (
     <Box sx={{ mb: 3, width: '100%', maxWidth: 600 }}>
-      <Accordion defaultExpanded={defaultExpanded}>
+      <Accordion
+        defaultExpanded={defaultExpanded}
+        sx={{
+          borderRadius: '12px !important',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          overflow: 'hidden',
+          '&:before': {
+            display: 'none',
+          },
+          '&:first-of-type': {
+            borderRadius: '12px !important',
+          },
+          '&:last-of-type': {
+            borderRadius: '12px !important',
+          },
+        }}
+      >
         <AccordionSummary
           expandIcon={<ExpandMore />}
           aria-controls="tag-filter-content"
           id="tag-filter-header"
           sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            backgroundColor: 'primary.main',
             color: 'white',
+            borderRadius: '12px 12px 0 0 !important',
+            minHeight: 56,
+            margin: 0,
             '&:hover': {
-              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              backgroundColor: 'primary.dark',
             },
-            borderRadius: '12px 12px 0 0',
+            '&.Mui-expanded': {
+              borderRadius: '12px 12px 0 0 !important',
+              margin: 0,
+            },
+            '&.Mui-focusVisible': {
+              backgroundColor: 'primary.dark',
+            },
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -70,6 +95,7 @@ export function TagFilter({
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   color: 'white',
                   fontWeight: 'bold',
+                  height: 24,
                 }}
               />
             )}
@@ -77,10 +103,13 @@ export function TagFilter({
         </AccordionSummary>
         <AccordionDetails
           sx={{
-            background: 'linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%)',
-            borderRadius: '0 0 12px 12px',
-            border: '1px solid #e0e0e0',
+            backgroundColor: 'background.paper',
+            borderRadius: '0 0 12px 12px !important',
+            border: '1px solid',
+            borderColor: 'divider',
             borderTop: 'none',
+            p: 2,
+            margin: 0,
           }}
         >
           <Box sx={{ width: '100%' }}>
@@ -89,7 +118,7 @@ export function TagFilter({
               sx={{
                 display: 'flex',
                 gap: 1,
-                mb: 3,
+                mb: 2,
                 justifyContent: 'center',
                 flexWrap: 'wrap',
               }}
@@ -99,45 +128,29 @@ export function TagFilter({
                 variant="contained"
                 onClick={onSelectAllTags}
                 disabled={selectedTagIds.size === availableTags.length}
+                color="success"
                 sx={{
-                  background:
-                    'linear-gradient(45deg, #4CAF50 30%, #45a049 90%)',
                   borderRadius: '20px',
                   textTransform: 'none',
                   fontWeight: '500',
-                  boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)',
-                  '&:hover': {
-                    background:
-                      'linear-gradient(45deg, #45a049 30%, #3d8b40 90%)',
-                  },
-                  '&:disabled': {
-                    background: '#bdbdbd',
-                    boxShadow: 'none',
-                  },
+                  minWidth: 'auto',
+                  px: 2,
                 }}
               >
                 ✨ Выбрать все
               </Button>
               <Button
                 size="small"
-                variant="contained"
+                variant="outlined"
                 onClick={onClearTagSelection}
                 disabled={selectedTagIds.size === 0}
+                color="error"
                 sx={{
-                  background:
-                    'linear-gradient(45deg, #ff6b6b 30%, #ee5a52 90%)',
                   borderRadius: '20px',
                   textTransform: 'none',
                   fontWeight: '500',
-                  boxShadow: '0 3px 5px 2px rgba(255, 107, 107, .3)',
-                  '&:hover': {
-                    background:
-                      'linear-gradient(45deg, #ee5a52 30%, #dc4c48 90%)',
-                  },
-                  '&:disabled': {
-                    background: '#bdbdbd',
-                    boxShadow: 'none',
-                  },
+                  minWidth: 'auto',
+                  px: 2,
                 }}
               >
                 🗑️ Очистить
@@ -149,12 +162,13 @@ export function TagFilter({
               sx={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: 1.5,
+                gap: 1,
                 justifyContent: 'center',
                 p: 2,
-                background: 'rgba(255, 255, 255, 0.7)',
-                borderRadius: '16px',
-                border: '2px dashed #e0e0e0',
+                backgroundColor: 'grey.50',
+                borderRadius: '8px',
+                border: '1px dashed',
+                borderColor: 'grey.300',
               }}
             >
               {availableTags.map((tag) => {
@@ -163,33 +177,31 @@ export function TagFilter({
                   <Chip
                     key={tag.id}
                     label={tag.name}
-                    onClick={() => { handleTagToggle(tag.id); }}
+                    onClick={() => {
+                      handleTagToggle(tag.id);
+                    }}
                     variant={isSelected ? 'filled' : 'outlined'}
                     sx={{
                       borderColor: tag.color,
                       borderWidth: '2px',
                       color: isSelected ? 'white' : tag.color,
                       backgroundColor: isSelected ? tag.color : 'transparent',
-                      fontWeight: isSelected ? 'bold' : '500',
+                      fontWeight: isSelected ? '600' : '500',
                       fontSize: '0.875rem',
-                      height: '36px',
-                      borderRadius: '18px',
+                      height: '32px',
+                      borderRadius: '16px',
                       cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                      boxShadow: isSelected
-                        ? `0 4px 12px ${tag.color}40`
-                        : '0 2px 4px rgba(0,0,0,0.1)',
+                      transition: 'all 0.2s ease-in-out',
+                      transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                       '&:hover': {
                         backgroundColor: isSelected
                           ? tag.color
-                          : `${tag.color}20`,
-                        transform: 'scale(1.05)',
-                        boxShadow: `0 4px 12px ${tag.color}40`,
+                          : `${tag.color}15`,
+                        transform: 'scale(1.02)',
                         borderColor: tag.color,
                       },
                       '&:active': {
-                        transform: 'scale(0.95)',
+                        transform: 'scale(0.98)',
                       },
                     }}
                   />
@@ -203,16 +215,16 @@ export function TagFilter({
                 sx={{
                   mt: 2,
                   textAlign: 'center',
-                  p: 1.5,
-                  background:
-                    'linear-gradient(135deg, #667eea22 0%, #764ba222 100%)',
+                  p: 1,
+                  backgroundColor: 'primary.50',
                   borderRadius: '8px',
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid',
+                  borderColor: 'primary.200',
                 }}
               >
                 <Typography
                   variant="body2"
-                  color="text.secondary"
+                  color="primary.main"
                   sx={{ fontWeight: '500' }}
                 >
                   📊 Выбрано тегов: <strong>{selectedTagIds.size}</strong> из{' '}
