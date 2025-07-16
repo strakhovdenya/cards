@@ -271,20 +271,42 @@ laufen - бегать`;
           {/* Выбор тегов для массового импорта */}
           {availableTags.length > 0 && (
             <Box sx={{ mb: 3 }}>
-              <Accordion>
+              <Accordion
+                sx={{
+                  borderRadius: '12px !important',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  overflow: 'hidden',
+                  '&:before': {
+                    display: 'none',
+                  },
+                  '&:first-of-type': {
+                    borderRadius: '12px !important',
+                  },
+                  '&:last-of-type': {
+                    borderRadius: '12px !important',
+                  },
+                }}
+              >
                 <AccordionSummary
                   expandIcon={<ExpandMore />}
                   aria-controls="bulk-import-tags-content"
                   id="bulk-import-tags-header"
                   sx={{
-                    background:
-                      'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+                    backgroundColor: 'primary.main',
                     color: 'white',
+                    borderRadius: '12px 12px 0 0 !important',
+                    minHeight: 56,
+                    margin: 0,
                     '&:hover': {
-                      background:
-                        'linear-gradient(135deg, #f57c00 0%, #e65100 100%)',
+                      backgroundColor: 'primary.dark',
                     },
-                    borderRadius: '12px 12px 0 0',
+                    '&.Mui-expanded': {
+                      borderRadius: '12px 12px 0 0 !important',
+                      margin: 0,
+                    },
+                    '&.Mui-focusVisible': {
+                      backgroundColor: 'primary.dark',
+                    },
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -311,11 +333,13 @@ laufen - бегать`;
                 </AccordionSummary>
                 <AccordionDetails
                   sx={{
-                    background:
-                      'linear-gradient(145deg, #fff3e0 0%, #ffe0b2 100%)',
-                    borderRadius: '0 0 12px 12px',
-                    border: '1px solid #e0e0e0',
+                    backgroundColor: 'background.paper',
+                    borderRadius: '0 0 12px 12px !important',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     borderTop: 'none',
+                    p: 2,
+                    margin: 0,
                   }}
                 >
                   <Box>

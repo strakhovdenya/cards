@@ -304,18 +304,42 @@ export function CardEditor({
 
       {/* Поиск и фильтрация */}
       <Box sx={{ mb: 3 }}>
-        <Accordion>
+        <Accordion
+          sx={{
+            borderRadius: '12px !important',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+            '&:before': {
+              display: 'none',
+            },
+            '&:first-of-type': {
+              borderRadius: '12px !important',
+            },
+            '&:last-of-type': {
+              borderRadius: '12px !important',
+            },
+          }}
+        >
           <AccordionSummary
             expandIcon={<ExpandMore />}
             aria-controls="search-filter-content"
             id="search-filter-header"
             sx={{
-              background: 'linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%)',
+              backgroundColor: 'primary.main',
               color: 'white',
+              borderRadius: '12px 12px 0 0 !important',
+              minHeight: 56,
+              margin: 0,
               '&:hover': {
-                background: 'linear-gradient(135deg, #29b6f6 0%, #0288d1 100%)',
+                backgroundColor: 'primary.dark',
               },
-              borderRadius: '12px 12px 0 0',
+              '&.Mui-expanded': {
+                borderRadius: '12px 12px 0 0 !important',
+                margin: 0,
+              },
+              '&.Mui-focusVisible': {
+                backgroundColor: 'primary.dark',
+              },
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -335,6 +359,7 @@ export function CardEditor({
                     backgroundColor: 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
                     fontWeight: 'bold',
+                    borderRadius: '12px',
                   }}
                 />
               )}
@@ -342,13 +367,16 @@ export function CardEditor({
           </AccordionSummary>
           <AccordionDetails
             sx={{
-              background: 'linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%)',
-              borderRadius: '0 0 12px 12px',
-              border: '1px solid #e0e0e0',
+              backgroundColor: 'background.paper',
+              borderRadius: '0 0 12px 12px !important',
+              border: '1px solid',
+              borderColor: 'divider',
               borderTop: 'none',
+              p: 2,
+              margin: 0,
             }}
           >
-            <Stack spacing={3}>
+            <Stack spacing={2}>
               {/* Текстовый поиск */}
               <Box>
                 <TextField
@@ -521,6 +549,7 @@ export function CardEditor({
                             sx={{
                               fontSize: '0.75rem',
                               height: 20,
+                              borderRadius: '10px',
                               borderColor: tag.color,
                               color: tag.color,
                               '&:hover': {
@@ -640,6 +669,7 @@ export function CardEditor({
                         : undefined,
                       borderColor: tag?.color,
                       color: tag?.color,
+                      borderRadius: '12px',
                     }}
                   />
                 );

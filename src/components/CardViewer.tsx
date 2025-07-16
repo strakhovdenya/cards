@@ -137,6 +137,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
               sx={{
                 borderColor: tag.color,
                 color: tag.color,
+                borderRadius: '12px',
                 '&:hover': {
                   backgroundColor: `${tag.color}20`, // 20% прозрачность
                 },
