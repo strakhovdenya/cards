@@ -44,7 +44,7 @@ export function TagFilter({
   }
 
   return (
-    <Box sx={{ mb: 3, width: '100%', maxWidth: 600 }}>
+    <Box sx={{ mb: 2, width: '100%', maxWidth: 600 }}>
       <Accordion
         defaultExpanded={defaultExpanded}
         sx={{
@@ -70,7 +70,7 @@ export function TagFilter({
             backgroundColor: 'primary.main',
             color: 'white',
             borderRadius: '12px 12px 0 0 !important',
-            minHeight: 56,
+            minHeight: 48,
             margin: 0,
             '&:hover': {
               backgroundColor: 'primary.dark',
@@ -78,6 +78,7 @@ export function TagFilter({
             '&.Mui-expanded': {
               borderRadius: '12px 12px 0 0 !important',
               margin: 0,
+              minHeight: 48,
             },
             '&.Mui-focusVisible': {
               backgroundColor: 'primary.dark',
@@ -85,8 +86,10 @@ export function TagFilter({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FilterList />
-            <Typography fontWeight="500">Фильтрация по тегам</Typography>
+            <FilterList sx={{ fontSize: '1.2rem' }} />
+            <Typography fontWeight="500" sx={{ fontSize: '0.9rem' }}>
+              Фильтрация по тегам
+            </Typography>
             {showStatsChip && selectedTagIds.size > 0 && (
               <Chip
                 label={selectedTagIds.size}
@@ -95,7 +98,8 @@ export function TagFilter({
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   color: 'white',
                   fontWeight: 'bold',
-                  height: 24,
+                  height: 20,
+                  fontSize: '0.75rem',
                 }}
               />
             )}
@@ -108,7 +112,7 @@ export function TagFilter({
             border: '1px solid',
             borderColor: 'divider',
             borderTop: 'none',
-            p: 2,
+            p: 1.5,
             margin: 0,
           }}
         >
@@ -118,7 +122,7 @@ export function TagFilter({
               sx={{
                 display: 'flex',
                 gap: 1,
-                mb: 2,
+                mb: 1.5,
                 justifyContent: 'center',
                 flexWrap: 'wrap',
               }}
@@ -130,11 +134,14 @@ export function TagFilter({
                 disabled={selectedTagIds.size === availableTags.length}
                 color="success"
                 sx={{
-                  borderRadius: '20px',
+                  borderRadius: '16px',
                   textTransform: 'none',
                   fontWeight: '500',
                   minWidth: 'auto',
-                  px: 2,
+                  px: 1.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                  height: '28px',
                 }}
               >
                 ✨ Выбрать все
@@ -146,11 +153,14 @@ export function TagFilter({
                 disabled={selectedTagIds.size === 0}
                 color="error"
                 sx={{
-                  borderRadius: '20px',
+                  borderRadius: '16px',
                   textTransform: 'none',
                   fontWeight: '500',
                   minWidth: 'auto',
-                  px: 2,
+                  px: 1.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                  height: '28px',
                 }}
               >
                 🗑️ Очистить
@@ -162,9 +172,9 @@ export function TagFilter({
               sx={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: 1,
+                gap: 0.75,
                 justifyContent: 'center',
-                p: 2,
+                p: 1.5,
                 backgroundColor: 'grey.50',
                 borderRadius: '8px',
                 border: '1px dashed',
@@ -187,9 +197,9 @@ export function TagFilter({
                       color: isSelected ? 'white' : tag.color,
                       backgroundColor: isSelected ? tag.color : 'transparent',
                       fontWeight: isSelected ? '600' : '500',
-                      fontSize: '0.875rem',
-                      height: '32px',
-                      borderRadius: '16px',
+                      fontSize: '0.75rem',
+                      height: '28px',
+                      borderRadius: '14px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease-in-out',
                       transform: isSelected ? 'scale(1.02)' : 'scale(1)',
@@ -213,9 +223,9 @@ export function TagFilter({
             {selectedTagIds.size > 0 && (
               <Box
                 sx={{
-                  mt: 2,
+                  mt: 1.5,
                   textAlign: 'center',
-                  p: 1,
+                  p: 0.75,
                   backgroundColor: 'primary.50',
                   borderRadius: '8px',
                   border: '1px solid',
@@ -223,7 +233,7 @@ export function TagFilter({
                 }}
               >
                 <Typography
-                  variant="body2"
+                  variant="caption"
                   color="primary.main"
                   sx={{ fontWeight: '500' }}
                 >

@@ -121,10 +121,10 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
     if (!currentCard?.tags || currentCard.tags.length === 0) return null;
 
     return (
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 1.5 }}>
         <Stack
           direction="row"
-          spacing={1}
+          spacing={0.75}
           justifyContent="center"
           flexWrap="wrap"
         >
@@ -137,7 +137,9 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
               sx={{
                 borderColor: tag.color,
                 color: tag.color,
-                borderRadius: '12px',
+                borderRadius: '10px',
+                fontSize: '0.75rem',
+                height: '24px',
                 '&:hover': {
                   backgroundColor: `${tag.color}20`, // 20% прозрачность
                 },
@@ -323,70 +325,95 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: 3,
+        padding: { xs: 2, sm: 3 },
         maxWidth: 600,
         margin: '0 auto',
       }}
     >
-      {/* Индикатор прогресса */}
-      <Box sx={{ mb: 3, textAlign: 'center' }}>
-        <Chip
-          label={`${currentCardIndex + 1} из ${shuffledCards.length}`}
-          color="primary"
-          variant="outlined"
-          size="small"
+      {/* Компактная верхняя панель */}
+      <Box sx={{ mb: 2, textAlign: 'center', width: '100%' }}>
+        {/* Первая строка: прогресс и переключатель режима */}
+        <Box
           sx={{
-            fontWeight: 'bold',
-            fontSize: '0.875rem',
-            background: 'linear-gradient(135deg, #2196F3 0%, #21CBF3 100%)',
-            color: 'white',
-            border: 'none',
-            boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1,
+            mb: 1.5,
           }}
-        />
-        {selectedTagIds.size > 0 && (
-          <Chip
-            label={`🏷️ Фильтр: ${selectedTagIds.size} тег${selectedTagIds.size === 1 ? '' : selectedTagIds.size < 5 ? 'а' : 'ов'}`}
-            sx={{
-              ml: 1,
-              fontWeight: '500',
-              fontSize: '0.875rem',
-              backgroundColor: 'primary.main',
-              color: 'white',
-              border: 'none',
-              boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
-            }}
-          />
-        )}
+        >
+          {/* Индикатор прогресса */}
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Chip
+              label={`${currentCardIndex + 1} из ${shuffledCards.length}`}
+              color="primary"
+              variant="outlined"
+              size="small"
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '0.875rem',
+                background: 'linear-gradient(135deg, #2196F3 0%, #21CBF3 100%)',
+                color: 'white',
+                border: 'none',
+                boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+              }}
+            />
+            {selectedTagIds.size > 0 && (
+              <Chip
+                label={`🏷️ ${selectedTagIds.size}`}
+                size="small"
+                sx={{
+                  fontWeight: '500',
+                  fontSize: '0.75rem',
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  border: 'none',
+                  height: '24px',
+                }}
+              />
+            )}
+          </Box>
+
+          {/* Переключатель лицевой стороны */}
+          <Tooltip title="Выберите какую сторону показывать первой">
+            <ToggleButtonGroup
+              value={frontSide}
+              exclusive
+              onChange={handleChangeFrontSide}
+              size="small"
+              color="primary"
+              sx={{ height: '32px' }}
+            >
+              <ToggleButton
+                value="german"
+                sx={{ px: 1.5, fontSize: '0.75rem' }}
+              >
+                de → ru
+              </ToggleButton>
+              <ToggleButton
+                value="russian"
+                sx={{ px: 1.5, fontSize: '0.75rem' }}
+              >
+                ru → de
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Tooltip>
+        </Box>
       </Box>
 
-      {/* Фильтрация по тегам */}
+      {/* Фильтрация по тегам - свернута по умолчанию */}
       <TagFilter
         availableTags={availableTags}
         selectedTagIds={selectedTagIds}
         onTagToggle={handleTagToggle}
         onSelectAllTags={handleSelectAllTags}
         onClearTagSelection={handleClearTagSelection}
+        defaultExpanded={false}
       />
 
-      {/* Переключатель лицевой стороны */}
-      <Box sx={{ mb: 3, textAlign: 'center' }}>
-        <Tooltip title="Выберите какую сторону показывать первой">
-          <ToggleButtonGroup
-            value={frontSide}
-            exclusive
-            onChange={handleChangeFrontSide}
-            size="small"
-            color="primary"
-          >
-            <ToggleButton value="german">de → ru</ToggleButton>
-            <ToggleButton value="russian">ru → de</ToggleButton>
-          </ToggleButtonGroup>
-        </Tooltip>
-      </Box>
-
       {/* Карточка */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 2 }}>
         <Card
           card={currentCard}
           isFlipped={isFlipped}
@@ -399,7 +426,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
       {cardTags}
 
       {/* Статус изучения */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 2 }}>
         <Button
           variant={currentCard.learned ? 'contained' : 'outlined'}
           color={currentCard.learned ? 'success' : 'primary'}
@@ -407,6 +434,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
           startIcon={
             currentCard.learned ? <CheckCircle /> : <RadioButtonUnchecked />
           }
+          size="medium"
         >
           {currentCard.learned ? 'Выучено' : 'Отметить как выученное'}
         </Button>
@@ -414,7 +442,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
 
       {/* Основная подсказка */}
       <Box sx={{ mb: 2, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {isFlipped
             ? 'Нажмите для возврата'
             : `Нажмите для показа ${frontSide === 'german' ? 'русского перевода' : 'немецкого слова'}`}
@@ -423,7 +451,6 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         {/* Кнопка для показа/скрытия горячих клавиш */}
         <Box
           sx={{
-            mt: 1,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -461,8 +488,8 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         <Collapse in={showKeyboardHints}>
           <Box
             sx={{
-              mt: 2,
-              p: 2,
+              mt: 1.5,
+              p: 1.5,
               backgroundColor: 'grey.50',
               borderRadius: '8px',
               border: '1px solid',
@@ -497,9 +524,9 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         {selectedTagIds.size > 0 && (
           <Box
             sx={{
-              mt: 2,
+              mt: 1.5,
               px: 2,
-              py: 1,
+              py: 0.5,
               backgroundColor: 'primary.50',
               borderRadius: '12px',
               border: '1px solid',
@@ -517,12 +544,13 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
       </Box>
 
       {/* Кнопки управления */}
-      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
         <Button
           variant="outlined"
           onClick={handlePrevious}
           startIcon={<ArrowBack />}
           disabled={shuffledCards.length <= 1}
+          size="medium"
         >
           Назад
         </Button>
@@ -532,6 +560,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
           onClick={handleFlip}
           startIcon={<Flip />}
           sx={{ minWidth: 120 }}
+          size="medium"
         >
           Перевернуть
         </Button>
@@ -541,6 +570,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
           onClick={handleNext}
           endIcon={<ArrowForward />}
           disabled={shuffledCards.length <= 1}
+          size="medium"
         >
           Вперёд
         </Button>
@@ -553,6 +583,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
         startIcon={<Shuffle />}
         color="secondary"
         disabled={shuffledCards.length <= 1}
+        size="medium"
       >
         Перемешать
       </Button>
