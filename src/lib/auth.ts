@@ -306,22 +306,26 @@ export async function checkIfAdminsExist(): Promise<boolean> {
 
 export async function validateInviteCode(code: string): Promise<boolean> {
   try {
-    const inviteResult = (await supabase
+    const { data, error } = await supabase
       .from('invites')
       .select('*')
       .eq('invite_code', code)
-      .eq('used', false)
-      .single()) as SupabaseResponse<Invite>;
+      .eq('used', false);
 
-    const data: Invite | null = inviteResult.data;
-    const error = inviteResult.error;
-
-    if (error || !data) {
+    if (error) {
+      console.error('Error validating invite code:', error);
       return false;
     }
 
+    // Проверяем что нашлась хотя бы одна запись
+    if (!data || data.length === 0) {
+      return false;
+    }
+
+    const invite = data[0] as Invite;
+
     // Проверяем срок действия
-    return new Date(data.expires_at) > new Date();
+    return new Date(invite.expires_at) > new Date();
   } catch (error) {
     console.error('Error validating invite code:', error);
     return false;
