@@ -89,7 +89,16 @@ export async function signUpWithEmail(signUpData: SignUpData) {
     }
 
     // Проверяем email (если указан в приглашении)
-    if (invite.email && invite.email !== email) {
+    if (
+      invite.email &&
+      invite.email.trim().toLowerCase() !== email.trim().toLowerCase()
+    ) {
+      console.error('Email mismatch:', {
+        inviteEmail: invite.email,
+        providedEmail: email,
+        inviteEmailTrimmed: invite.email.trim().toLowerCase(),
+        providedEmailTrimmed: email.trim().toLowerCase(),
+      });
       throw new Error('Код приглашения предназначен для другого email');
     }
   }

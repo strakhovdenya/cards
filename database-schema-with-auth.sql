@@ -157,6 +157,11 @@ CREATE POLICY "Users can update own profile" ON profiles
     FOR UPDATE USING (auth.uid() = id);
 
 -- Политики для приглашений
+DROP POLICY IF EXISTS "Admins can view all invites" ON invites;
+DROP POLICY IF EXISTS "Admins can create invites" ON invites;
+DROP POLICY IF EXISTS "Users can view invites sent to them" ON invites;
+DROP POLICY IF EXISTS "Anonymous can validate invite codes" ON invites;
+
 CREATE POLICY "Admins can view all invites" ON invites
     FOR SELECT USING (
         EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
@@ -169,6 +174,10 @@ CREATE POLICY "Admins can create invites" ON invites
 
 CREATE POLICY "Users can view invites sent to them" ON invites
     FOR SELECT USING (email = auth.jwt() ->> 'email');
+
+-- Новая политика: анонимные пользователи могут читать коды для валидации
+CREATE POLICY "Anonymous can validate invite codes" ON invites
+    FOR SELECT USING (true);
 
 -- Функция для создания профиля при регистрации
 CREATE OR REPLACE FUNCTION public.handle_new_user()
