@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Box, Container, Typography, Alert } from '@mui/material';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { checkIfAdminsExist } from '@/lib/auth';
 import { useSearchParams } from 'next/navigation';
 
-export default function AuthPage() {
+function AuthPageContent() {
   const [showSignupLink, setShowSignupLink] = useState(false);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -66,5 +66,36 @@ export default function AuthPage() {
         <AuthForm showSignupLink={showSignupLink && !loading} />
       </Container>
     </Box>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'background.default',
+          }}
+        >
+          <Container maxWidth="sm">
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" component="h1" gutterBottom>
+                German Word Cards
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Загрузка...
+              </Typography>
+            </Box>
+          </Container>
+        </Box>
+      }
+    >
+      <AuthPageContent />
+    </Suspense>
   );
 }
