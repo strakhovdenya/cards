@@ -25,26 +25,19 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
 // Клиентский сервис для работы с тегами
 export class ClientTagService {
-  // Получить все теги пользователя
-  static async getTags(userId?: string): Promise<Tag[]> {
-    const url = userId
-      ? `${API_BASE_URL}?user_id=${encodeURIComponent(userId)}`
-      : API_BASE_URL;
-
-    const response = await fetch(url);
+  // Получить теги текущего пользователя
+  static async getTags(): Promise<Tag[]> {
+    const response = await fetch(API_BASE_URL, {
+      credentials: 'include', // Важно для передачи cookies с сессией
+    });
     return handleApiResponse<Tag[]>(response);
   }
 
   // Создать новый тег
-  static async createTag(
-    name: string,
-    color?: string,
-    userId?: string
-  ): Promise<Tag> {
+  static async createTag(name: string, color?: string): Promise<Tag> {
     const tagData: CreateTagRequest = {
       name,
       color,
-      user_id: userId,
     };
 
     const response = await fetch(API_BASE_URL, {
@@ -52,6 +45,7 @@ export class ClientTagService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Важно для передачи cookies с сессией
       body: JSON.stringify(tagData),
     });
     return handleApiResponse<Tag>(response);
@@ -59,7 +53,9 @@ export class ClientTagService {
 
   // Получить тег по ID
   static async getTagById(tagId: string): Promise<Tag> {
-    const response = await fetch(`${API_BASE_URL}/${tagId}`);
+    const response = await fetch(`${API_BASE_URL}/${tagId}`, {
+      credentials: 'include',
+    });
     return handleApiResponse<Tag>(response);
   }
 
@@ -73,6 +69,7 @@ export class ClientTagService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
     return handleApiResponse<Tag>(response);
@@ -82,6 +79,7 @@ export class ClientTagService {
   static async deleteTag(tagId: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/${tagId}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     await handleApiResponse<null>(response);
   }

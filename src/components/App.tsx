@@ -15,7 +15,6 @@ import { CardViewer } from './CardViewer';
 import { CardEditor } from './CardEditor';
 import type { Card as CardType, CardFormData, ViewMode } from '@/types';
 import { ClientCardService } from '@/services/cardService';
-import { migrateSampleData } from '@/utils/migrateData';
 
 interface AppProps {
   showNavigation?: boolean;
@@ -52,18 +51,29 @@ export function App({
 
       // Пытаемся загрузить карточки
       const fetchedCards = await ClientCardService.getCards();
+      console.log(`Загружено карточек: ${fetchedCards.length}`);
 
-      // Если карточек нет, запускаем миграцию
-      if (fetchedCards.length === 0) {
-        console.log('Карточки не найдены, запускаю миграцию данных...');
-        await migrateSampleData();
-        const migratedCards = await ClientCardService.getCards();
-        setCards(migratedCards);
-      } else {
-        setCards(fetchedCards);
-      }
+      // Просто устанавливаем карточки (пустой массив для новых пользователей)
+      setCards(fetchedCards);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки карточек');
+      console.error('Error loading cards:', err);
+      const errorMessage =
+        err instanceof Error ? err.message : 'Ошибка загрузки карточек';
+
+      // Если ошибка аутентификации - не показываем sample данные
+      if (
+        errorMessage.includes('Unauthorized') ||
+        errorMessage.includes('401')
+      ) {
+        setError(
+          'Ошибка аутентификации. Пожалуйста, войдите в систему заново.'
+        );
+        setCards([]); // Очищаем карточки
+        return;
+      }
+
+      setError(errorMessage);
+      setCards([]); // Очищаем карточки при любой ошибке
     } finally {
       setLoading(false);
     }

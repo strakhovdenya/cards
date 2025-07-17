@@ -31,7 +31,7 @@ import {
   LocalOffer,
   Palette,
 } from '@mui/icons-material';
-import { ClientTagService } from '@/services/cardService';
+import { ClientTagService } from '@/services/tagService';
 import type { Tag, CreateTagRequest, UpdateTagRequest } from '@/types';
 
 interface TagManagerProps {
@@ -212,7 +212,9 @@ export function TagManager({ open, onClose, onTagsUpdate }: TagManagerProps) {
             <Alert
               severity="error"
               sx={{ mb: 2 }}
-              onClose={() => { setError(null); }}
+              onClose={() => {
+                setError(null);
+              }}
             >
               {error}
             </Alert>

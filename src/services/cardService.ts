@@ -5,9 +5,6 @@ import type {
   UpdateCardRequest,
   ApiResponse,
   CardFormData,
-  Tag,
-  CreateTagRequest,
-  UpdateTagRequest,
 } from '@/types';
 
 // Базовый URL для API
@@ -30,13 +27,11 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
 // Клиентский сервис для работы с карточками
 export class ClientCardService {
-  // Получить все карточки (пока без фильтрации по пользователю)
-  static async getCards(userId?: string): Promise<Card[]> {
-    const url = userId
-      ? `${API_BASE_URL}?user_id=${encodeURIComponent(userId)}`
-      : API_BASE_URL;
-
-    const response = await fetch(url);
+  // Получить карточки текущего пользователя
+  static async getCards(): Promise<Card[]> {
+    const response = await fetch(API_BASE_URL, {
+      credentials: 'include', // Важно для передачи cookies с сессией
+    });
     return handleApiResponse<Card[]>(response);
   }
 
@@ -57,6 +52,7 @@ export class ClientCardService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(cardData),
     });
     return handleApiResponse<Card>(response);
@@ -79,6 +75,7 @@ export class ClientCardService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(bulkRequest),
     });
 
@@ -87,7 +84,9 @@ export class ClientCardService {
 
   // Получить карточку по ID
   static async getCardById(cardId: string): Promise<Card> {
-    const response = await fetch(`${API_BASE_URL}/${cardId}`);
+    const response = await fetch(`${API_BASE_URL}/${cardId}`, {
+      credentials: 'include',
+    });
     return handleApiResponse<Card>(response);
   }
 
@@ -101,6 +100,7 @@ export class ClientCardService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
     return handleApiResponse<Card>(response);
@@ -110,6 +110,7 @@ export class ClientCardService {
   static async deleteCard(cardId: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/${cardId}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
     await handleApiResponse<null>(response);
   }
@@ -139,63 +140,4 @@ export class ClientCardService {
   }
 }
 
-// Клиентский сервис для работы с тегами
-export class ClientTagService {
-  private static readonly API_BASE_URL = '/api/tags';
-
-  // Получить все теги пользователя
-  static async getTags(userId?: string): Promise<Tag[]> {
-    const url = userId
-      ? `${this.API_BASE_URL}?user_id=${encodeURIComponent(userId)}`
-      : this.API_BASE_URL;
-
-    const response = await fetch(url);
-    return handleApiResponse<Tag[]>(response);
-  }
-
-  // Создать новый тег
-  static async createTag(name: string, color?: string): Promise<Tag> {
-    const tagData: CreateTagRequest = {
-      name,
-      color: color ?? '#2196f3',
-    };
-
-    const response = await fetch(this.API_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(tagData),
-    });
-    return handleApiResponse<Tag>(response);
-  }
-
-  // Получить тег по ID
-  static async getTagById(tagId: string): Promise<Tag> {
-    const response = await fetch(`${this.API_BASE_URL}/${tagId}`);
-    return handleApiResponse<Tag>(response);
-  }
-
-  // Обновить тег
-  static async updateTag(
-    tagId: string,
-    updates: UpdateTagRequest
-  ): Promise<Tag> {
-    const response = await fetch(`${this.API_BASE_URL}/${tagId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
-    return handleApiResponse<Tag>(response);
-  }
-
-  // Удалить тег
-  static async deleteTag(tagId: string): Promise<void> {
-    const response = await fetch(`${this.API_BASE_URL}/${tagId}`, {
-      method: 'DELETE',
-    });
-    await handleApiResponse<null>(response);
-  }
-}
+// ClientTagService перенесен в отдельный файл src/services/tagService.ts

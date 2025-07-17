@@ -33,7 +33,6 @@ export interface CreateCardRequest {
   translation: string;
   tagIds?: string[]; // Массив ID тегов
   tags?: string[]; // Для обратной совместимости
-  user_id?: string; // Пока опциональный
 }
 
 export interface BulkCreateCardsRequest {
@@ -51,7 +50,6 @@ export interface UpdateCardRequest {
 export interface CreateTagRequest {
   name: string;
   color?: string; // Опциональный, есть значение по умолчанию
-  user_id?: string; // Пока опциональный
 }
 
 export interface UpdateTagRequest {
@@ -63,6 +61,37 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+// Интерфейсы для данных из базы данных (snake_case)
+export interface DatabaseCard {
+  id: string;
+  german_word: string;
+  translation: string;
+  user_id: string;
+  learned: boolean;
+  created_at: string;
+  updated_at: string;
+  tags?: DatabaseCardTag[];
+}
+
+export interface DatabaseTag {
+  id: string;
+  name: string;
+  color: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DatabaseCardTag {
+  tag: DatabaseTag;
+}
+
+// Интерфейс для ошибок Supabase
+export interface SupabaseError {
+  message: string;
+  code?: string;
 }
 
 export interface CardViewerState {

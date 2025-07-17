@@ -223,7 +223,7 @@ export class CardService {
     const dbCard = toDatabaseCard({
       germanWord: cardData.germanWord,
       translation: cardData.translation,
-      user_id: cardData.user_id ?? '00000000-0000-0000-0000-000000000000', // Временный default user_id
+      user_id: '00000000-0000-0000-0000-000000000000', // Заглушка для старого кода
       learned: false,
     });
 
@@ -451,7 +451,7 @@ export class TagService {
     const dbTag = toDatabaseTag({
       name: tagData.name,
       color: tagData.color ?? '#2196f3',
-      user_id: tagData.user_id ?? '00000000-0000-0000-0000-000000000000',
+      user_id: '00000000-0000-0000-0000-000000000000', // Заглушка для старого кода
     });
 
     const {

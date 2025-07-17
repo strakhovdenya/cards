@@ -40,7 +40,8 @@ import type { Card as CardType, CardFormData, Tag } from '@/types';
 import { BulkImport } from './BulkImport';
 import { TagManager } from './TagManager';
 import { TagFilter } from './TagFilter';
-import { ClientCardService, ClientTagService } from '@/services/cardService';
+import { ClientCardService } from '@/services/cardService';
+import { ClientTagService } from '@/services/tagService';
 
 interface CardEditorProps {
   cards: CardType[];

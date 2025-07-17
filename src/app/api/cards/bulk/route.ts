@@ -1,96 +1,143 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { CardService } from '@/lib/supabase';
-import type { BulkCreateCardsRequest, ApiResponse, Card } from '@/types';
+import { getAuthenticatedUser } from '@/lib/auth-server';
+import type {
+  BulkCreateCardsRequest,
+  ApiResponse,
+  Card,
+  DatabaseCard,
+  SupabaseError,
+} from '@/types';
 
 // POST /api/cards/bulk - массовое создание карточек
 export async function POST(request: NextRequest) {
   try {
+    const { supabase } = await getAuthenticatedUser();
     const body = (await request.json()) as BulkCreateCardsRequest;
 
-    // Валидация запроса
     if (!body.cards || !Array.isArray(body.cards) || body.cards.length === 0) {
       return NextResponse.json<ApiResponse<null>>(
-        {
-          error: 'cards array is required and must not be empty',
-        },
+        { error: 'Cards array is required and cannot be empty' },
         { status: 400 }
       );
     }
 
-    // Валидация каждой карточки
-    for (let i = 0; i < body.cards.length; i++) {
-      const card = body.cards[i];
+    // Валидируем каждую карточку
+    for (const [index, card] of body.cards.entries()) {
       if (!card.germanWord || !card.translation) {
         return NextResponse.json<ApiResponse<null>>(
           {
-            error: `Card at index ${i}: germanWord and translation are required`,
+            error: `Card at index ${index}: germanWord and translation are required`,
           },
           { status: 400 }
         );
       }
     }
 
-    // Лимит на количество карточек за раз (для предотвращения злоупотреблений)
-    const MAX_BULK_SIZE = 100;
-    if (body.cards.length > MAX_BULK_SIZE) {
-      return NextResponse.json<ApiResponse<null>>(
-        {
-          error: `Cannot create more than ${MAX_BULK_SIZE} cards at once`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Создаем карточки последовательно (можно оптимизировать через batch insert)
     const createdCards: Card[] = [];
-    const errors: string[] = [];
 
-    for (let i = 0; i < body.cards.length; i++) {
-      try {
-        const card = await CardService.createCard(body.cards[i]);
-        createdCards.push(card);
-      } catch (error) {
-        console.error(`Error creating card at index ${i}:`, error);
-        errors.push(
-          `Card ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
+    // Создаем карточки по одной (можно оптимизировать позже)
+    for (const cardData of body.cards) {
+      // Создаем карточку
+      const { data: card, error } = (await supabase
+        .from('cards')
+        .insert([
+          {
+            german_word: cardData.germanWord,
+            translation: cardData.translation,
+          },
+        ])
+        .select()
+        .single()) as {
+        data: DatabaseCard | null;
+        error: SupabaseError | null;
+      };
+
+      if (error) {
+        console.error('Error creating card:', error);
+        continue; // Пропускаем ошибочные карточки
       }
+
+      // Добавляем теги если указаны
+      if (cardData.tagIds && cardData.tagIds.length > 0) {
+        const cardTagInserts = cardData.tagIds.map((tagId) => ({
+          card_id: card!.id,
+          tag_id: tagId,
+        }));
+
+        const { error: tagError } = await supabase
+          .from('card_tags')
+          .insert(cardTagInserts);
+
+        if (tagError) {
+          console.error('Error adding tags to card:', tagError);
+        }
+      }
+
+      // Получаем полную карточку с тегами
+      const { data: fullCard, error: fetchError } = (await supabase
+        .from('cards')
+        .select(
+          `
+          *,
+          tags:card_tags(
+            tag:tags(*)
+          )
+        `
+        )
+        .eq('id', card!.id)
+        .single()) as {
+        data: DatabaseCard | null;
+        error: SupabaseError | null;
+      };
+
+      if (fetchError) {
+        console.error('Error fetching full card:', fetchError);
+        continue;
+      }
+
+      // Форматируем результат (snake_case -> camelCase)
+      const formattedCard: Card = {
+        id: fullCard!.id,
+        germanWord: fullCard!.german_word,
+        translation: fullCard!.translation,
+        user_id: fullCard!.user_id,
+        learned: fullCard!.learned,
+        createdAt: new Date(fullCard!.created_at),
+        updatedAt: new Date(fullCard!.updated_at),
+        tags:
+          fullCard!.tags?.map((ct) => ({
+            id: ct.tag.id,
+            name: ct.tag.name,
+            color: ct.tag.color,
+            user_id: ct.tag.user_id,
+            createdAt: new Date(ct.tag.created_at),
+            updatedAt: new Date(ct.tag.updated_at),
+          })) ?? [],
+      };
+
+      createdCards.push(formattedCard);
     }
 
-    // Если есть ошибки, но созданы некоторые карточки
-    if (errors.length > 0 && createdCards.length > 0) {
-      return NextResponse.json<ApiResponse<Card[]>>(
-        {
-          data: createdCards,
-          error: `Partially successful. Errors: ${errors.join('; ')}`,
-          message: `Created ${createdCards.length} of ${body.cards.length} cards`,
-        },
-        { status: 207 } // Multi-Status
-      );
-    }
-
-    // Если все карточки созданы успешно
-    if (errors.length === 0) {
-      return NextResponse.json<ApiResponse<Card[]>>({
-        data: createdCards,
-        message: `Successfully created ${createdCards.length} cards`,
-      });
-    }
-
-    // Если все карточки не удалось создать
-    return NextResponse.json<ApiResponse<null>>(
+    return NextResponse.json<ApiResponse<Card[]>>(
       {
-        error: `Failed to create cards. Errors: ${errors.join('; ')}`,
+        data: createdCards,
+        message: `Successfully created ${createdCards.length} out of ${body.cards.length} cards`,
       },
-      { status: 500 }
+      { status: 201 }
     );
   } catch (error) {
     console.error('Error in bulk card creation:', error);
+
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json<ApiResponse<null>>(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json<ApiResponse<null>>(
-      {
-        error: 'Internal server error',
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
