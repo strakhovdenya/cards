@@ -9,14 +9,16 @@ import type {
   SupabaseError,
 } from '@/types';
 
+// Тип для параметров динамического route
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // GET /api/tags/[id] - получить тег по ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    const { id } = params;
+    const { id } = await params;
 
     const { data: tag, error } = (await supabase
       .from('tags')
@@ -66,13 +68,10 @@ export async function GET(
 }
 
 // PUT /api/tags/[id] - обновить тег
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    const { id } = params;
+    const { id } = await params;
     const body = (await request.json()) as UpdateTagRequest;
 
     // Валидация
@@ -153,13 +152,10 @@ export async function PUT(
 }
 
 // DELETE /api/tags/[id] - удалить тег
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    const { id } = params;
+    const { id } = await params;
 
     // Удаляем тег (связи с карточками удалятся каскадно)
     const { error } = await supabase

@@ -12,7 +12,7 @@ import type {
 // POST /api/cards/bulk - массовое создание карточек
 export async function POST(request: NextRequest) {
   try {
-    const { supabase } = await getAuthenticatedUser();
+    const { user, supabase } = await getAuthenticatedUser();
     const body = (await request.json()) as BulkCreateCardsRequest;
 
     if (!body.cards || !Array.isArray(body.cards) || body.cards.length === 0) {
@@ -58,11 +58,33 @@ export async function POST(request: NextRequest) {
         continue; // Пропускаем ошибочные карточки
       }
 
-      // Добавляем теги если указаны
+      // Добавляем теги если указаны - ИСПРАВЛЕНО: безопасные операции с user_id
       if (cardData.tagIds && cardData.tagIds.length > 0) {
+        // Проверяем что все теги принадлежат пользователю
+        const { data: userTags, error: tagCheckError } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('user_id', user.id)
+          .in('id', cardData.tagIds);
+
+        if (tagCheckError) {
+          console.error('Error checking tags ownership:', tagCheckError);
+          continue; // Пропускаем эту карточку
+        }
+
+        // Проверяем что все запрашиваемые теги принадлежат пользователю
+        if (!userTags || userTags.length !== cardData.tagIds.length) {
+          console.error(
+            'Some tags do not belong to the user for card:',
+            cardData
+          );
+          continue; // Пропускаем эту карточку
+        }
+
         const cardTagInserts = cardData.tagIds.map((tagId) => ({
           card_id: card!.id,
           tag_id: tagId,
+          user_id: user.id, // Явно указываем user_id для безопасности
         }));
 
         const { error: tagError } = await supabase

@@ -78,7 +78,7 @@ export async function GET() {
 // POST /api/cards - создать новую карточку
 export async function POST(request: NextRequest) {
   try {
-    const { supabase } = await getAuthenticatedUser();
+    const { user, supabase } = await getAuthenticatedUser();
     const body = (await request.json()) as CreateCardRequest;
 
     // Валидация
@@ -107,11 +107,29 @@ export async function POST(request: NextRequest) {
       throw new Error(error.message);
     }
 
-    // Добавляем теги если указаны
+    // Добавляем теги если указаны - ИСПРАВЛЕНО: добавляем user_id для безопасности
     if (body.tagIds && body.tagIds.length > 0) {
+      // Сначала проверяем что все теги принадлежат пользователю
+      const { data: userTags, error: tagCheckError } = await supabase
+        .from('tags')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('id', body.tagIds);
+
+      if (tagCheckError) {
+        throw new Error(tagCheckError.message);
+      }
+
+      // Проверяем что все запрашиваемые теги принадлежат пользователю
+      if (!userTags || userTags.length !== body.tagIds.length) {
+        throw new Error('Some tags do not belong to the user');
+      }
+
+      // Создаем связи с явным указанием user_id (триггер тоже его проставит, но для надежности)
       const cardTagInserts = body.tagIds.map((tagId) => ({
         card_id: card!.id,
         tag_id: tagId,
+        user_id: user.id, // Явно указываем user_id для безопасности
       }));
 
       const { error: tagError } = await supabase

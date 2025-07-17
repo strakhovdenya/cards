@@ -10,14 +10,16 @@ import type {
   SupabaseError,
 } from '@/types';
 
+// Тип для параметров динамического route
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // GET /api/cards/[id] - получить карточку по ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    const { id } = params;
+    const { id } = await params;
 
     const { data: card, error } = (await supabase
       .from('cards')
@@ -85,13 +87,10 @@ export async function GET(
 }
 
 // PUT /api/cards/[id] - обновить карточку
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    const { id } = params;
+    const { id } = await params;
     const body = (await request.json()) as UpdateCardRequest;
 
     // Обновляем основные данные карточки
@@ -119,16 +118,38 @@ export async function PUT(
       throw new Error(error.message);
     }
 
-    // Обновляем теги если указаны
+    // Обновляем теги если указаны - ИСПРАВЛЕНО: безопасные операции с user_id
     if (body.tagIds !== undefined) {
-      // Удаляем старые связи
-      await supabase.from('card_tags').delete().eq('card_id', id);
+      // БЕЗОПАСНО: Удаляем только связи текущего пользователя
+      await supabase
+        .from('card_tags')
+        .delete()
+        .eq('card_id', id)
+        .eq('user_id', user.id);
 
       // Добавляем новые связи
       if (body.tagIds.length > 0) {
+        // Проверяем что все теги принадлежат пользователю
+        const { data: userTags, error: tagCheckError } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('user_id', user.id)
+          .in('id', body.tagIds);
+
+        if (tagCheckError) {
+          throw new Error(tagCheckError.message);
+        }
+
+        // Проверяем что все запрашиваемые теги принадлежат пользователю
+        if (!userTags || userTags.length !== body.tagIds.length) {
+          throw new Error('Some tags do not belong to the user');
+        }
+
+        // Создаем связи с явным указанием user_id
         const cardTagInserts = body.tagIds.map((tagId) => ({
           card_id: id,
           tag_id: tagId,
+          user_id: user.id, // Явно указываем user_id для безопасности
         }));
 
         const { error: tagError } = await supabase
@@ -201,13 +222,10 @@ export async function PUT(
 }
 
 // DELETE /api/cards/[id] - удалить карточку
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    const { id } = params;
+    const { id } = await params;
 
     const { error } = await supabase
       .from('cards')
