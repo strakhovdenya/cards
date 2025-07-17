@@ -79,8 +79,48 @@ export interface CardEditorState {
 }
 
 export type ViewMode = 'viewer' | 'editor';
-
 export interface AppState {
   cards: Card[];
   viewMode: ViewMode;
+}
+
+// Типы для Supabase данных
+export interface Invite {
+  id: string;
+  email: string | null;
+  invite_code: string;
+  invited_by: string;
+  used: boolean;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'admin' | 'user';
+  created_at: string;
+  updated_at: string;
+}
+
+// Типы для Supabase ошибок
+export interface SupabaseError {
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+}
+
+// Типы для результатов Supabase запросов
+export interface SupabaseResponse<T> {
+  data: T | null;
+  error: SupabaseError | null;
+}
+
+export interface SupabaseListResponse<T> {
+  data: T[] | null;
+  error: SupabaseError | null;
 }

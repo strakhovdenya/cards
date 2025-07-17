@@ -1,5 +1,5 @@
-import ClientApp from '@/components/ClientApp';
+import { AuthenticatedApp } from '@/components/AuthenticatedApp';
 
 export default function Home() {
-  return <ClientApp />;
+  return <AuthenticatedApp />;
 }

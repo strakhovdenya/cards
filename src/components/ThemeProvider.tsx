@@ -1,8 +1,11 @@
 'use client';
 
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import { createTheme } from '@mui/material/styles';
 
-export const theme = createTheme({
+const theme = createTheme({
   palette: {
     primary: {
       main: '#1976d2',
@@ -49,7 +52,7 @@ export const theme = createTheme({
           borderRadius: 8,
           textTransform: 'none',
           fontWeight: 500,
-          minHeight: 48, // Больше высота для мобильного
+          minHeight: 48,
           '@media (max-width:600px)': {
             minHeight: 44,
           },
@@ -72,7 +75,7 @@ export const theme = createTheme({
         root: {
           '& .MuiOutlinedInput-root': {
             borderRadius: 8,
-            minHeight: 48, // Больше высота для мобильного
+            minHeight: 48,
             '@media (max-width:600px)': {
               minHeight: 44,
             },
@@ -98,3 +101,18 @@ export const theme = createTheme({
     },
   },
 });
+
+interface CustomThemeProviderProps {
+  children: React.ReactNode;
+}
+
+export function CustomThemeProvider({ children }: CustomThemeProviderProps) {
+  return (
+    <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </AppRouterCacheProvider>
+  );
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ThemeProvider } from '../app/providers/ThemeProvider';
+import { CustomThemeProvider } from './ThemeProvider';
 import { App } from './App';
 
 function ClientApp() {
@@ -16,9 +16,9 @@ function ClientApp() {
   }
 
   return (
-    <ThemeProvider>
+    <CustomThemeProvider>
       <App />
-    </ThemeProvider>
+    </CustomThemeProvider>
   );
 }
 

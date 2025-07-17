@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { CustomThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'German Word Cards',
@@ -21,7 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body>
+        <CustomThemeProvider>{children}</CustomThemeProvider>
+      </body>
     </html>
   );
 }

@@ -2,9 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import {
-  AppBar,
-  Toolbar,
-  Typography,
   Box,
   Container,
   BottomNavigation,
@@ -20,9 +17,21 @@ import type { Card as CardType, CardFormData, ViewMode } from '@/types';
 import { ClientCardService } from '@/services/cardService';
 import { migrateSampleData } from '@/utils/migrateData';
 
-export function App() {
+interface AppProps {
+  showNavigation?: boolean;
+  onCardsCountChange?: (count: number) => void;
+  initialViewMode?: 'viewer' | 'editor';
+  onViewModeChange?: (mode: 'viewer' | 'editor') => void;
+}
+
+export function App({
+  showNavigation = true,
+  onCardsCountChange,
+  initialViewMode = 'viewer',
+  onViewModeChange,
+}: AppProps) {
   const [cards, setCards] = useState<CardType[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('viewer');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +39,11 @@ export function App() {
   useEffect(() => {
     void loadCards();
   }, []);
+
+  // Уведомляем о изменении количества карточек
+  useEffect(() => {
+    onCardsCountChange?.(cards.length);
+  }, [cards.length, onCardsCountChange]);
 
   const loadCards = async () => {
     try {
@@ -99,6 +113,7 @@ export function App() {
 
   const handleViewModeChange = (newMode: ViewMode) => {
     setViewMode(newMode);
+    onViewModeChange?.(newMode);
   };
 
   return (
@@ -110,20 +125,8 @@ export function App() {
         bgcolor: 'background.default',
       }}
     >
-      {/* Заголовок */}
-      <AppBar position="static" elevation={0}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            German Word Cards
-          </Typography>
-          <Typography variant="body2" color="inherit">
-            {cards.length} карточек
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
       {/* Основной контент */}
-      <Box sx={{ flexGrow: 1, pb: 7 }}>
+      <Box sx={{ flexGrow: 1, pb: showNavigation ? 8 : 0 }}>
         <Container maxWidth="lg" sx={{ py: 2 }}>
           {error && (
             <Alert
@@ -172,41 +175,43 @@ export function App() {
         </Container>
       </Box>
 
-      {/* Нижняя навигация */}
-      <Paper
-        sx={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-        }}
-        elevation={3}
-      >
-        <BottomNavigation
-          value={viewMode}
-          onChange={(event, newValue) => {
-            handleViewModeChange(newValue as ViewMode);
-          }}
+      {/* Нижняя навигация для режимов карточек */}
+      {showNavigation && (
+        <Paper
           sx={{
-            '& .MuiBottomNavigationAction-root': {
-              minWidth: 'auto',
-              px: 3,
-            },
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
           }}
+          elevation={3}
         >
-          <BottomNavigationAction
-            label="Изучение"
-            value="viewer"
-            icon={<School />}
-          />
-          <BottomNavigationAction
-            label="Редактор"
-            value="editor"
-            icon={<Edit />}
-          />
-        </BottomNavigation>
-      </Paper>
+          <BottomNavigation
+            value={viewMode}
+            onChange={(event, newValue) => {
+              handleViewModeChange(newValue as ViewMode);
+            }}
+            sx={{
+              '& .MuiBottomNavigationAction-root': {
+                minWidth: 'auto',
+                px: 3,
+              },
+            }}
+          >
+            <BottomNavigationAction
+              label="Изучение"
+              value="viewer"
+              icon={<School />}
+            />
+            <BottomNavigationAction
+              label="Редактор"
+              value="editor"
+              icon={<Edit />}
+            />
+          </BottomNavigation>
+        </Paper>
+      )}
     </Box>
   );
 }
