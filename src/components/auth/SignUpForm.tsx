@@ -37,6 +37,13 @@ export function SignUpForm({ initialInviteCode }: SignUpFormProps) {
   const [inviteValid, setInviteValid] = useState<boolean | null>(null);
   const router = useRouter();
 
+  // Обновляем код приглашения при изменении initialInviteCode
+  useEffect(() => {
+    if (initialInviteCode && initialInviteCode !== formData.inviteCode) {
+      setFormData((prev) => ({ ...prev, inviteCode: initialInviteCode }));
+    }
+  }, [initialInviteCode, formData.inviteCode]);
+
   // Проверяем инвайт-код при изменении
   useEffect(() => {
     const checkInviteCode = async () => {
