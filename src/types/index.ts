@@ -153,3 +153,71 @@ export interface SupabaseListResponse<T> {
   data: T[] | null;
   error: SupabaseError | null;
 }
+
+// Новые типы для глаголов
+export interface VerbConjugation {
+  person: string;
+  form: string;
+  translation: string;
+}
+
+export interface Verb {
+  id: string;
+  infinitive: string; // Инфинитив глагола (например, "arbeiten")
+  translation: string; // Перевод инфинитива
+  conjugations: VerbConjugation[]; // Спряжения по лицам
+  user_id: string;
+  learned: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface VerbFormData {
+  infinitive: string;
+  translation: string;
+  conjugations: VerbConjugation[];
+}
+
+export interface CreateVerbRequest {
+  infinitive: string;
+  translation: string;
+  conjugations: VerbConjugation[];
+}
+
+export interface UpdateVerbRequest {
+  infinitive?: string;
+  translation?: string;
+  conjugations?: VerbConjugation[];
+  learned?: boolean;
+}
+
+// Типы для базы данных глаголов (snake_case)
+export interface DatabaseVerb {
+  id: string;
+  infinitive: string;
+  translation: string;
+  conjugations: VerbConjugation[];
+  user_id: string;
+  learned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Типы для тренировки глаголов
+export interface VerbTrainingState {
+  currentVerb: Verb | null;
+  currentPerson: string | null;
+  isFormVisible: boolean;
+  verbs: Verb[];
+  viewedVerbs: Set<string>;
+}
+
+export interface VerbTableState {
+  verbs: Verb[];
+  selectedVerb: Verb | null;
+  isModalOpen: boolean;
+}
+
+export interface VerbAppState {
+  verbs: Verb[];
+}
