@@ -73,11 +73,11 @@ export function TagManager({ open, onClose, onTagsUpdate }: TagManagerProps) {
   }>({});
 
   // Загрузка тегов
-  const loadTags = async () => {
+  const loadTags = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedTags = await ClientTagService.getTags();
+      const fetchedTags = await ClientTagService.getTags(forceRefresh);
       setTags(fetchedTags);
     } catch (err) {
       console.error('Error loading tags:', err);
@@ -142,26 +142,18 @@ export function TagManager({ open, onClose, onTagsUpdate }: TagManagerProps) {
           name: tagForm.name.trim(),
           color: tagForm.color,
         };
-        const updatedTag = await ClientTagService.updateTag(
-          editingTag.id,
-          updateData
-        );
-        setTags((prev) =>
-          prev.map((tag) => (tag.id === editingTag.id ? updatedTag : tag))
-        );
+        await ClientTagService.updateTag(editingTag.id, updateData);
       } else {
         // Создание нового тега
         const createData: CreateTagRequest = {
           name: tagForm.name.trim(),
           color: tagForm.color,
         };
-        const newTag = await ClientTagService.createTag(
-          createData.name,
-          createData.color
-        );
-        setTags((prev) => [...prev, newTag]);
+        await ClientTagService.createTag(createData.name, createData.color);
       }
 
+      // Обновляем список тегов из кеша
+      await loadTags(true);
       handleCloseTagDialog();
       if (onTagsUpdate) {
         onTagsUpdate();
@@ -187,7 +179,8 @@ export function TagManager({ open, onClose, onTagsUpdate }: TagManagerProps) {
 
     try {
       await ClientTagService.deleteTag(tagId);
-      setTags((prev) => prev.filter((tag) => tag.id !== tagId));
+      // Обновляем список тегов из кеша
+      await loadTags(true);
       if (onTagsUpdate) {
         onTagsUpdate();
       }

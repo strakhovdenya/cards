@@ -195,40 +195,38 @@ export function AuthenticatedApp() {
     setIsEditDialogOpen(true);
   };
 
-  const handleStudyModeSelect = async (mode: 'cards' | 'verbs') => {
+  const handleStudyModeSelect = (mode: 'cards' | 'verbs') => {
     setStudyMode(mode);
     setIsStudyDialogOpen(false);
 
     if (mode === 'cards') {
       setViewMode('viewer');
-      // Обновляем теги при переключении на карточки
-      await loadTags();
     } else if (mode === 'verbs') {
       setIsVerbModeDialogOpen(true);
     }
   };
 
-  const handleEditModeSelect = async (mode: 'cards' | 'verbs') => {
+  const handleEditModeSelect = (mode: 'cards' | 'verbs') => {
     setMainViewMode('edit');
     setIsEditDialogOpen(false);
 
     if (mode === 'cards') {
       setViewMode('editor');
-      await loadCards();
+      void loadCards();
     } else if (mode === 'verbs') {
       setViewMode('verbs');
-      await loadVerbs();
+      void loadVerbs();
     }
   };
 
-  const handleVerbModeSelect = async (mode: 'view' | 'training') => {
+  const handleVerbModeSelect = (mode: 'view' | 'training') => {
     setVerbMode(mode);
     setMainViewMode('study');
     setStudyMode('verbs');
     setIsVerbModeDialogOpen(false);
 
     if (mode === 'view') {
-      await loadVerbs();
+      void loadVerbs();
     }
   };
 
@@ -236,8 +234,6 @@ export function AuthenticatedApp() {
     try {
       const fetchedVerbs = await getVerbs();
       setVerbs(fetchedVerbs);
-      // Обновляем теги после загрузки глаголов
-      await loadTags();
     } catch (error) {
       console.error('Error loading verbs:', error);
       setError('Ошибка загрузки глаголов');
@@ -248,8 +244,6 @@ export function AuthenticatedApp() {
     try {
       const fetchedCards = await ClientCardService.getCards();
       setCards(fetchedCards);
-      // Обновляем теги после загрузки карточек
-      await loadTags();
     } catch (error) {
       console.error('Error loading cards:', error);
       setError('Ошибка загрузки карточек');
@@ -258,9 +252,9 @@ export function AuthenticatedApp() {
     }
   };
 
-  const loadTags = async () => {
+  const loadTags = async (forceRefresh = false) => {
     try {
-      const tags = await ClientTagService.getTags();
+      const tags = await ClientTagService.getTags(forceRefresh);
       setAvailableTags(tags);
     } catch (error) {
       console.error('Error loading tags:', error);
@@ -275,8 +269,10 @@ export function AuthenticatedApp() {
         cardData.tagIds
       );
       setCards((prev) => [newCard, ...prev]);
-      // Обновляем теги после создания карточки (на случай если создавались новые теги)
-      await loadTags();
+      // Обновляем теги только если создавались новые теги
+      if (cardData.tagIds && cardData.tagIds.length > 0) {
+        await loadTags(true);
+      }
     } catch (error) {
       console.error('Error adding card:', error);
       setError('Ошибка добавления карточки');
@@ -293,8 +289,10 @@ export function AuthenticatedApp() {
       setCards((prev) =>
         prev.map((card) => (card.id === id ? updatedCard : card))
       );
-      // Обновляем теги после обновления карточки (на случай если создавались новые теги)
-      await loadTags();
+      // Обновляем теги только если создавались новые теги
+      if (cardData.tagIds && cardData.tagIds.length > 0) {
+        await loadTags(true);
+      }
     } catch (error) {
       console.error('Error updating card:', error);
       setError('Ошибка обновления карточки');
@@ -305,8 +303,6 @@ export function AuthenticatedApp() {
     try {
       await ClientCardService.deleteCard(id);
       setCards((prev) => prev.filter((card) => card.id !== id));
-      // Обновляем теги после удаления карточки
-      await loadTags();
     } catch (error) {
       console.error('Error deleting card:', error);
       setError('Ошибка удаления карточки');
@@ -390,8 +386,6 @@ export function AuthenticatedApp() {
         const newVerb = await createVerb(verbFormData);
         setVerbs((prev) => [newVerb, ...prev]);
       }
-      // Обновляем теги после создания/обновления глагола
-      await loadTags();
       setIsVerbEditDialogOpen(false);
     } catch (error) {
       console.error('Error saving verb:', error);
@@ -405,8 +399,6 @@ export function AuthenticatedApp() {
     try {
       await deleteVerb(id);
       setVerbs((prev) => prev.filter((v) => v.id !== id));
-      // Обновляем теги после удаления глагола
-      await loadTags();
     } catch (error) {
       console.error('Error deleting verb:', error);
       setError('Ошибка удаления глагола');
@@ -420,8 +412,6 @@ export function AuthenticatedApp() {
         verbs.map((verb) => createVerb(verb))
       );
       setVerbs((prev) => [...importedVerbs, ...prev]);
-      // Обновляем теги после импорта глаголов
-      await loadTags();
       setIsBulkVerbImportOpen(false);
     } catch (error) {
       console.error('Error importing verbs:', error);
@@ -474,10 +464,8 @@ export function AuthenticatedApp() {
           {viewMode === 'invites' && (
             <IconButton
               color="inherit"
-              onClick={async () => {
+              onClick={() => {
                 setViewMode('viewer');
-                // Обновляем теги при возврате к просмотру
-                await loadTags();
               }}
               sx={{ mr: 2 }}
             >
@@ -611,8 +599,8 @@ export function AuthenticatedApp() {
           <List>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
-                  await handleStudyModeSelect('cards');
+                onClick={() => {
+                  handleStudyModeSelect('cards');
                 }}
               >
                 <ListItemIcon>
@@ -626,8 +614,8 @@ export function AuthenticatedApp() {
             </ListItem>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
-                  await handleStudyModeSelect('verbs');
+                onClick={() => {
+                  handleStudyModeSelect('verbs');
                 }}
               >
                 <ListItemIcon>
@@ -659,8 +647,8 @@ export function AuthenticatedApp() {
           <List>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
-                  await handleEditModeSelect('cards');
+                onClick={() => {
+                  handleEditModeSelect('cards');
                 }}
               >
                 <ListItemIcon>
@@ -674,8 +662,8 @@ export function AuthenticatedApp() {
             </ListItem>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
-                  await handleEditModeSelect('verbs');
+                onClick={() => {
+                  handleEditModeSelect('verbs');
                 }}
               >
                 <ListItemIcon>
@@ -689,9 +677,7 @@ export function AuthenticatedApp() {
             </ListItem>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
-                  // Обновляем теги перед открытием менеджера
-                  await loadTags();
+                onClick={() => {
                   setIsTagManagerOpen(true);
                 }}
               >
@@ -739,8 +725,8 @@ export function AuthenticatedApp() {
           <List>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
-                  await handleVerbModeSelect('view');
+                onClick={() => {
+                  handleVerbModeSelect('view');
                 }}
               >
                 <ListItemIcon>
@@ -754,8 +740,8 @@ export function AuthenticatedApp() {
             </ListItem>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
-                  await handleVerbModeSelect('training');
+                onClick={() => {
+                  handleVerbModeSelect('training');
                 }}
               >
                 <ListItemIcon>
@@ -875,10 +861,8 @@ export function AuthenticatedApp() {
           <List>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
+                onClick={() => {
                   setIsImportMenuOpen(false);
-                  // Обновляем теги перед открытием импорта
-                  await loadTags();
                   setIsBulkImportOpen(true);
                 }}
               >
@@ -893,10 +877,8 @@ export function AuthenticatedApp() {
             </ListItem>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={async () => {
+                onClick={() => {
                   setIsImportMenuOpen(false);
-                  // Обновляем теги перед открытием импорта глаголов
-                  await loadTags();
                   setIsBulkVerbImportOpen(true);
                 }}
               >
@@ -916,24 +898,20 @@ export function AuthenticatedApp() {
       {/* Диалог управления тегами */}
       <TagManager
         open={isTagManagerOpen}
-        onClose={async () => {
+        onClose={() => {
           setIsTagManagerOpen(false);
-          // Обновляем теги после закрытия менеджера
-          await loadTags();
         }}
         onTagsUpdate={async () => {
           // Обновляем теги при изменении в менеджере
-          await loadTags();
+          await loadTags(true);
         }}
       />
 
       {/* Диалог массового импорта карточек */}
       <BulkImport
         open={isBulkImportOpen}
-        onClose={async () => {
+        onClose={() => {
           setIsBulkImportOpen(false);
-          // Обновляем теги после закрытия импорта
-          await loadTags();
         }}
         onImport={async (cards) => {
           try {
@@ -941,8 +919,13 @@ export function AuthenticatedApp() {
             const importedCards =
               await ClientCardService.createBulkCards(cards);
             setCards((prev) => [...importedCards, ...prev]);
-            // Обновляем список тегов после импорта
-            await loadTags();
+            // Обновляем теги только если импортировались карточки с тегами
+            const hasTags = cards.some(
+              (card) => card.tagIds && card.tagIds.length > 0
+            );
+            if (hasTags) {
+              await loadTags(true);
+            }
             setIsBulkImportOpen(false);
           } catch (error) {
             console.error('Error importing cards:', error);
@@ -955,10 +938,8 @@ export function AuthenticatedApp() {
       {/* Диалог массового импорта глаголов */}
       <BulkVerbImport
         open={isBulkVerbImportOpen}
-        onClose={async () => {
+        onClose={() => {
           setIsBulkVerbImportOpen(false);
-          // Обновляем теги после закрытия импорта глаголов
-          await loadTags();
         }}
         onImport={async (verbs) => {
           await handleBulkVerbImport(verbs);

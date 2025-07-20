@@ -71,9 +71,9 @@ export function CardEditor({
     void loadTags();
   }, []);
 
-  const loadTags = async () => {
+  const loadTags = async (forceRefresh = false) => {
     try {
-      const tags = await ClientTagService.getTags();
+      const tags = await ClientTagService.getTags(forceRefresh);
       setAvailableTags(tags);
     } catch (error) {
       console.error('Ошибка загрузки тегов:', error);
