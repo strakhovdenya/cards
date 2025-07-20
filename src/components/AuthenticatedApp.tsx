@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -30,7 +31,20 @@ import {
   Button,
   DialogActions,
 } from '@mui/material';
-import { PersonAdd, ExitToApp, ArrowBack, School, Style, Translate, Edit, School as SchoolIcon, KeyboardArrowDown, KeyboardArrowRight, LocalOffer, Upload } from '@mui/icons-material';
+import {
+  PersonAdd,
+  ExitToApp,
+  ArrowBack,
+  School,
+  Style,
+  Translate,
+  Edit,
+  School as SchoolIcon,
+  KeyboardArrowDown,
+  KeyboardArrowRight,
+  LocalOffer,
+  Upload,
+} from '@mui/icons-material';
 import { App } from './App';
 import { InviteManager } from './auth/InviteManager';
 import { VerbTraining } from './VerbTraining';
@@ -38,15 +52,31 @@ import { VerbManager } from './VerbManager';
 import { DevelopmentWarning } from './DevelopmentWarning';
 import { TagManager } from './TagManager';
 import { BulkImport } from './BulkImport';
+import { BulkVerbImport } from './BulkVerbImport';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { VerbViewer } from './VerbViewer';
 import type { Verb } from '@/types';
-import { getVerbs, createVerb, updateVerb, deleteVerb } from '@/services/verbService';
+import {
+  getVerbs,
+  createVerb,
+  updateVerb,
+  deleteVerb,
+} from '@/services/verbService';
 import { CardEditor } from './CardEditor';
 import type { Card } from '@/types';
 import { ClientCardService } from '@/services/cardService';
 import type { CardFormData } from '@/types';
+
+interface CreateVerbData {
+  infinitive: string;
+  translation: string;
+  conjugations: Array<{
+    person: string;
+    form: string;
+    translation: string;
+  }>;
+}
 
 type ViewMode = 'viewer' | 'editor' | 'invites' | 'verbs';
 type MainViewMode = 'study' | 'edit';
@@ -71,6 +101,7 @@ export function AuthenticatedApp() {
   const [isVerbEditDialogOpen, setIsVerbEditDialogOpen] = useState(false);
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isBulkVerbImportOpen, setIsBulkVerbImportOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
   const [editingVerb, setEditingVerb] = useState<Verb | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
@@ -159,7 +190,7 @@ export function AuthenticatedApp() {
   const handleStudyModeSelect = (mode: 'cards' | 'verbs') => {
     setStudyMode(mode);
     setIsStudyDialogOpen(false);
-    
+
     if (mode === 'cards') {
       setViewMode('viewer');
     } else if (mode === 'verbs') {
@@ -170,13 +201,13 @@ export function AuthenticatedApp() {
   const handleEditModeSelect = (mode: 'cards' | 'verbs') => {
     setMainViewMode('edit');
     setIsEditDialogOpen(false);
-    
+
     if (mode === 'cards') {
       setViewMode('editor');
-      loadCards();
+      void loadCards();
     } else if (mode === 'verbs') {
       setViewMode('verbs');
-      loadVerbs();
+      void loadVerbs();
     }
   };
 
@@ -185,9 +216,9 @@ export function AuthenticatedApp() {
     setMainViewMode('study');
     setStudyMode('verbs');
     setIsVerbModeDialogOpen(false);
-    
+
     if (mode === 'view') {
-      loadVerbs();
+      void loadVerbs();
     }
   };
 
@@ -220,7 +251,7 @@ export function AuthenticatedApp() {
         cardData.translation.trim(),
         cardData.tagIds
       );
-      setCards(prev => [newCard, ...prev]);
+      setCards((prev) => [newCard, ...prev]);
     } catch (error) {
       console.error('Error adding card:', error);
       setError('Ошибка добавления карточки');
@@ -234,7 +265,9 @@ export function AuthenticatedApp() {
         translation: cardData.translation.trim(),
         tagIds: cardData.tagIds,
       });
-      setCards(prev => prev.map(card => card.id === id ? updatedCard : card));
+      setCards((prev) =>
+        prev.map((card) => (card.id === id ? updatedCard : card))
+      );
     } catch (error) {
       console.error('Error updating card:', error);
       setError('Ошибка обновления карточки');
@@ -244,7 +277,7 @@ export function AuthenticatedApp() {
   const handleDeleteCard = async (id: string) => {
     try {
       await ClientCardService.deleteCard(id);
-      setCards(prev => prev.filter(card => card.id !== id));
+      setCards((prev) => prev.filter((card) => card.id !== id));
     } catch (error) {
       console.error('Error deleting card:', error);
       setError('Ошибка удаления карточки');
@@ -252,7 +285,9 @@ export function AuthenticatedApp() {
   };
 
   const handleVerbUpdate = (updatedVerb: Verb) => {
-    setVerbs(prev => prev.map(v => v.id === updatedVerb.id ? updatedVerb : v));
+    setVerbs((prev) =>
+      prev.map((v) => (v.id === updatedVerb.id ? updatedVerb : v))
+    );
   };
 
   const handleAddVerb = () => {
@@ -289,12 +324,19 @@ export function AuthenticatedApp() {
     setIsVerbEditDialogOpen(true);
   };
 
-  const handleVerbFormChange = (field: keyof typeof verbFormData, value: string) => {
-    setVerbFormData(prev => ({ ...prev, [field]: value }));
+  const handleVerbFormChange = (
+    field: keyof typeof verbFormData,
+    value: string
+  ) => {
+    setVerbFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleConjugationChange = (index: number, field: keyof typeof verbFormData.conjugations[0], value: string) => {
-    setVerbFormData(prev => ({
+  const handleConjugationChange = (
+    index: number,
+    field: keyof (typeof verbFormData.conjugations)[0],
+    value: string
+  ) => {
+    setVerbFormData((prev) => ({
       ...prev,
       conjugations: prev.conjugations.map((conj, i) =>
         i === index ? { ...conj, [field]: value } : conj
@@ -312,10 +354,12 @@ export function AuthenticatedApp() {
       setError(null);
       if (editingVerb) {
         const updatedVerb = await updateVerb(editingVerb.id, verbFormData);
-        setVerbs(prev => prev.map(v => v.id === editingVerb.id ? updatedVerb : v));
+        setVerbs((prev) =>
+          prev.map((v) => (v.id === editingVerb.id ? updatedVerb : v))
+        );
       } else {
         const newVerb = await createVerb(verbFormData);
-        setVerbs(prev => [newVerb, ...prev]);
+        setVerbs((prev) => [newVerb, ...prev]);
       }
       setIsVerbEditDialogOpen(false);
     } catch (error) {
@@ -329,10 +373,24 @@ export function AuthenticatedApp() {
 
     try {
       await deleteVerb(id);
-      setVerbs(prev => prev.filter(v => v.id !== id));
+      setVerbs((prev) => prev.filter((v) => v.id !== id));
     } catch (error) {
       console.error('Error deleting verb:', error);
       setError('Ошибка удаления глагола');
+    }
+  };
+
+  const handleBulkVerbImport = async (verbs: CreateVerbData[]) => {
+    try {
+      setError(null);
+      const importedVerbs = await Promise.all(
+        verbs.map((verb) => createVerb(verb))
+      );
+      setVerbs((prev) => [...importedVerbs, ...prev]);
+      setIsBulkVerbImportOpen(false);
+    } catch (error) {
+      console.error('Error importing verbs:', error);
+      setError('Ошибка импорта глаголов');
     }
   };
 
@@ -390,18 +448,29 @@ export function AuthenticatedApp() {
             </IconButton>
           )}
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {viewMode === 'invites' ? 'Приглашения' : 
-             mainViewMode === 'study' ? (studyMode === 'verbs' ? 
-               (verbMode === 'training' ? 'Тренировка глаголов' : 'Изучение глаголов') : 
-               'German Word Cards') : 
-             mainViewMode === 'edit' ? (viewMode === 'verbs' ? 'Редактирование глаголов' : 
-               viewMode === 'editor' ? 'Редактирование карточек' : 'German Word Cards') :
-             'German Word Cards'}
+            {viewMode === 'invites'
+              ? 'Приглашения'
+              : mainViewMode === 'study'
+                ? studyMode === 'verbs'
+                  ? verbMode === 'training'
+                    ? 'Тренировка глаголов'
+                    : 'Изучение глаголов'
+                  : 'German Word Cards'
+                : mainViewMode === 'edit'
+                  ? viewMode === 'verbs'
+                    ? 'Редактирование глаголов'
+                    : viewMode === 'editor'
+                      ? 'Редактирование карточек'
+                      : 'German Word Cards'
+                  : 'German Word Cards'}
           </Typography>
           {mainViewMode === 'study' && (
             <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-              {studyMode === 'cards' ? 'Карточки' : 
-               verbMode === 'training' ? 'Тренировка' : 'Просмотр'}
+              {studyMode === 'cards'
+                ? 'Карточки'
+                : verbMode === 'training'
+                  ? 'Тренировка'
+                  : 'Просмотр'}
             </Typography>
           )}
           {mainViewMode === 'edit' && (
@@ -409,11 +478,13 @@ export function AuthenticatedApp() {
               {viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
             </Typography>
           )}
-          {mainViewMode === 'study' && studyMode === 'cards' && cardsCount > 0 && (
-            <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-              {cardsCount} карточек
-            </Typography>
-          )}
+          {mainViewMode === 'study' &&
+            studyMode === 'cards' &&
+            cardsCount > 0 && (
+              <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
+                {cardsCount} карточек
+              </Typography>
+            )}
 
           {/* Информация о пользователе */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -492,7 +563,9 @@ export function AuthenticatedApp() {
       {/* Диалог выбора режима изучения */}
       <Dialog
         open={isStudyDialogOpen}
-        onClose={() => setIsStudyDialogOpen(false)}
+        onClose={() => {
+          setIsStudyDialogOpen(false);
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -500,23 +573,31 @@ export function AuthenticatedApp() {
         <DialogContent>
           <List>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => handleStudyModeSelect('cards')}>
+              <ListItemButton
+                onClick={() => {
+                  handleStudyModeSelect('cards');
+                }}
+              >
                 <ListItemIcon>
                   <LocalOffer />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Карточки" 
+                <ListItemText
+                  primary="Карточки"
                   secondary="Изучение немецких слов с помощью карточек"
                 />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => handleStudyModeSelect('verbs')}>
+              <ListItemButton
+                onClick={() => {
+                  handleStudyModeSelect('verbs');
+                }}
+              >
                 <ListItemIcon>
                   <Translate />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Глаголы" 
+                <ListItemText
+                  primary="Глаголы"
                   secondary="Изучение спряжений немецких глаголов"
                 />
                 <KeyboardArrowRight />
@@ -530,7 +611,9 @@ export function AuthenticatedApp() {
       {/* Диалог выбора режима редактирования */}
       <Dialog
         open={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -538,45 +621,61 @@ export function AuthenticatedApp() {
         <DialogContent>
           <List>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => handleEditModeSelect('cards')}>
+              <ListItemButton
+                onClick={() => {
+                  handleEditModeSelect('cards');
+                }}
+              >
                 <ListItemIcon>
                   <LocalOffer />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Карточки" 
+                <ListItemText
+                  primary="Карточки"
                   secondary="Редактирование немецких слов"
                 />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => handleEditModeSelect('verbs')}>
+              <ListItemButton
+                onClick={() => {
+                  handleEditModeSelect('verbs');
+                }}
+              >
                 <ListItemIcon>
                   <Translate />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Глаголы" 
+                <ListItemText
+                  primary="Глаголы"
                   secondary="Редактирование спряжений немецких глаголов"
                 />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => setIsTagManagerOpen(true)}>
+              <ListItemButton
+                onClick={() => {
+                  setIsTagManagerOpen(true);
+                }}
+              >
                 <ListItemIcon>
                   <LocalOffer />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Управление тегами" 
+                <ListItemText
+                  primary="Управление тегами"
                   secondary="Создание и редактирование тегов"
                 />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => setIsImportMenuOpen(true)}>
+              <ListItemButton
+                onClick={() => {
+                  setIsImportMenuOpen(true);
+                }}
+              >
                 <ListItemIcon>
                   <Upload />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Импорт карточек" 
+                <ListItemText
+                  primary="Импорт карточек"
                   secondary="Массовый импорт карточек"
                 />
                 <KeyboardArrowRight />
@@ -590,7 +689,9 @@ export function AuthenticatedApp() {
       {/* Диалог выбора режима глаголов */}
       <Dialog
         open={isVerbModeDialogOpen}
-        onClose={() => setIsVerbModeDialogOpen(false)}
+        onClose={() => {
+          setIsVerbModeDialogOpen(false);
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -598,23 +699,31 @@ export function AuthenticatedApp() {
         <DialogContent>
           <List>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => handleVerbModeSelect('view')}>
+              <ListItemButton
+                onClick={() => {
+                  handleVerbModeSelect('view');
+                }}
+              >
                 <ListItemIcon>
                   <Style />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Просмотр" 
+                <ListItemText
+                  primary="Просмотр"
                   secondary="Просмотр всех глаголов и их спряжений"
                 />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => handleVerbModeSelect('training')}>
+              <ListItemButton
+                onClick={() => {
+                  handleVerbModeSelect('training');
+                }}
+              >
                 <ListItemIcon>
                   <School />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Тренировка" 
+                <ListItemText
+                  primary="Тренировка"
                   secondary="Интерактивная тренировка спряжений"
                 />
               </ListItemButton>
@@ -626,7 +735,9 @@ export function AuthenticatedApp() {
       {/* Диалог редактирования глаголов */}
       <Dialog
         open={isVerbEditDialogOpen}
-        onClose={() => setIsVerbEditDialogOpen(false)}
+        onClose={() => {
+          setIsVerbEditDialogOpen(false);
+        }}
         maxWidth="md"
         fullWidth
       >
@@ -651,13 +762,16 @@ export function AuthenticatedApp() {
               }}
               fullWidth
             />
-            
+
             <Typography variant="h6" sx={{ mt: 2 }}>
               Спряжения
             </Typography>
-            
+
             {verbFormData.conjugations.map((conjugation, index) => (
-              <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box
+                key={index}
+                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+              >
                 <Typography variant="subtitle2" color="primary">
                   {conjugation.person}
                 </Typography>
@@ -675,7 +789,11 @@ export function AuthenticatedApp() {
                     label="Перевод"
                     value={conjugation.translation}
                     onChange={(e) => {
-                      handleConjugationChange(index, 'translation', e.target.value);
+                      handleConjugationChange(
+                        index,
+                        'translation',
+                        e.target.value
+                      );
                     }}
                     size="small"
                     sx={{ flex: 1 }}
@@ -686,10 +804,19 @@ export function AuthenticatedApp() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsVerbEditDialogOpen(false)}>Отмена</Button>
-          <Button onClick={() => {
-            handleVerbSubmit();
-          }} variant="contained">
+          <Button
+            onClick={() => {
+              setIsVerbEditDialogOpen(false);
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={() => {
+              void handleVerbSubmit();
+            }}
+            variant="contained"
+          >
             {editingVerb ? 'Сохранить' : 'Добавить'}
           </Button>
         </DialogActions>
@@ -698,24 +825,44 @@ export function AuthenticatedApp() {
       {/* Диалог меню импорта */}
       <Dialog
         open={isImportMenuOpen}
-        onClose={() => setIsImportMenuOpen(false)}
+        onClose={() => {
+          setIsImportMenuOpen(false);
+        }}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Импорт карточек</DialogTitle>
+        <DialogTitle>Импорт</DialogTitle>
         <DialogContent>
           <List>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => {
-                setIsImportMenuOpen(false);
-                setIsBulkImportOpen(true);
-              }}>
+              <ListItemButton
+                onClick={() => {
+                  setIsImportMenuOpen(false);
+                  setIsBulkImportOpen(true);
+                }}
+              >
                 <ListItemIcon>
                   <Upload />
                 </ListItemIcon>
-                <ListItemText 
-                  primary="Импорт карточек" 
+                <ListItemText
+                  primary="Импорт карточек"
                   secondary="Массовый импорт карточек из текста"
+                />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  setIsImportMenuOpen(false);
+                  setIsBulkVerbImportOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <Upload />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Импорт глаголов"
+                  secondary="Массовый импорт глаголов с спряжениями"
                 />
               </ListItemButton>
             </ListItem>
@@ -724,15 +871,19 @@ export function AuthenticatedApp() {
       </Dialog>
 
       {/* Диалог управления тегами */}
-      <TagManager 
-        open={isTagManagerOpen} 
-        onClose={() => setIsTagManagerOpen(false)} 
+      <TagManager
+        open={isTagManagerOpen}
+        onClose={() => {
+          setIsTagManagerOpen(false);
+        }}
       />
 
-      {/* Диалог массового импорта */}
-      <BulkImport 
-        open={isBulkImportOpen} 
-        onClose={() => setIsBulkImportOpen(false)}
+      {/* Диалог массового импорта карточек */}
+      <BulkImport
+        open={isBulkImportOpen}
+        onClose={() => {
+          setIsBulkImportOpen(false);
+        }}
         onImport={async (cards) => {
           // Здесь можно добавить логику импорта
           await Promise.resolve();
@@ -740,8 +891,24 @@ export function AuthenticatedApp() {
         }}
       />
 
+      {/* Диалог массового импорта глаголов */}
+      <BulkVerbImport
+        open={isBulkVerbImportOpen}
+        onClose={() => {
+          setIsBulkVerbImportOpen(false);
+        }}
+        onImport={async (verbs) => {
+          await handleBulkVerbImport(verbs);
+        }}
+      />
+
       {/* Основной контент */}
-      <Box sx={{ flexGrow: 1, pb: viewMode !== 'invites' ? 8 : (userIsAdmin ? 14 : 8) }}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          pb: viewMode !== 'invites' ? 8 : userIsAdmin ? 14 : 8,
+        }}
+      >
         {error && (
           <Container maxWidth="lg" sx={{ pt: 2 }}>
             <Alert
@@ -767,11 +934,11 @@ export function AuthenticatedApp() {
               verbMode === 'training' ? (
                 <VerbTraining />
               ) : (
-                <VerbViewer 
-                  verbs={verbs} 
-                  onVerbUpdate={handleVerbUpdate} 
-                  onVerbDelete={handleVerbDelete} 
-                  onAddVerb={handleAddVerb} 
+                <VerbViewer
+                  verbs={verbs}
+                  onVerbUpdate={handleVerbUpdate}
+                  onVerbDelete={handleVerbDelete}
+                  onAddVerb={handleAddVerb}
                   onEditVerb={handleEditVerb}
                 />
               )
@@ -793,9 +960,11 @@ export function AuthenticatedApp() {
             ) : viewMode === 'editor' ? (
               <CardEditor
                 cards={cards}
-                onAddCard={handleAddCard}
-                onUpdateCard={handleUpdateCard}
-                onDeleteCard={handleDeleteCard}
+                onAddCard={(cardData) => void handleAddCard(cardData)}
+                onUpdateCard={(id, cardData) =>
+                  void handleUpdateCard(id, cardData)
+                }
+                onDeleteCard={(id) => void handleDeleteCard(id)}
               />
             ) : (
               <App
@@ -822,34 +991,44 @@ export function AuthenticatedApp() {
 
       {/* Нижняя панель навигации */}
       {viewMode !== 'invites' && (
-        <Paper 
-          sx={{ 
-            position: 'fixed', 
-            bottom: 0, 
-            left: 0, 
-            right: 0, 
+        <Paper
+          sx={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
             zIndex: 1000,
             borderTop: 1,
-            borderColor: 'divider'
-          }} 
+            borderColor: 'divider',
+          }}
           elevation={3}
         >
           <BottomNavigation
-            value={mainViewMode === 'edit' && viewMode === 'viewer' ? 'study' : mainViewMode}
+            value={
+              mainViewMode === 'edit' && viewMode === 'viewer'
+                ? 'study'
+                : mainViewMode
+            }
             onChange={(event, newValue) => {
               if (newValue === 'study') {
                 handleStudyClick();
               } else if (newValue === 'edit') {
                 handleEditClick();
               } else {
-                setMainViewMode(newValue);
+                setMainViewMode(newValue as MainViewMode);
               }
             }}
             showLabels
           >
             <BottomNavigationAction
               label={
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <SchoolIcon />
                     <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
@@ -862,7 +1041,13 @@ export function AuthenticatedApp() {
             />
             <BottomNavigationAction
               label={
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Edit />
                     <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />

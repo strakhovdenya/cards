@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
-import type { CreateVerbRequest, DatabaseVerb, ApiResponse, Verb } from '@/types';
+import type {
+  CreateVerbRequest,
+  DatabaseVerb,
+  ApiResponse,
+  Verb,
+} from '@/types';
 
 // Преобразование данных из базы в клиентский формат
 const transformDatabaseVerb = (dbVerb: DatabaseVerb) => ({
@@ -34,7 +39,8 @@ export async function GET() {
       );
     }
 
-    const verbs = data?.map(transformDatabaseVerb) || [];
+    const verbs =
+      data?.map((verb) => transformDatabaseVerb(verb as DatabaseVerb)) || [];
     return NextResponse.json<ApiResponse<Verb[]>>({
       data: verbs,
       message: 'Verbs fetched successfully',
@@ -61,8 +67,8 @@ export async function POST(request: NextRequest) {
     // Получаем аутентифицированного пользователя и Supabase клиент
     const { user, supabase } = await getAuthenticatedUser();
 
-    const body: CreateVerbRequest = await request.json();
-    
+    const body = (await request.json()) as CreateVerbRequest;
+
     // Валидация данных
     if (!body.infinitive || !body.translation || !body.conjugations) {
       return NextResponse.json(
@@ -79,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Создаем глагол с user_id текущего пользователя
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('verbs')
       .insert({
         infinitive: body.infinitive,
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
       })
       .select()
-      .single();
+      .single()) as { data: DatabaseVerb | null; error: unknown };
 
     if (error) {
       console.error('Error creating verb:', error);
@@ -98,7 +104,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const verb = transformDatabaseVerb(data);
+    const verb = transformDatabaseVerb(data as DatabaseVerb);
     return NextResponse.json<ApiResponse<Verb>>(
       {
         data: verb,
@@ -121,4 +127,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

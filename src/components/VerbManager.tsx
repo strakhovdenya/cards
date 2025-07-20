@@ -19,14 +19,16 @@ import {
   CircularProgress,
   Fab,
 } from '@mui/material';
-import {
-  Add,
-  Edit,
-  Delete,
-} from '@mui/icons-material';
+import { Add, Edit, Delete } from '@mui/icons-material';
 import type { Verb } from '@/types';
-import { getVerbs, createVerb, updateVerb, deleteVerb } from '@/services/verbService';
+import {
+  getVerbs,
+  createVerb,
+  updateVerb,
+  deleteVerb,
+} from '@/services/verbService';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface VerbManagerProps {
   // Компонент больше не принимает onTrainingMode
 }
@@ -114,11 +116,15 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
   };
 
   const handleFormChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleConjugationChange = (index: number, field: keyof typeof formData.conjugations[0], value: string) => {
-    setFormData(prev => ({
+  const handleConjugationChange = (
+    index: number,
+    field: keyof (typeof formData.conjugations)[0],
+    value: string
+  ) => {
+    setFormData((prev) => ({
       ...prev,
       conjugations: prev.conjugations.map((conj, i) =>
         i === index ? { ...conj, [field]: value } : conj
@@ -136,10 +142,12 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
       setError(null);
       if (editingVerb) {
         const updatedVerb = await updateVerb(editingVerb.id, formData);
-        setVerbs(prev => prev.map(v => v.id === editingVerb.id ? updatedVerb : v));
+        setVerbs((prev) =>
+          prev.map((v) => (v.id === editingVerb.id ? updatedVerb : v))
+        );
       } else {
         const newVerb = await createVerb(formData);
-        setVerbs(prev => [newVerb, ...prev]);
+        setVerbs((prev) => [newVerb, ...prev]);
       }
       handleCloseDialog();
     } catch (error) {
@@ -153,7 +161,7 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
 
     try {
       await deleteVerb(id);
-      setVerbs(prev => prev.filter(v => v.id !== id));
+      setVerbs((prev) => prev.filter((v) => v.id !== id));
     } catch (error) {
       console.error('Error deleting verb:', error);
       setError('Ошибка удаления глагола');
@@ -162,7 +170,12 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress size={60} />
       </Box>
     );
@@ -183,47 +196,52 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
           <Typography variant="h6" color="text.secondary">
             Нет добавленных глаголов
           </Typography>
-          <Button
-            variant="contained"
-            onClick={() => {
-              handleOpenDialog();
-            }}
-            sx={{ mt: 2 }}
+          <Box
+            sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'center' }}
           >
-            Добавить первый глагол
-          </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                handleOpenDialog();
+              }}
+            >
+              Добавить первый глагол
+            </Button>
+          </Box>
         </Box>
       ) : (
-        <List>
-          {verbs.map((verb) => (
-            <ListItem key={verb.id} divider>
-              <ListItemText
-                primary={verb.infinitive}
-                secondary={verb.translation}
-              />
-              <ListItemSecondaryAction>
-                <IconButton
-                  edge="end"
-                  onClick={() => {
-                    handleOpenDialog(verb);
-                  }}
-                  sx={{ mr: 1 }}
-                >
-                  <Edit />
-                </IconButton>
-                <IconButton
-                  edge="end"
-                  onClick={() => {
-                    void handleDeleteVerb(verb.id);
-                  }}
-                  color="error"
-                >
-                  <Delete />
-                </IconButton>
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
+        <>
+          <List>
+            {verbs.map((verb) => (
+              <ListItem key={verb.id} divider>
+                <ListItemText
+                  primary={verb.infinitive}
+                  secondary={verb.translation}
+                />
+                <ListItemSecondaryAction>
+                  <IconButton
+                    edge="end"
+                    onClick={() => {
+                      handleOpenDialog(verb);
+                    }}
+                    sx={{ mr: 1 }}
+                  >
+                    <Edit />
+                  </IconButton>
+                  <IconButton
+                    edge="end"
+                    onClick={() => {
+                      void handleDeleteVerb(verb.id);
+                    }}
+                    color="error"
+                  >
+                    <Delete />
+                  </IconButton>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+        </>
       )}
 
       {/* Кнопка добавления */}
@@ -239,7 +257,12 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
       </Fab>
 
       {/* Диалог добавления/редактирования */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
           {editingVerb ? 'Редактировать глагол' : 'Добавить глагол'}
         </DialogTitle>
@@ -261,13 +284,16 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
               }}
               fullWidth
             />
-            
+
             <Typography variant="h6" sx={{ mt: 2 }}>
               Спряжения
             </Typography>
-            
+
             {formData.conjugations.map((conjugation, index) => (
-              <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box
+                key={index}
+                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+              >
                 <Typography variant="subtitle2" color="primary">
                   {conjugation.person}
                 </Typography>
@@ -285,7 +311,11 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
                     label="Перевод"
                     value={conjugation.translation}
                     onChange={(e) => {
-                      handleConjugationChange(index, 'translation', e.target.value);
+                      handleConjugationChange(
+                        index,
+                        'translation',
+                        e.target.value
+                      );
                     }}
                     size="small"
                     sx={{ flex: 1 }}
@@ -297,13 +327,16 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Отмена</Button>
-          <Button onClick={() => {
-            void handleSubmit();
-          }} variant="contained">
+          <Button
+            onClick={() => {
+              void handleSubmit();
+            }}
+            variant="contained"
+          >
             {editingVerb ? 'Сохранить' : 'Добавить'}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
-}; 
+};

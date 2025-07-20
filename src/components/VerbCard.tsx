@@ -65,7 +65,7 @@ const CardBack = styled(CardSide)(({ theme }) => ({
   transform: 'rotateY(180deg)',
 }));
 
-const CardContent = styled(Box)(({ theme }) => ({
+const CardContent = styled(Box)(() => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
@@ -166,8 +166,12 @@ export const VerbCard = memo(function VerbCard({
   const [internalIsFlipped, setInternalIsFlipped] = useState(false);
 
   // Используем внешнее управление, если оно предоставлено, иначе внутреннее
-  const isFlipped = externalIsFlipped !== undefined ? externalIsFlipped : internalIsFlipped;
-  const handleFlip = externalOnFlip || (() => setInternalIsFlipped(!internalIsFlipped));
+  const isFlipped = externalIsFlipped ?? internalIsFlipped;
+  const handleFlip =
+    externalOnFlip ??
+    (() => {
+      setInternalIsFlipped(!internalIsFlipped);
+    });
 
   if (!verb) {
     return null;
@@ -179,14 +183,10 @@ export const VerbCard = memo(function VerbCard({
         {/* Передняя сторона - основная информация */}
         <CardFront>
           <CardContent>
-            <VerbInfinitive variant="h3">
-              {verb.infinitive}
-            </VerbInfinitive>
-            <VerbTranslation variant="h4">
-              {verb.translation}
-            </VerbTranslation>
-            <FormsChip 
-              label={`${verb.conjugations?.length || 0} форм`} 
+            <VerbInfinitive variant="h3">{verb.infinitive}</VerbInfinitive>
+            <VerbTranslation variant="h4">{verb.translation}</VerbTranslation>
+            <FormsChip
+              label={`${verb.conjugations?.length || 0} форм`}
               size="medium"
             />
           </CardContent>
@@ -195,19 +195,13 @@ export const VerbCard = memo(function VerbCard({
         {/* Обратная сторона - спряжения */}
         <CardBack>
           <CardContent>
-            <ConjugationsTitle variant="h5">
-              Спряжения
-            </ConjugationsTitle>
-            
+            <ConjugationsTitle variant="h5">Спряжения</ConjugationsTitle>
+
             <ConjugationsGrid>
               {verb.conjugations?.map((conjugation, index) => (
                 <ConjugationItem key={index}>
-                  <ConjugationPerson>
-                    {conjugation.person}
-                  </ConjugationPerson>
-                  <ConjugationForm>
-                    {conjugation.form}
-                  </ConjugationForm>
+                  <ConjugationPerson>{conjugation.person}</ConjugationPerson>
+                  <ConjugationForm>{conjugation.form}</ConjugationForm>
                   <ConjugationTranslation>
                     {conjugation.translation}
                   </ConjugationTranslation>
@@ -219,4 +213,4 @@ export const VerbCard = memo(function VerbCard({
       </CardInner>
     </VerbCardContainer>
   );
-}); 
+});

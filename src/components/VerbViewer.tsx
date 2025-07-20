@@ -6,10 +6,6 @@ import {
   Button,
   Typography,
   Stack,
-  Chip,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
   Collapse,
   useMediaQuery,
   useTheme,
@@ -19,8 +15,6 @@ import {
   ArrowForward,
   Shuffle,
   Flip,
-  KeyboardHide,
-  Keyboard,
   Add,
 } from '@mui/icons-material';
 import { VerbCard } from './VerbCard';
@@ -34,13 +28,7 @@ interface VerbViewerProps {
   onEditVerb?: (verb: Verb) => void;
 }
 
-export function VerbViewer({ 
-  verbs, 
-  onVerbUpdate, 
-  onVerbDelete, 
-  onAddVerb, 
-  onEditVerb 
-}: VerbViewerProps) {
+export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
   const [currentVerbIndex, setCurrentVerbIndex] = useState(0);
   const [shuffledVerbs, setShuffledVerbs] = useState<Verb[]>([]);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
@@ -90,35 +78,6 @@ export function VerbViewer({
     setIsCardFlipped(!isCardFlipped);
   }, [isCardFlipped]);
 
-  const handleToggleLearned = useCallback(async (verb: Verb) => {
-    if (!onVerbUpdate) return;
-
-    // Оптимистичное обновление UI
-    const optimisticVerb = { ...verb, learned: !verb.learned };
-    const optimisticShuffledVerbs = shuffledVerbs.map((v) =>
-      v.id === verb.id ? optimisticVerb : v
-    );
-    setShuffledVerbs(optimisticShuffledVerbs);
-    onVerbUpdate(optimisticVerb);
-  }, [onVerbUpdate, shuffledVerbs]);
-
-  const handleDeleteVerb = useCallback(async (verbId: string) => {
-    if (!onVerbDelete) return;
-
-    const updatedVerbs = shuffledVerbs.filter(v => v.id !== verbId);
-    setShuffledVerbs(updatedVerbs);
-    
-    if (currentVerbIndex >= updatedVerbs.length && updatedVerbs.length > 0) {
-      setCurrentVerbIndex(updatedVerbs.length - 1);
-    }
-    
-    onVerbDelete(verbId);
-  }, [onVerbDelete, shuffledVerbs, currentVerbIndex]);
-
-  const handleEditVerb = useCallback((verb: Verb) => {
-    onEditVerb?.(verb);
-  }, [onEditVerb]);
-
   // Обработка клавиатуры
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -141,7 +100,9 @@ export function VerbViewer({
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [handleNext, handlePrevious, handleFlip, shuffledVerbs.length]);
 
   if (verbs.length === 0) {
@@ -178,7 +139,14 @@ export function VerbViewer({
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
       {/* Заголовок и статистика */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <Typography variant="h6" color="primary">
           Просмотр глаголов
         </Typography>
@@ -268,4 +236,4 @@ export function VerbViewer({
       )}
     </Box>
   );
-} 
+}

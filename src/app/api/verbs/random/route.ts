@@ -26,10 +26,10 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     // Выбираем случайный глагол из результатов
-    let randomVerb = null;
+    let randomVerb: DatabaseVerb | null = null;
     if (data && data.length > 0) {
       const randomIndex = Math.floor(Math.random() * data.length);
-      randomVerb = data[randomIndex];
+      randomVerb = data[randomIndex] as DatabaseVerb;
     }
 
     if (error) {
@@ -58,24 +58,24 @@ export async function GET() {
       data: verb,
       message: 'Random verb fetched successfully',
     });
-      } catch (error) {
-      if (error instanceof Error) {
-        if (error.message === 'Unauthorized') {
-          return NextResponse.json<ApiResponse<null>>(
-            { error: 'Unauthorized' },
-            { status: 401 }
-          );
-        }
-        
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
         return NextResponse.json<ApiResponse<null>>(
-          { error: 'Error: ' + error.message },
-          { status: 500 }
+          { error: 'Unauthorized' },
+          { status: 401 }
         );
       }
 
       return NextResponse.json<ApiResponse<null>>(
-        { error: 'Internal server error' },
+        { error: 'Error: ' + error.message },
         { status: 500 }
       );
     }
-} 
+
+    return NextResponse.json<ApiResponse<null>>(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
-import type { UpdateVerbRequest, DatabaseVerb, ApiResponse, Verb } from '@/types';
+import type {
+  UpdateVerbRequest,
+  DatabaseVerb,
+  ApiResponse,
+  Verb,
+} from '@/types';
 
 interface RouteParams {
   params: {
@@ -25,18 +30,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { user, supabase } = await getAuthenticatedUser();
 
     // Получаем глагол только если он принадлежит текущему пользователю
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('verbs')
       .select('*')
       .eq('id', params.id)
       .eq('user_id', user.id)
-      .single();
+      .single()) as { data: DatabaseVerb | null; error: unknown };
 
     if (error || !data) {
-      return NextResponse.json(
-        { error: 'Глагол не найден' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Глагол не найден' }, { status: 404 });
     }
 
     const verb = transformDatabaseVerb(data);
@@ -64,8 +66,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    const body: UpdateVerbRequest = await request.json();
-    
+    const body = (await request.json()) as UpdateVerbRequest;
+
     // Валидация данных
     if (body.infinitive !== undefined && !body.infinitive.trim()) {
       return NextResponse.json(
@@ -82,13 +84,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Обновляем глагол только если он принадлежит текущему пользователю
-    const { data, error } = await supabase
+    const { data, error } = (await supabase
       .from('verbs')
       .update(body)
       .eq('id', params.id)
       .eq('user_id', user.id)
       .select()
-      .single();
+      .single()) as { data: DatabaseVerb | null; error: unknown };
 
     if (error || !data) {
       return NextResponse.json(
@@ -156,4 +158,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-} 
+}

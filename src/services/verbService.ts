@@ -1,9 +1,10 @@
-import type { 
-  Verb, 
-  CreateVerbRequest, 
+import type {
+  Verb,
+  CreateVerbRequest,
   UpdateVerbRequest,
   VerbConjugation,
-  ApiResponse
+  ApiResponse,
+  BulkCreateVerbsRequest,
 } from '@/types';
 
 // Базовый URL для API
@@ -23,8 +24,6 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
   return data.data!;
 }
-
-
 
 // Клиентский сервис для работы с глаголами
 export class ClientVerbService {
@@ -49,6 +48,24 @@ export class ClientVerbService {
     return handleApiResponse<Verb>(response);
   }
 
+  // Массовое создание глаголов
+  static async createBulkVerbs(verbs: CreateVerbRequest[]): Promise<Verb[]> {
+    const bulkRequest: BulkCreateVerbsRequest = {
+      verbs,
+    };
+
+    const response = await fetch(`${API_BASE_URL}/bulk`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(bulkRequest),
+    });
+
+    return handleApiResponse<Verb[]>(response);
+  }
+
   // Получить глагол по ID
   static async getVerbById(id: string): Promise<Verb | null> {
     try {
@@ -68,7 +85,10 @@ export class ClientVerbService {
   }
 
   // Обновить глагол
-  static async updateVerb(id: string, updates: UpdateVerbRequest): Promise<Verb> {
+  static async updateVerb(
+    id: string,
+    updates: UpdateVerbRequest
+  ): Promise<Verb> {
     const response = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'PUT',
       headers: {
@@ -109,22 +129,31 @@ export class ClientVerbService {
 
   // Получить глаголы по статусу изучения
   static async getVerbsByLearnedStatus(learned: boolean): Promise<Verb[]> {
-    const response = await fetch(`${API_BASE_URL}/by-learned-status?learned=${learned}`, {
-      credentials: 'include',
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/by-learned-status?learned=${learned}`,
+      {
+        credentials: 'include',
+      }
+    );
     return handleApiResponse<Verb[]>(response);
   }
 
   // Поиск глаголов по инфинитиву
   static async searchVerbs(query: string): Promise<Verb[]> {
-    const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
-      credentials: 'include',
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`,
+      {
+        credentials: 'include',
+      }
+    );
     return handleApiResponse<Verb[]>(response);
   }
 
   // Пометить глагол как изученный/не изученный
-  static async toggleLearnedStatus(id: string, learned: boolean): Promise<Verb> {
+  static async toggleLearnedStatus(
+    id: string,
+    learned: boolean
+  ): Promise<Verb> {
     return this.updateVerb(id, { learned });
   }
 
@@ -148,11 +177,14 @@ export class ClientVerbService {
 // Утилитарные функции
 export const getRandomPerson = (): string => {
   const persons = ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie / Sie'];
-  return persons[Math.floor(Math.random() * persons.length)];
+  return persons[Math.floor(Math.random() * persons.length)] ?? 'ich';
 };
 
-export const getConjugationForPerson = (verb: Verb, person: string): VerbConjugation | null => {
-  return verb.conjugations.find(conj => conj.person === person) || null;
+export const getConjugationForPerson = (
+  verb: Verb,
+  person: string
+): VerbConjugation | null => {
+  return verb.conjugations.find((conj) => conj.person === person) ?? null;
 };
 
 // Обратная совместимость - экспортируем старые функции
@@ -162,5 +194,6 @@ export const getVerbById = ClientVerbService.getVerbById;
 export const updateVerb = ClientVerbService.updateVerb;
 export const deleteVerb = ClientVerbService.deleteVerb;
 export const getRandomVerb = ClientVerbService.getRandomVerb;
-export const getVerbsByLearnedStatus = ClientVerbService.getVerbsByLearnedStatus;
-export const searchVerbs = ClientVerbService.searchVerbs; 
+export const getVerbsByLearnedStatus =
+  ClientVerbService.getVerbsByLearnedStatus;
+export const searchVerbs = ClientVerbService.searchVerbs;

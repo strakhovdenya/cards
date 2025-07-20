@@ -184,6 +184,10 @@ export interface CreateVerbRequest {
   conjugations: VerbConjugation[];
 }
 
+export interface BulkCreateVerbsRequest {
+  verbs: CreateVerbRequest[];
+}
+
 export interface UpdateVerbRequest {
   infinitive?: string;
   translation?: string;

@@ -11,15 +11,14 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import {
-  Refresh,
-  Visibility,
-  CheckCircle,
-  Cancel,
-} from '@mui/icons-material';
+import { Refresh, Visibility, CheckCircle, Cancel } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import type { Verb } from '@/types';
-import { getRandomVerb, getRandomPerson, getConjugationForPerson } from '@/services/verbService';
+import {
+  getRandomVerb,
+  getRandomPerson,
+  getConjugationForPerson,
+} from '@/services/verbService';
 
 const TrainingCard = styled(Card)(() => ({
   maxWidth: 600,
@@ -53,6 +52,7 @@ const ConjugationDisplay = styled(Box)(({ theme }) => ({
   margin: theme.spacing(2, 0),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface VerbTrainingProps {
   // Компонент больше не принимает onBack, так как навигация происходит через меню
 }
@@ -79,7 +79,7 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
       if (verb) {
         setCurrentVerb(verb);
         setCurrentPerson(getRandomPerson());
-        setStats(prev => ({ ...prev, total: prev.total + 1 }));
+        setStats((prev) => ({ ...prev, total: prev.total + 1 }));
       } else {
         setError('Не удалось загрузить глагол');
       }
@@ -104,22 +104,28 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
   };
 
   const handleCorrectAnswer = () => {
-    setStats(prev => ({ ...prev, correct: prev.correct + 1 }));
+    setStats((prev) => ({ ...prev, correct: prev.correct + 1 }));
     handleNextVerb();
   };
 
   const handleIncorrectAnswer = () => {
-    setStats(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
+    setStats((prev) => ({ ...prev, incorrect: prev.incorrect + 1 }));
     handleNextVerb();
   };
 
-  const currentConjugation = currentVerb && currentPerson
-    ? getConjugationForPerson(currentVerb, currentPerson)
-    : null;
+  const currentConjugation =
+    currentVerb && currentPerson
+      ? getConjugationForPerson(currentVerb, currentPerson)
+      : null;
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress size={60} />
       </Box>
     );
@@ -131,7 +137,12 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
-        <Button variant="contained" onClick={loadNewVerb}>
+        <Button
+          variant="contained"
+          onClick={() => {
+            void loadNewVerb();
+          }}
+        >
           Попробовать снова
         </Button>
       </Box>
@@ -151,14 +162,33 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
       {/* Статистика */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <Typography variant="h6" color="primary">
           Тренировка глаголов
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Chip label={`Всего: ${stats.total}`} color="primary" variant="outlined" />
-          <Chip label={`Правильно: ${stats.correct}`} color="success" variant="outlined" />
-          <Chip label={`Неправильно: ${stats.incorrect}`} color="error" variant="outlined" />
+          <Chip
+            label={`Всего: ${stats.total}`}
+            color="primary"
+            variant="outlined"
+          />
+          <Chip
+            label={`Правильно: ${stats.correct}`}
+            color="success"
+            variant="outlined"
+          />
+          <Chip
+            label={`Неправильно: ${stats.incorrect}`}
+            color="error"
+            variant="outlined"
+          />
         </Box>
       </Box>
 
@@ -239,4 +269,4 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
       </TrainingCard>
     </Box>
   );
-}; 
+};
