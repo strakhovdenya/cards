@@ -67,6 +67,8 @@ import { CardEditor } from './CardEditor';
 import type { Card } from '@/types';
 import { ClientCardService } from '@/services/cardService';
 import type { CardFormData } from '@/types';
+import { ClientTagService } from '@/services/tagService';
+import type { Tag } from '@/types';
 
 interface CreateVerbData {
   infinitive: string;
@@ -105,6 +107,7 @@ export function AuthenticatedApp() {
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
   const [editingVerb, setEditingVerb] = useState<Verb | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [verbFormData, setVerbFormData] = useState({
     infinitive: '',
     translation: '',
@@ -156,6 +159,11 @@ export function AuthenticatedApp() {
   useEffect(() => {
     void loadUserAndProfile();
   }, [loadUserAndProfile]);
+
+  // Загрузка тегов при инициализации
+  useEffect(() => {
+    void loadTags();
+  }, []);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -241,6 +249,15 @@ export function AuthenticatedApp() {
       setError('Ошибка загрузки карточек');
     } finally {
       // setCardsLoading(false); // This line is removed
+    }
+  };
+
+  const loadTags = async () => {
+    try {
+      const tags = await ClientTagService.getTags();
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error('Error loading tags:', error);
     }
   };
 
@@ -885,10 +902,18 @@ export function AuthenticatedApp() {
           setIsBulkImportOpen(false);
         }}
         onImport={async (cards) => {
-          // Здесь можно добавить логику импорта
-          await Promise.resolve();
-          console.log('Importing cards:', cards);
+          try {
+            setError(null);
+            const importedCards =
+              await ClientCardService.createBulkCards(cards);
+            setCards((prev) => [...importedCards, ...prev]);
+            setIsBulkImportOpen(false);
+          } catch (error) {
+            console.error('Error importing cards:', error);
+            setError('Ошибка импорта карточек');
+          }
         }}
+        availableTags={availableTags}
       />
 
       {/* Диалог массового импорта глаголов */}
