@@ -30,17 +30,23 @@ import {
   Button,
   DialogActions,
 } from '@mui/material';
-import { PersonAdd, ExitToApp, ArrowBack, School, Style, Translate, Edit, School as SchoolIcon, KeyboardArrowDown, KeyboardArrowRight, LocalOffer } from '@mui/icons-material';
+import { PersonAdd, ExitToApp, ArrowBack, School, Style, Translate, Edit, School as SchoolIcon, KeyboardArrowDown, KeyboardArrowRight, LocalOffer, Upload } from '@mui/icons-material';
 import { App } from './App';
 import { InviteManager } from './auth/InviteManager';
 import { VerbTraining } from './VerbTraining';
 import { VerbManager } from './VerbManager';
 import { DevelopmentWarning } from './DevelopmentWarning';
+import { TagManager } from './TagManager';
+import { BulkImport } from './BulkImport';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { VerbViewer } from './VerbViewer';
 import type { Verb } from '@/types';
 import { getVerbs, createVerb, updateVerb, deleteVerb } from '@/services/verbService';
+import { CardEditor } from './CardEditor';
+import type { Card } from '@/types';
+import { ClientCardService } from '@/services/cardService';
+import type { CardFormData } from '@/types';
 
 type ViewMode = 'viewer' | 'editor' | 'invites' | 'verbs';
 type MainViewMode = 'study' | 'edit';
@@ -63,7 +69,11 @@ export function AuthenticatedApp() {
   const [isVerbModeDialogOpen, setIsVerbModeDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isVerbEditDialogOpen, setIsVerbEditDialogOpen] = useState(false);
+  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
   const [editingVerb, setEditingVerb] = useState<Verb | null>(null);
+  const [cards, setCards] = useState<Card[]>([]);
   const [verbFormData, setVerbFormData] = useState({
     infinitive: '',
     translation: '',
@@ -150,7 +160,9 @@ export function AuthenticatedApp() {
     setStudyMode(mode);
     setIsStudyDialogOpen(false);
     
-    if (mode === 'verbs') {
+    if (mode === 'cards') {
+      setViewMode('viewer');
+    } else if (mode === 'verbs') {
       setIsVerbModeDialogOpen(true);
     }
   };
@@ -161,9 +173,10 @@ export function AuthenticatedApp() {
     
     if (mode === 'cards') {
       setViewMode('editor');
+      loadCards();
     } else if (mode === 'verbs') {
       setViewMode('verbs');
-      void loadVerbs();
+      loadVerbs();
     }
   };
 
@@ -174,7 +187,7 @@ export function AuthenticatedApp() {
     setIsVerbModeDialogOpen(false);
     
     if (mode === 'view') {
-      void loadVerbs();
+      loadVerbs();
     }
   };
 
@@ -185,6 +198,56 @@ export function AuthenticatedApp() {
     } catch (error) {
       console.error('Error loading verbs:', error);
       setError('Ошибка загрузки глаголов');
+    }
+  };
+
+  const loadCards = async () => {
+    try {
+      const fetchedCards = await ClientCardService.getCards();
+      setCards(fetchedCards);
+    } catch (error) {
+      console.error('Error loading cards:', error);
+      setError('Ошибка загрузки карточек');
+    } finally {
+      // setCardsLoading(false); // This line is removed
+    }
+  };
+
+  const handleAddCard = async (cardData: CardFormData) => {
+    try {
+      const newCard = await ClientCardService.createCard(
+        cardData.germanWord.trim(),
+        cardData.translation.trim(),
+        cardData.tagIds
+      );
+      setCards(prev => [newCard, ...prev]);
+    } catch (error) {
+      console.error('Error adding card:', error);
+      setError('Ошибка добавления карточки');
+    }
+  };
+
+  const handleUpdateCard = async (id: string, cardData: CardFormData) => {
+    try {
+      const updatedCard = await ClientCardService.updateCard(id, {
+        germanWord: cardData.germanWord.trim(),
+        translation: cardData.translation.trim(),
+        tagIds: cardData.tagIds,
+      });
+      setCards(prev => prev.map(card => card.id === id ? updatedCard : card));
+    } catch (error) {
+      console.error('Error updating card:', error);
+      setError('Ошибка обновления карточки');
+    }
+  };
+
+  const handleDeleteCard = async (id: string) => {
+    try {
+      await ClientCardService.deleteCard(id);
+      setCards(prev => prev.filter(card => card.id !== id));
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      setError('Ошибка удаления карточки');
     }
   };
 
@@ -331,8 +394,9 @@ export function AuthenticatedApp() {
              mainViewMode === 'study' ? (studyMode === 'verbs' ? 
                (verbMode === 'training' ? 'Тренировка глаголов' : 'Изучение глаголов') : 
                'German Word Cards') : 
-             mainViewMode === 'edit' ? (viewMode === 'verbs' ? 'Редактирование глаголов' : 'Редактирование') :
-             'Редактирование'}
+             mainViewMode === 'edit' ? (viewMode === 'verbs' ? 'Редактирование глаголов' : 
+               viewMode === 'editor' ? 'Редактирование карточек' : 'German Word Cards') :
+             'German Word Cards'}
           </Typography>
           {mainViewMode === 'study' && (
             <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
@@ -495,6 +559,29 @@ export function AuthenticatedApp() {
                 />
               </ListItemButton>
             </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => setIsTagManagerOpen(true)}>
+                <ListItemIcon>
+                  <LocalOffer />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Управление тегами" 
+                  secondary="Создание и редактирование тегов"
+                />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => setIsImportMenuOpen(true)}>
+                <ListItemIcon>
+                  <Upload />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Импорт карточек" 
+                  secondary="Массовый импорт карточек"
+                />
+                <KeyboardArrowRight />
+              </ListItemButton>
+            </ListItem>
             <DevelopmentWarning />
           </List>
         </DialogContent>
@@ -601,12 +688,57 @@ export function AuthenticatedApp() {
         <DialogActions>
           <Button onClick={() => setIsVerbEditDialogOpen(false)}>Отмена</Button>
           <Button onClick={() => {
-            void handleVerbSubmit();
+            handleVerbSubmit();
           }} variant="contained">
             {editingVerb ? 'Сохранить' : 'Добавить'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Диалог меню импорта */}
+      <Dialog
+        open={isImportMenuOpen}
+        onClose={() => setIsImportMenuOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Импорт карточек</DialogTitle>
+        <DialogContent>
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => {
+                setIsImportMenuOpen(false);
+                setIsBulkImportOpen(true);
+              }}>
+                <ListItemIcon>
+                  <Upload />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Импорт карточек" 
+                  secondary="Массовый импорт карточек из текста"
+                />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог управления тегами */}
+      <TagManager 
+        open={isTagManagerOpen} 
+        onClose={() => setIsTagManagerOpen(false)} 
+      />
+
+      {/* Диалог массового импорта */}
+      <BulkImport 
+        open={isBulkImportOpen} 
+        onClose={() => setIsBulkImportOpen(false)}
+        onImport={async (cards) => {
+          // Здесь можно добавить логику импорта
+          await Promise.resolve();
+          console.log('Importing cards:', cards);
+        }}
+      />
 
       {/* Основной контент */}
       <Box sx={{ flexGrow: 1, pb: viewMode !== 'invites' ? 8 : (userIsAdmin ? 14 : 8) }}>
@@ -659,19 +791,17 @@ export function AuthenticatedApp() {
             {viewMode === 'verbs' ? (
               <VerbManager />
             ) : viewMode === 'editor' ? (
-              <App
-                showNavigation={false}
-                onCardsCountChange={setCardsCount}
-                initialViewMode="editor"
-                onViewModeChange={(mode) => {
-                  setViewMode(mode);
-                }}
+              <CardEditor
+                cards={cards}
+                onAddCard={handleAddCard}
+                onUpdateCard={handleUpdateCard}
+                onDeleteCard={handleDeleteCard}
               />
             ) : (
               <App
                 showNavigation={false}
                 onCardsCountChange={setCardsCount}
-                initialViewMode="editor"
+                initialViewMode="viewer"
                 onViewModeChange={(mode) => {
                   setViewMode(mode);
                 }}
@@ -705,7 +835,7 @@ export function AuthenticatedApp() {
           elevation={3}
         >
           <BottomNavigation
-            value={mainViewMode}
+            value={mainViewMode === 'edit' && viewMode === 'viewer' ? 'study' : mainViewMode}
             onChange={(event, newValue) => {
               if (newValue === 'study') {
                 handleStudyClick();

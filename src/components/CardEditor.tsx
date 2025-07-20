@@ -31,25 +31,19 @@ import {
   Save,
   Cancel,
   LocalOffer,
-  Upload,
   Search,
   ExpandMore,
   Clear,
 } from '@mui/icons-material';
 import type { Card as CardType, CardFormData, Tag } from '@/types';
-import { BulkImport } from './BulkImport';
-import { TagManager } from './TagManager';
-import { TagFilter } from './TagFilter';
-import { ClientCardService } from '@/services/cardService';
 import { ClientTagService } from '@/services/tagService';
+import { TagFilter } from './TagFilter';
 
 interface CardEditorProps {
   cards: CardType[];
   onAddCard: (card: CardFormData) => void;
   onUpdateCard: (id: string, card: CardFormData) => void;
   onDeleteCard: (id: string) => void;
-  onBulkImport?: () => void; // Для обновления списка карточек после импорта
-  onCardsUpdate?: () => void; // Для обновления списка карточек после изменения тегов
 }
 
 export function CardEditor({
@@ -57,12 +51,8 @@ export function CardEditor({
   onAddCard,
   onUpdateCard,
   onDeleteCard,
-  onBulkImport,
-  onCardsUpdate,
 }: CardEditorProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
   const [formData, setFormData] = useState<CardFormData>({
     germanWord: '',
@@ -250,19 +240,6 @@ export function CardEditor({
     }
   };
 
-  const handleBulkImport = async (cards: CardFormData[]) => {
-    try {
-      await ClientCardService.createBulkCards(cards);
-      // Обновляем список карточек
-      if (onBulkImport) {
-        onBulkImport();
-      }
-    } catch (error) {
-      console.error('Ошибка массового импорта:', error);
-      throw error; // Пробрасываем ошибку для обработки в BulkImport
-    }
-  };
-
   return (
     <Box sx={{ padding: 3, maxWidth: 800, margin: '0 auto' }}>
       <Box
@@ -281,26 +258,6 @@ export function CardEditor({
         >
           Редактор карточек
         </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<LocalOffer />}
-          onClick={() => {
-            setIsTagManagerOpen(true);
-          }}
-          sx={{ ml: 2 }}
-        >
-          Управление тегами
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Upload />}
-          onClick={() => {
-            setIsBulkImportOpen(true);
-          }}
-          sx={{ ml: 1 }}
-        >
-          Массовый импорт
-        </Button>
       </Box>
 
       {/* Поиск и фильтрация */}
@@ -717,28 +674,10 @@ export function CardEditor({
       </Dialog>
 
       {/* Компонент массового импорта */}
-      <BulkImport
-        open={isBulkImportOpen}
-        onClose={() => {
-          setIsBulkImportOpen(false);
-        }}
-        onImport={handleBulkImport}
-        availableTags={availableTags}
-      />
+      {/* Removed BulkImport component */}
 
       {/* Компонент управления тегами */}
-      <TagManager
-        open={isTagManagerOpen}
-        onClose={() => {
-          setIsTagManagerOpen(false);
-        }}
-        onTagsUpdate={() => {
-          void loadTags();
-          if (onCardsUpdate) {
-            onCardsUpdate();
-          }
-        }}
-      />
+      {/* Removed TagManager component */}
     </Box>
   );
 }

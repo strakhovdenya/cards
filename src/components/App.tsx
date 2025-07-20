@@ -178,8 +178,6 @@ export function App({
                 void handleUpdateCard(id, cardData)
               }
               onDeleteCard={(id) => void handleDeleteCard(id)}
-              onBulkImport={() => void loadCards()}
-              onCardsUpdate={() => void loadCards()}
             />
           )}
         </Container>
