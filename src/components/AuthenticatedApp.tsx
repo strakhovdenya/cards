@@ -26,14 +26,21 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  TextField,
+  Button,
+  DialogActions,
 } from '@mui/material';
 import { PersonAdd, ExitToApp, ArrowBack, School, Style, Translate, Edit, School as SchoolIcon, KeyboardArrowDown, KeyboardArrowRight, LocalOffer } from '@mui/icons-material';
 import { App } from './App';
 import { InviteManager } from './auth/InviteManager';
 import { VerbTraining } from './VerbTraining';
 import { VerbManager } from './VerbManager';
+import { DevelopmentWarning } from './DevelopmentWarning';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
+import { VerbViewer } from './VerbViewer';
+import type { Verb } from '@/types';
+import { getVerbs, createVerb, updateVerb, deleteVerb } from '@/services/verbService';
 
 type ViewMode = 'viewer' | 'editor' | 'invites' | 'verbs';
 type MainViewMode = 'study' | 'edit';
@@ -54,6 +61,22 @@ export function AuthenticatedApp() {
   const [cardsCount, setCardsCount] = useState(0);
   const [isStudyDialogOpen, setIsStudyDialogOpen] = useState(false);
   const [isVerbModeDialogOpen, setIsVerbModeDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isVerbEditDialogOpen, setIsVerbEditDialogOpen] = useState(false);
+  const [editingVerb, setEditingVerb] = useState<Verb | null>(null);
+  const [verbFormData, setVerbFormData] = useState({
+    infinitive: '',
+    translation: '',
+    conjugations: [
+      { person: 'ich', form: '', translation: '' },
+      { person: 'du', form: '', translation: '' },
+      { person: 'er/sie/es', form: '', translation: '' },
+      { person: 'wir', form: '', translation: '' },
+      { person: 'ihr', form: '', translation: '' },
+      { person: 'sie / Sie', form: '', translation: '' },
+    ],
+  });
+  const [verbs, setVerbs] = useState<Verb[]>([]);
   const router = useRouter();
 
   const loadUserAndProfile = useCallback(async () => {
@@ -119,18 +142,135 @@ export function AuthenticatedApp() {
     setIsStudyDialogOpen(true);
   };
 
+  const handleEditClick = () => {
+    setIsEditDialogOpen(true);
+  };
+
   const handleStudyModeSelect = (mode: 'cards' | 'verbs') => {
     setStudyMode(mode);
     setIsStudyDialogOpen(false);
     
     if (mode === 'verbs') {
-      setVerbMode('view');
+      setIsVerbModeDialogOpen(true);
+    }
+  };
+
+  const handleEditModeSelect = (mode: 'cards' | 'verbs') => {
+    setMainViewMode('edit');
+    setIsEditDialogOpen(false);
+    
+    if (mode === 'cards') {
+      setViewMode('editor');
+    } else if (mode === 'verbs') {
+      setViewMode('verbs');
+      void loadVerbs();
     }
   };
 
   const handleVerbModeSelect = (mode: 'view' | 'training') => {
     setVerbMode(mode);
+    setMainViewMode('study');
+    setStudyMode('verbs');
     setIsVerbModeDialogOpen(false);
+    
+    if (mode === 'view') {
+      void loadVerbs();
+    }
+  };
+
+  const loadVerbs = async () => {
+    try {
+      const fetchedVerbs = await getVerbs();
+      setVerbs(fetchedVerbs);
+    } catch (error) {
+      console.error('Error loading verbs:', error);
+      setError('Ошибка загрузки глаголов');
+    }
+  };
+
+  const handleVerbUpdate = (updatedVerb: Verb) => {
+    setVerbs(prev => prev.map(v => v.id === updatedVerb.id ? updatedVerb : v));
+  };
+
+  const handleAddVerb = () => {
+    setEditingVerb(null);
+    setVerbFormData({
+      infinitive: '',
+      translation: '',
+      conjugations: [
+        { person: 'ich', form: '', translation: '' },
+        { person: 'du', form: '', translation: '' },
+        { person: 'er/sie/es', form: '', translation: '' },
+        { person: 'wir', form: '', translation: '' },
+        { person: 'ihr', form: '', translation: '' },
+        { person: 'sie / Sie', form: '', translation: '' },
+      ],
+    });
+    setIsVerbEditDialogOpen(true);
+  };
+
+  const handleEditVerb = (verb: Verb) => {
+    setEditingVerb(verb);
+    setVerbFormData({
+      infinitive: verb.infinitive,
+      translation: verb.translation,
+      conjugations: verb.conjugations || [
+        { person: 'ich', form: '', translation: '' },
+        { person: 'du', form: '', translation: '' },
+        { person: 'er/sie/es', form: '', translation: '' },
+        { person: 'wir', form: '', translation: '' },
+        { person: 'ihr', form: '', translation: '' },
+        { person: 'sie / Sie', form: '', translation: '' },
+      ],
+    });
+    setIsVerbEditDialogOpen(true);
+  };
+
+  const handleVerbFormChange = (field: keyof typeof verbFormData, value: string) => {
+    setVerbFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleConjugationChange = (index: number, field: keyof typeof verbFormData.conjugations[0], value: string) => {
+    setVerbFormData(prev => ({
+      ...prev,
+      conjugations: prev.conjugations.map((conj, i) =>
+        i === index ? { ...conj, [field]: value } : conj
+      ),
+    }));
+  };
+
+  const handleVerbSubmit = async () => {
+    if (!verbFormData.infinitive.trim() || !verbFormData.translation.trim()) {
+      setError('Заполните все обязательные поля');
+      return;
+    }
+
+    try {
+      setError(null);
+      if (editingVerb) {
+        const updatedVerb = await updateVerb(editingVerb.id, verbFormData);
+        setVerbs(prev => prev.map(v => v.id === editingVerb.id ? updatedVerb : v));
+      } else {
+        const newVerb = await createVerb(verbFormData);
+        setVerbs(prev => [newVerb, ...prev]);
+      }
+      setIsVerbEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving verb:', error);
+      setError('Ошибка сохранения глагола');
+    }
+  };
+
+  const handleVerbDelete = async (id: string) => {
+    if (!window.confirm('Удалить этот глагол?')) return;
+
+    try {
+      await deleteVerb(id);
+      setVerbs(prev => prev.filter(v => v.id !== id));
+    } catch (error) {
+      console.error('Error deleting verb:', error);
+      setError('Ошибка удаления глагола');
+    }
   };
 
   if (loading) {
@@ -190,12 +330,19 @@ export function AuthenticatedApp() {
             {viewMode === 'invites' ? 'Приглашения' : 
              mainViewMode === 'study' ? (studyMode === 'verbs' ? 
                (verbMode === 'training' ? 'Тренировка глаголов' : 'Изучение глаголов') : 
-               'German Word Cards') : 'Редактирование'}
+               'German Word Cards') : 
+             mainViewMode === 'edit' ? (viewMode === 'verbs' ? 'Редактирование глаголов' : 'Редактирование') :
+             'Редактирование'}
           </Typography>
           {mainViewMode === 'study' && (
             <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
               {studyMode === 'cards' ? 'Карточки' : 
                verbMode === 'training' ? 'Тренировка' : 'Просмотр'}
+            </Typography>
+          )}
+          {mainViewMode === 'edit' && (
+            <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
+              {viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
             </Typography>
           )}
           {mainViewMode === 'study' && studyMode === 'cards' && cardsCount > 0 && (
@@ -311,11 +458,44 @@ export function AuthenticatedApp() {
                 <KeyboardArrowRight />
               </ListItemButton>
             </ListItem>
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
-              <Typography variant="body2" color="warning.contrastText">
-                ⚠️ Глаголы работают, но функционал еще в разработке
-              </Typography>
-            </Box>
+            <DevelopmentWarning />
+          </List>
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог выбора режима редактирования */}
+      <Dialog
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Выберите режим редактирования</DialogTitle>
+        <DialogContent>
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => handleEditModeSelect('cards')}>
+                <ListItemIcon>
+                  <LocalOffer />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Карточки" 
+                  secondary="Редактирование немецких слов"
+                />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => handleEditModeSelect('verbs')}>
+                <ListItemIcon>
+                  <Translate />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Глаголы" 
+                  secondary="Редактирование спряжений немецких глаголов"
+                />
+              </ListItemButton>
+            </ListItem>
+            <DevelopmentWarning />
           </List>
         </DialogContent>
       </Dialog>
@@ -356,6 +536,78 @@ export function AuthenticatedApp() {
         </DialogContent>
       </Dialog>
 
+      {/* Диалог редактирования глаголов */}
+      <Dialog
+        open={isVerbEditDialogOpen}
+        onClose={() => setIsVerbEditDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingVerb ? 'Редактировать глагол' : 'Добавить глагол'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              label="Инфинитив"
+              value={verbFormData.infinitive}
+              onChange={(e) => {
+                handleVerbFormChange('infinitive', e.target.value);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Перевод"
+              value={verbFormData.translation}
+              onChange={(e) => {
+                handleVerbFormChange('translation', e.target.value);
+              }}
+              fullWidth
+            />
+            
+            <Typography variant="h6" sx={{ mt: 2 }}>
+              Спряжения
+            </Typography>
+            
+            {verbFormData.conjugations.map((conjugation, index) => (
+              <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="subtitle2" color="primary">
+                  {conjugation.person}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    label="Форма"
+                    value={conjugation.form}
+                    onChange={(e) => {
+                      handleConjugationChange(index, 'form', e.target.value);
+                    }}
+                    size="small"
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    label="Перевод"
+                    value={conjugation.translation}
+                    onChange={(e) => {
+                      handleConjugationChange(index, 'translation', e.target.value);
+                    }}
+                    size="small"
+                    sx={{ flex: 1 }}
+                  />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsVerbEditDialogOpen(false)}>Отмена</Button>
+          <Button onClick={() => {
+            void handleVerbSubmit();
+          }} variant="contained">
+            {editingVerb ? 'Сохранить' : 'Добавить'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Основной контент */}
       <Box sx={{ flexGrow: 1, pb: viewMode !== 'invites' ? 8 : (userIsAdmin ? 14 : 8) }}>
         {error && (
@@ -383,13 +635,43 @@ export function AuthenticatedApp() {
               verbMode === 'training' ? (
                 <VerbTraining />
               ) : (
-                <VerbManager />
+                <VerbViewer 
+                  verbs={verbs} 
+                  onVerbUpdate={handleVerbUpdate} 
+                  onVerbDelete={handleVerbDelete} 
+                  onAddVerb={handleAddVerb} 
+                  onEditVerb={handleEditVerb}
+                />
               )
             ) : (
               <App
                 showNavigation={false}
                 onCardsCountChange={setCardsCount}
                 initialViewMode="viewer"
+                onViewModeChange={(mode) => {
+                  setViewMode(mode);
+                }}
+              />
+            )}
+          </Container>
+        ) : mainViewMode === 'edit' ? (
+          <Container maxWidth="lg" sx={{ py: 2 }}>
+            {viewMode === 'verbs' ? (
+              <VerbManager />
+            ) : viewMode === 'editor' ? (
+              <App
+                showNavigation={false}
+                onCardsCountChange={setCardsCount}
+                initialViewMode="editor"
+                onViewModeChange={(mode) => {
+                  setViewMode(mode);
+                }}
+              />
+            ) : (
+              <App
+                showNavigation={false}
+                onCardsCountChange={setCardsCount}
+                initialViewMode="editor"
                 onViewModeChange={(mode) => {
                   setViewMode(mode);
                 }}
@@ -427,6 +709,8 @@ export function AuthenticatedApp() {
             onChange={(event, newValue) => {
               if (newValue === 'study') {
                 handleStudyClick();
+              } else if (newValue === 'edit') {
+                handleEditClick();
               } else {
                 setMainViewMode(newValue);
               }
@@ -447,9 +731,17 @@ export function AuthenticatedApp() {
               icon={<></>}
             />
             <BottomNavigationAction
-              label="Редактирование"
+              label={
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Edit />
+                    <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
+                  </Box>
+                  <Typography variant="caption">Редактирование</Typography>
+                </Box>
+              }
               value="edit"
-              icon={<Edit />}
+              icon={<></>}
             />
           </BottomNavigation>
         </Paper>
