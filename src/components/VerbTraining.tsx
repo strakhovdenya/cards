@@ -79,7 +79,7 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
       if (verb) {
         setCurrentVerb(verb);
         setCurrentPerson(getRandomPerson());
-        setStats((prev) => ({ ...prev, total: prev.total + 1 }));
+        // Не увеличиваем stats.total здесь!
       } else {
         setError('Не удалось загрузить глагол');
       }
@@ -93,6 +93,8 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
 
   useEffect(() => {
     void loadNewVerb();
+    // Сброс статистики при старте тренировки
+    setStats({ total: 0, correct: 0, incorrect: 0 });
   }, []);
 
   const handleShowAnswer = () => {
@@ -104,12 +106,20 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
   };
 
   const handleCorrectAnswer = () => {
-    setStats((prev) => ({ ...prev, correct: prev.correct + 1 }));
+    setStats((prev) => ({
+      ...prev,
+      correct: prev.correct + 1,
+      total: prev.total + 1,
+    }));
     handleNextVerb();
   };
 
   const handleIncorrectAnswer = () => {
-    setStats((prev) => ({ ...prev, incorrect: prev.incorrect + 1 }));
+    setStats((prev) => ({
+      ...prev,
+      incorrect: prev.incorrect + 1,
+      total: prev.total + 1,
+    }));
     handleNextVerb();
   };
 
@@ -168,26 +178,31 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap', // Добавлено для переноса
+          gap: 1.5, // Чуть больше для мобильных
         }}
       >
         <Typography variant="h6" color="primary">
           Тренировка глаголов
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Chip
             label={`Всего: ${stats.total}`}
             color="primary"
             variant="outlined"
+            sx={{ mb: { xs: 1, sm: 0 } }}
           />
           <Chip
             label={`Правильно: ${stats.correct}`}
             color="success"
             variant="outlined"
+            sx={{ mb: { xs: 1, sm: 0 } }}
           />
           <Chip
             label={`Неправильно: ${stats.incorrect}`}
             color="error"
             variant="outlined"
+            sx={{ mb: { xs: 1, sm: 0 } }}
           />
         </Box>
       </Box>
