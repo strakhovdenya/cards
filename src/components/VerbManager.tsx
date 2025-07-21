@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -18,8 +18,10 @@ import {
   Alert,
   CircularProgress,
   Fab,
+  InputAdornment,
+  Paper,
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Clear } from '@mui/icons-material';
 import type { Verb } from '@/types';
 import {
   getVerbs,
@@ -39,6 +41,7 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVerb, setEditingVerb] = useState<Verb | null>(null);
+  const [searchText, setSearchText] = useState('');
   const [formData, setFormData] = useState({
     infinitive: '',
     translation: '',
@@ -69,6 +72,39 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
       setLoading(false);
     }
   };
+
+  // Фильтрация глаголов по всем формам
+  const filteredVerbs = useMemo(() => {
+    if (!searchText.trim()) {
+      return verbs;
+    }
+
+    const searchLower = searchText.toLowerCase().trim();
+
+    return verbs.filter((verb) => {
+      // Поиск по инфинитиву
+      if (verb.infinitive.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+
+      // Поиск по переводу
+      if (verb.translation.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+
+      // Поиск по спряжениям
+      if (verb.conjugations) {
+        return verb.conjugations.some((conjugation) => {
+          return (
+            conjugation.form.toLowerCase().includes(searchLower) ||
+            conjugation.translation.toLowerCase().includes(searchLower)
+          );
+        });
+      }
+
+      return false;
+    });
+  }, [verbs, searchText]);
 
   const handleOpenDialog = (verb?: Verb) => {
     if (verb) {
@@ -190,29 +226,83 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
         </Alert>
       )}
 
+      {/* Поле фильтрации */}
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          placeholder="Поиск по всем формам глагола (немецкий, русский, спряжения)..."
+          value={searchText}
+          onChange={(e) => { setSearchText(e.target.value); }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search sx={{ color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchText && (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => { setSearchText(''); }}
+                  edge="end"
+                  size="small"
+                >
+                  <Clear />
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '12px',
+              backgroundColor: 'white',
+              '&:hover fieldset': {
+                borderColor: '#4fc3f7',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#29b6f6',
+              },
+            },
+          }}
+        />
+        {searchText && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Найдено: {filteredVerbs.length} из {verbs.length} глаголов
+          </Typography>
+        )}
+      </Paper>
+
       {/* Просмотр глаголов */}
-      {verbs.length === 0 ? (
+      {filteredVerbs.length === 0 ? (
         <Box textAlign="center" p={3}>
           <Typography variant="h6" color="text.secondary">
-            Нет добавленных глаголов
+            {verbs.length === 0
+              ? 'Нет добавленных глаголов'
+              : 'Глаголы не найдены'}
           </Typography>
-          <Box
-            sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'center' }}
-          >
-            <Button
-              variant="contained"
-              onClick={() => {
-                handleOpenDialog();
-              }}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {verbs.length === 0
+              ? 'Добавьте первый глагол для изучения'
+              : 'Попробуйте изменить критерии поиска'}
+          </Typography>
+          {verbs.length === 0 && (
+            <Box
+              sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'center' }}
             >
-              Добавить первый глагол
-            </Button>
-          </Box>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  handleOpenDialog();
+                }}
+              >
+                Добавить первый глагол
+              </Button>
+            </Box>
+          )}
         </Box>
       ) : (
         <>
           <List>
-            {verbs.map((verb) => (
+            {filteredVerbs.map((verb) => (
               <ListItem key={verb.id} divider>
                 <ListItemText
                   primary={verb.infinitive}
