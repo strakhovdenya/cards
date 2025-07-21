@@ -31,11 +31,11 @@ import {
 } from '@/services/verbService';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface VerbManagerProps {
+interface VerbEditorProps {
   // Компонент больше не принимает onTrainingMode
 }
 
-export const VerbManager: React.FC<VerbManagerProps> = () => {
+export const VerbEditor: React.FC<VerbEditorProps> = () => {
   const [verbs, setVerbs] = useState<Verb[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -232,7 +232,9 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
           fullWidth
           placeholder="Поиск по всем формам глагола (немецкий, русский, спряжения)..."
           value={searchText}
-          onChange={(e) => { setSearchText(e.target.value); }}
+          onChange={(e) => {
+            setSearchText(e.target.value);
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -242,7 +244,9 @@ export const VerbManager: React.FC<VerbManagerProps> = () => {
             endAdornment: searchText && (
               <InputAdornment position="end">
                 <IconButton
-                  onClick={() => { setSearchText(''); }}
+                  onClick={() => {
+                    setSearchText('');
+                  }}
                   edge="end"
                   size="small"
                 >

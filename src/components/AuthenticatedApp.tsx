@@ -48,7 +48,7 @@ import {
 import { App } from './App';
 import { InviteManager } from './auth/InviteManager';
 import { VerbTraining } from './VerbTraining';
-import { VerbManager } from './VerbManager';
+import { VerbEditor } from './VerbEditor';
 import { DevelopmentWarning } from './DevelopmentWarning';
 import { TagManager } from './TagManager';
 import { BulkImport } from './BulkImport';
@@ -1000,7 +1000,7 @@ export function AuthenticatedApp() {
         ) : mainViewMode === 'edit' ? (
           <Container maxWidth="lg" sx={{ py: 2 }}>
             {viewMode === 'verbs' ? (
-              <VerbManager />
+              <VerbEditor />
             ) : viewMode === 'editor' ? (
               <CardEditor
                 cards={cards}
