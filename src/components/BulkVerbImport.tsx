@@ -88,10 +88,14 @@ export function BulkVerbImport({
     const verbs: ParsedVerb[] = [];
     const errors: string[] = [];
 
+    // Заменяем все типы кавычек на стандартные двойные кавычки
+    const normalizedText = text.replace(/[“”«»„‟❝❞＂]/g, '"');
+
     // Сначала пытаемся парсить как JSON
-    if (text.trim().startsWith('{')) {
+    if (normalizedText.trim().startsWith('{')) {
+      let jsonData: JsonResponse;
       try {
-        const jsonData = JSON.parse(text) as JsonResponse;
+        jsonData = JSON.parse(normalizedText) as JsonResponse;
 
         if (!jsonData.verbs || !Array.isArray(jsonData.verbs)) {
           errors.push('Неверный формат JSON: отсутствует массив "verbs"');

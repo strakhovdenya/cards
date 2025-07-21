@@ -97,7 +97,10 @@ export function BulkImport({
     const errors: string[] = [];
 
     lines.forEach((line, index) => {
-      const trimmedLine = line.trim();
+      let trimmedLine = line.trim();
+      // Заменяем все виды дефисов на обычный дефис
+      trimmedLine = trimmedLine.replace(/[‐‑‒–—−﹘﹣－]/g, '-');
+
       const lineNumber = index + 1;
 
       // Пропускаем пустые строки
