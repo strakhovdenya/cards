@@ -10,13 +10,18 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
-import { LocalOffer, Translate, KeyboardArrowRight } from '@mui/icons-material';
+import {
+  LocalOffer,
+  Translate,
+  Schedule,
+  KeyboardArrowRight,
+} from '@mui/icons-material';
 import { DevelopmentWarning } from '../DevelopmentWarning';
 
 interface StudyModeSelectorProps {
   open: boolean;
   onClose: () => void;
-  onModeSelect: (mode: 'cards' | 'verbs') => void;
+  onModeSelect: (mode: 'cards' | 'verbs' | 'time') => void;
 }
 
 export function StudyModeSelector({
@@ -24,7 +29,7 @@ export function StudyModeSelector({
   onClose,
   onModeSelect,
 }: StudyModeSelectorProps) {
-  const handleModeSelect = (mode: 'cards' | 'verbs') => {
+  const handleModeSelect = (mode: 'cards' | 'verbs' | 'time') => {
     onModeSelect(mode);
   };
 
@@ -62,6 +67,21 @@ export function StudyModeSelector({
                 secondary="Изучение спряжений немецких глаголов"
               />
               <KeyboardArrowRight />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => {
+                handleModeSelect('time');
+              }}
+            >
+              <ListItemIcon>
+                <Schedule />
+              </ListItemIcon>
+              <ListItemText
+                primary="Время"
+                secondary="Изучение времени на немецком языке"
+              />
             </ListItemButton>
           </ListItem>
           <DevelopmentWarning />

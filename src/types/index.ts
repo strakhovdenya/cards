@@ -63,6 +63,23 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// Типы для вопросов времени
+export interface TimeQuestion {
+  id: string;
+  time_value: string;
+  hour: number;
+  minute: number;
+  formal_description: string;
+  formal_words: string[];
+  informal_description: string;
+  informal_words: string[];
+  word_pool: string[];
+  difficulty_level: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Интерфейсы для данных из базы данных (snake_case)
 export interface DatabaseCard {
   id: string;

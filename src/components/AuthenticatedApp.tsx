@@ -44,6 +44,7 @@ import { BulkImport } from './BulkImport';
 import { BulkVerbImport } from './BulkVerbImport';
 import { VerbViewer } from './VerbViewer';
 import { CardEditor } from './CardEditor';
+import { TimeTraining } from './TimeTraining';
 import { UserMenu } from './navigation/UserMenu';
 import { StudyModeSelector } from './navigation/StudyModeSelector';
 import { EditModeSelector } from './navigation/EditModeSelector';
@@ -53,7 +54,7 @@ import { useVerbs } from '@/hooks/useVerbs';
 
 type ViewMode = 'viewer' | 'editor' | 'invites' | 'verbs';
 type MainViewMode = 'study' | 'edit';
-type StudyMode = 'cards' | 'verbs';
+type StudyMode = 'cards' | 'verbs' | 'time';
 type VerbMode = 'view' | 'training';
 
 export function AuthenticatedApp() {
@@ -114,7 +115,7 @@ export function AuthenticatedApp() {
     setIsEditDialogOpen(true);
   };
 
-  const handleStudyModeSelect = (mode: 'cards' | 'verbs') => {
+  const handleStudyModeSelect = (mode: 'cards' | 'verbs' | 'time') => {
     setStudyMode(mode);
     setIsStudyDialogOpen(false);
 
@@ -122,6 +123,8 @@ export function AuthenticatedApp() {
       setViewMode('viewer');
     } else if (mode === 'verbs') {
       setIsVerbModeDialogOpen(true);
+    } else if (mode === 'time') {
+      setViewMode('viewer');
     }
   };
 
@@ -210,7 +213,9 @@ export function AuthenticatedApp() {
                   ? verbMode === 'training'
                     ? 'Тренировка глаголов'
                     : 'Изучение глаголов'
-                  : 'German Word Cards'
+                  : studyMode === 'time'
+                    ? 'Изучение времени'
+                    : 'German Word Cards'
                 : mainViewMode === 'edit'
                   ? viewMode === 'verbs'
                     ? 'Редактирование глаголов'
@@ -223,9 +228,11 @@ export function AuthenticatedApp() {
             <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
               {studyMode === 'cards'
                 ? 'Карточки'
-                : verbMode === 'training'
-                  ? 'Тренировка'
-                  : 'Просмотр'}
+                : studyMode === 'time'
+                  ? 'Время'
+                  : verbMode === 'training'
+                    ? 'Тренировка'
+                    : 'Просмотр'}
             </Typography>
           )}
           {mainViewMode === 'edit' && (
@@ -543,6 +550,8 @@ export function AuthenticatedApp() {
                   onEditVerb={handleEditVerb}
                 />
               )
+            ) : studyMode === 'time' ? (
+              <TimeTraining />
             ) : (
               <App
                 showNavigation={false}
