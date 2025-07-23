@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
+import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
 import type {
   CreateCardRequest,
   ApiResponse,
@@ -88,6 +89,33 @@ export async function POST(request: NextRequest) {
           error: 'germanWord and translation are required',
         },
         { status: 400 }
+      );
+    }
+
+    // Проверка на дубликаты
+    const { data: existingCards, error: duplicateCheckError } = await supabase
+      .from('cards')
+      .select('german_word')
+      .eq('user_id', user.id);
+
+    if (duplicateCheckError) {
+      console.error('Error fetching existing cards:', duplicateCheckError);
+      return NextResponse.json<ApiResponse<null>>(
+        { error: 'Ошибка при проверке дубликатов' },
+        { status: 500 }
+      );
+    }
+
+    const existingGermanWords = extractGermanWords(
+      (existingCards ?? []).map((card) => ({
+        germanWord: card.german_word as string,
+      }))
+    );
+
+    if (isDuplicateGermanWord(body.germanWord, existingGermanWords)) {
+      return NextResponse.json<ApiResponse<null>>(
+        { error: 'Карточка с таким немецким словом уже существует' },
+        { status: 409 }
       );
     }
 

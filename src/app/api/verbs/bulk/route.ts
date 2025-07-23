@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
 import type { BulkCreateVerbsRequest, ApiResponse } from '@/types';
 
 interface DbVerb {
@@ -42,8 +43,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Получаем существующие глаголы для проверки дубликатов
+    const { data: existingVerbs, error: fetchError } = await supabase
+      .from('verbs')
+      .select('infinitive')
+      .eq('user_id', user.id);
+
+    if (fetchError) {
+      console.error('Error fetching existing verbs:', fetchError);
+      return NextResponse.json(
+        { error: 'Ошибка при проверке дубликатов' },
+        { status: 500 }
+      );
+    }
+
+    const existingGermanWords = extractGermanWords(existingVerbs || []);
+
     // Валидируем каждый глагол
     const validPersons = ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie / Sie'];
+    const duplicateVerbs: string[] = [];
 
     for (const verb of body.verbs) {
       if (!verb.infinitive || !verb.translation) {
@@ -90,6 +108,36 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // Проверяем на дубликаты среди существующих глаголов
+      if (isDuplicateGermanWord(verb.infinitive, existingGermanWords)) {
+        duplicateVerbs.push(verb.infinitive);
+      }
+    }
+
+    // Если есть дубликаты, возвращаем ошибку
+    if (duplicateVerbs.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Следующие глаголы уже существуют: ${duplicateVerbs.join(', ')}`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Проверяем дубликаты внутри нового списка
+    const newGermanWords = body.verbs.map((v) => v.infinitive);
+    const uniqueNewWords = new Set(
+      newGermanWords.map((word) =>
+        word.trim().toLowerCase().replace(/,/g, '').replace(/\s+/g, '')
+      )
+    );
+
+    if (uniqueNewWords.size !== newGermanWords.length) {
+      return NextResponse.json(
+        { error: 'В списке есть дублирующиеся глаголы' },
+        { status: 400 }
+      );
     }
 
     // Подготавливаем данные для вставки

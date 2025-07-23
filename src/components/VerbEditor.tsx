@@ -22,6 +22,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Clear } from '@mui/icons-material';
+import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
 import type { Verb } from '@/types';
 import {
   getVerbs,
@@ -54,6 +55,7 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       { person: 'sie / Sie', form: '', translation: '' },
     ],
   });
+  const [isDuplicate, setIsDuplicate] = useState(false);
 
   useEffect(() => {
     void loadVerbs();
@@ -130,6 +132,7 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       });
     }
     setError(null);
+    setIsDuplicate(false);
     setDialogOpen(true);
   };
 
@@ -149,10 +152,31 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       ],
     });
     setError(null);
+    setIsDuplicate(false);
+  };
+
+  // Функция для проверки дубликатов
+  const checkForDuplicates = (infinitive: string) => {
+    if (!infinitive.trim() || editingVerb) {
+      setIsDuplicate(false);
+      return;
+    }
+
+    const existingGermanWords = extractGermanWords(verbs);
+    const isDuplicateWord = isDuplicateGermanWord(
+      infinitive,
+      existingGermanWords
+    );
+    setIsDuplicate(isDuplicateWord);
   };
 
   const handleFormChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Проверяем дубликаты при изменении инфинитива
+    if (field === 'infinitive') {
+      checkForDuplicates(value);
+    }
   };
 
   const handleConjugationChange = (
@@ -174,6 +198,11 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       return;
     }
 
+    if (isDuplicate && !editingVerb) {
+      setError('Глагол с таким инфинитивом уже существует');
+      return;
+    }
+
     try {
       setError(null);
       if (editingVerb) {
@@ -188,7 +217,11 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving verb:', error);
-      setError('Ошибка сохранения глагола');
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Ошибка сохранения глагола');
+      }
     }
   };
 
@@ -369,6 +402,10 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
                 handleFormChange('infinitive', e.target.value);
               }}
               fullWidth
+              error={isDuplicate}
+              helperText={
+                isDuplicate ? 'Глагол с таким инфинитивом уже существует' : ''
+              }
             />
             <TextField
               label="Перевод"

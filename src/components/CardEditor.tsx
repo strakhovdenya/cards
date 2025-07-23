@@ -38,6 +38,7 @@ import {
 import type { Card as CardType, CardFormData, Tag } from '@/types';
 import { ClientTagService } from '@/services/tagService';
 import { TagFilter } from './TagFilter';
+import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
 
 interface CardEditorProps {
   cards: CardType[];
@@ -61,6 +62,7 @@ export function CardEditor({
   });
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [errors, setErrors] = useState<Partial<CardFormData>>({});
+  const [isDuplicate, setIsDuplicate] = useState(false);
 
   // Состояние для фильтрации
   const [searchText, setSearchText] = useState('');
@@ -78,6 +80,21 @@ export function CardEditor({
     } catch (error) {
       console.error('Ошибка загрузки тегов:', error);
     }
+  };
+
+  // Функция для проверки дубликатов
+  const checkForDuplicates = (germanWord: string) => {
+    if (!germanWord.trim() || editingCard) {
+      setIsDuplicate(false);
+      return;
+    }
+
+    const existingGermanWords = extractGermanWords(cards);
+    const isDuplicateWord = isDuplicateGermanWord(
+      germanWord,
+      existingGermanWords
+    );
+    setIsDuplicate(isDuplicateWord);
   };
 
   // Фильтрация карточек
@@ -147,6 +164,7 @@ export function CardEditor({
       });
     }
     setErrors({});
+    setIsDuplicate(false);
     setIsModalOpen(true);
   };
 
@@ -159,6 +177,7 @@ export function CardEditor({
       tags: [],
     });
     setErrors({});
+    setIsDuplicate(false);
   };
 
   const validateForm = (): boolean => {
@@ -170,6 +189,10 @@ export function CardEditor({
 
     if (!formData.translation.trim()) {
       newErrors.translation = 'Перевод обязателен';
+    }
+
+    if (isDuplicate && !editingCard) {
+      newErrors.germanWord = 'Карточка с таким немецким словом уже существует';
     }
 
     setErrors(newErrors);
@@ -231,6 +254,11 @@ export function CardEditor({
           ...prev,
           [field]: undefined,
         }));
+      }
+
+      // Проверяем дубликаты при изменении немецкого слова
+      if (field === 'germanWord') {
+        checkForDuplicates(value);
       }
     };
 
@@ -586,8 +614,13 @@ export function CardEditor({
             variant="outlined"
             value={formData.germanWord}
             onChange={handleInputChange('germanWord')}
-            error={!!errors.germanWord}
-            helperText={errors.germanWord}
+            error={!!errors.germanWord || isDuplicate}
+            helperText={
+              errors.germanWord ??
+              (isDuplicate
+                ? 'Карточка с таким немецким словом уже существует'
+                : '')
+            }
             sx={{ mb: 2 }}
           />
           <TextField

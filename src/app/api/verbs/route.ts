@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
+import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
 import type {
   CreateVerbRequest,
   DatabaseVerb,
@@ -81,6 +82,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Необходимо указать спряжения глагола' },
         { status: 400 }
+      );
+    }
+
+    // Проверка на дубликаты
+    const { data: existingVerbs, error: fetchError } = await supabase
+      .from('verbs')
+      .select('infinitive')
+      .eq('user_id', user.id);
+
+    if (fetchError) {
+      console.error('Error fetching existing verbs:', fetchError);
+      return NextResponse.json(
+        { error: 'Ошибка при проверке дубликатов' },
+        { status: 500 }
+      );
+    }
+
+    const existingGermanWords = extractGermanWords(existingVerbs || []);
+
+    if (isDuplicateGermanWord(body.infinitive, existingGermanWords)) {
+      return NextResponse.json(
+        { error: 'Глагол с таким инфинитивом уже существует' },
+        { status: 409 }
       );
     }
 
