@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -30,8 +30,11 @@ import {
   ContentCopy,
   Close,
   ExpandMore,
+  Warning,
 } from '@mui/icons-material';
-import type { VerbConjugation } from '@/types';
+import type { VerbConjugation, Verb } from '@/types';
+import { ClientVerbService } from '@/services/verbService';
+import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
 
 interface BulkVerbImportProps {
   open: boolean;
@@ -50,11 +53,14 @@ interface ParsedVerb {
   translation: string;
   conjugations: VerbConjugation[];
   lineNumber: number;
+  isDuplicate?: boolean;
 }
 
 interface ParseResult {
   verbs: ParsedVerb[];
   errors: string[];
+  duplicates: ParsedVerb[];
+  newVerbs: ParsedVerb[];
 }
 
 interface JsonVerbData {
@@ -82,14 +88,35 @@ export function BulkVerbImport({
   const [showPreview, setShowPreview] = useState(false);
   const [isGptPromptOpen, setIsGptPromptOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [existingVerbs, setExistingVerbs] = useState<Verb[]>([]);
+  const [loadingExistingVerbs, setLoadingExistingVerbs] = useState(false);
 
-  // Парсинг текста в глаголы
+  // Загружаем существующие глаголы при открытии диалога
+  useEffect(() => {
+    if (open) {
+      void loadExistingVerbs();
+    }
+  }, [open]);
+
+  const loadExistingVerbs = async () => {
+    try {
+      setLoadingExistingVerbs(true);
+      const verbs = await ClientVerbService.getVerbs();
+      setExistingVerbs(verbs);
+    } catch (error) {
+      console.error('Ошибка загрузки существующих глаголов:', error);
+    } finally {
+      setLoadingExistingVerbs(false);
+    }
+  };
+
+  // Парсинг текста в глаголы с проверкой дубликатов
   const parseVerbs = (text: string): ParseResult => {
     const verbs: ParsedVerb[] = [];
     const errors: string[] = [];
 
     // Заменяем все типы кавычек на стандартные двойные кавычки
-    const normalizedText = text.replace(/[“”«»„‟❝❞＂]/g, '"');
+    const normalizedText = text.replace(/[""«»„‟❝❞＂]/g, '"');
 
     // Сначала пытаемся парсить как JSON
     if (normalizedText.trim().startsWith('{')) {
@@ -99,7 +126,7 @@ export function BulkVerbImport({
 
         if (!jsonData.verbs || !Array.isArray(jsonData.verbs)) {
           errors.push('Неверный формат JSON: отсутствует массив "verbs"');
-          return { verbs, errors };
+          return { verbs, errors, duplicates: [], newVerbs: [] };
         }
 
         jsonData.verbs.forEach((verbData: JsonVerbData, index: number) => {
@@ -175,7 +202,24 @@ export function BulkVerbImport({
           });
         });
 
-        return { verbs, errors };
+        // Проверяем дубликаты для JSON
+        const existingGermanWords = extractGermanWords(existingVerbs);
+        const duplicates: ParsedVerb[] = [];
+        const newVerbs: ParsedVerb[] = [];
+
+        verbs.forEach((verb) => {
+          const isDuplicate = isDuplicateGermanWord(
+            verb.infinitive,
+            existingGermanWords
+          );
+          if (isDuplicate) {
+            duplicates.push({ ...verb, isDuplicate: true });
+          } else {
+            newVerbs.push({ ...verb, isDuplicate: false });
+          }
+        });
+
+        return { verbs, errors, duplicates, newVerbs };
       } catch (error) {
         errors.push(
           `Ошибка парсинга JSON: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
@@ -302,12 +346,34 @@ export function BulkVerbImport({
       }
     }
 
-    return { verbs, errors };
+    // Проверяем дубликаты для текстового формата
+    const existingGermanWords = extractGermanWords(existingVerbs);
+    const duplicates: ParsedVerb[] = [];
+    const newVerbs: ParsedVerb[] = [];
+
+    verbs.forEach((verb) => {
+      const isDuplicate = isDuplicateGermanWord(
+        verb.infinitive,
+        existingGermanWords
+      );
+      if (isDuplicate) {
+        duplicates.push({ ...verb, isDuplicate: true });
+      } else {
+        newVerbs.push({ ...verb, isDuplicate: false });
+      }
+    });
+
+    return { verbs, errors, duplicates, newVerbs };
   };
 
   const handlePreview = () => {
     if (!inputText.trim()) {
-      setParseResult({ verbs: [], errors: ['Введите текст для парсинга'] });
+      setParseResult({
+        verbs: [],
+        errors: ['Введите текст для парсинга'],
+        duplicates: [],
+        newVerbs: [],
+      });
       return;
     }
 
@@ -317,15 +383,17 @@ export function BulkVerbImport({
   };
 
   const handleImport = async () => {
-    if (!parseResult || parseResult.verbs.length === 0) return;
+    if (!parseResult || parseResult.newVerbs.length === 0) return;
 
     setIsImporting(true);
     try {
-      const verbsToImport: CreateVerbData[] = parseResult.verbs.map((verb) => ({
-        infinitive: verb.infinitive,
-        translation: verb.translation,
-        conjugations: verb.conjugations,
-      }));
+      const verbsToImport: CreateVerbData[] = parseResult.newVerbs.map(
+        (verb) => ({
+          infinitive: verb.infinitive,
+          translation: verb.translation,
+          conjugations: verb.conjugations,
+        })
+      );
 
       await onImport(verbsToImport);
 
@@ -566,9 +634,11 @@ sie / Sie - arbeiten - они работают
               variant="outlined"
               startIcon={<Preview />}
               onClick={handlePreview}
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || loadingExistingVerbs}
             >
-              Предварительный просмотр
+              {loadingExistingVerbs
+                ? 'Загрузка...'
+                : 'Предварительный просмотр'}
             </Button>
           </Box>
 
@@ -589,23 +659,68 @@ sie / Sie - arbeiten - они работают
                 </Alert>
               )}
 
-              {parseResult.verbs.length > 0 && (
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  Найдено {parseResult.verbs.length} глаголов для импорта
+              {/* Дубликаты */}
+              {parseResult.duplicates.length > 0 && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <Warning color="warning" />
+                    <Typography variant="subtitle2">
+                      Найдены дубликаты ({parseResult.duplicates.length}):
+                    </Typography>
+                  </Box>
+                  <Paper
+                    sx={{
+                      maxHeight: 200,
+                      overflow: 'auto',
+                      p: 1,
+                      bgcolor: 'warning.light',
+                    }}
+                  >
+                    <List dense>
+                      {parseResult.duplicates.map((verb, index) => (
+                        <ListItem key={index} divider>
+                          <ListItemText
+                            primary={`${verb.infinitive} - ${verb.translation}`}
+                            secondary={`Строка ${verb.lineNumber} - уже существует`}
+                            sx={{
+                              '& .MuiListItemText-primary': {
+                                color: 'warning.dark',
+                                fontWeight: 'bold',
+                              },
+                            }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
                 </Alert>
               )}
 
-              {showPreview && parseResult.verbs.length > 0 && (
+              {parseResult.newVerbs.length > 0 && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  Найдено {parseResult.newVerbs.length} новых глаголов для
+                  импорта
+                </Alert>
+              )}
+
+              {showPreview && parseResult.newVerbs.length > 0 && (
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMore />}>
                     <Typography>
-                      Предварительный просмотр ({parseResult.verbs.length}{' '}
+                      Предварительный просмотр ({parseResult.newVerbs.length}{' '}
                       глаголов)
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <List>
-                      {parseResult.verbs.map((verb, index) => (
+                      {parseResult.newVerbs.map((verb, index) => (
                         <Box key={index}>
                           <ListItem>
                             <ListItemText
@@ -622,13 +737,29 @@ sie / Sie - arbeiten - они работают
                               </ListItem>
                             ))}
                           </Box>
-                          {index < parseResult.verbs.length - 1 && <Divider />}
+                          {index < parseResult.newVerbs.length - 1 && (
+                            <Divider />
+                          )}
                         </Box>
                       ))}
                     </List>
                   </AccordionDetails>
                 </Accordion>
               )}
+
+              {/* Статистика */}
+              {parseResult.duplicates.length > 0 &&
+                parseResult.newVerbs.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Alert severity="info">
+                      <Typography variant="body2">
+                        <strong>Статистика:</strong>{' '}
+                        {parseResult.newVerbs.length} новых глаголов,{' '}
+                        {parseResult.duplicates.length} дубликатов пропущено
+                      </Typography>
+                    </Alert>
+                  </Box>
+                )}
             </Box>
           )}
         </DialogContent>
@@ -642,7 +773,7 @@ sie / Sie - arbeiten - они работают
             variant="contained"
             disabled={
               !parseResult ||
-              parseResult.verbs.length === 0 ||
+              parseResult.newVerbs.length === 0 ||
               parseResult.errors.length > 0 ||
               isImporting
             }

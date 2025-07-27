@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -31,9 +31,12 @@ import {
   Close,
   LocalOffer,
   ExpandMore,
+  Warning,
 } from '@mui/icons-material';
-import type { CardFormData, Tag } from '@/types';
+import type { CardFormData, Tag, Card } from '@/types';
 import { TagFilter } from './TagFilter';
+import { ClientCardService } from '@/services/cardService';
+import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
 
 interface BulkImportProps {
   open: boolean;
@@ -46,11 +49,14 @@ interface ParsedCard {
   germanWord: string;
   translation: string;
   lineNumber: number;
+  isDuplicate?: boolean;
 }
 
 interface ParseResult {
   cards: ParsedCard[];
   errors: string[];
+  duplicates: ParsedCard[];
+  newCards: ParsedCard[];
 }
 
 export function BulkImport({
@@ -65,9 +71,30 @@ export function BulkImport({
   const [showPreview, setShowPreview] = useState(false);
   const [isGptPromptOpen, setIsGptPromptOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [existingCards, setExistingCards] = useState<Card[]>([]);
+  const [loadingExistingCards, setLoadingExistingCards] = useState(false);
 
   // Состояние для выбора тегов
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+
+  // Загружаем существующие карточки при открытии диалога
+  useEffect(() => {
+    if (open) {
+      void loadExistingCards();
+    }
+  }, [open]);
+
+  const loadExistingCards = async () => {
+    try {
+      setLoadingExistingCards(true);
+      const cards = await ClientCardService.getCards();
+      setExistingCards(cards);
+    } catch (error) {
+      console.error('Ошибка загрузки существующих карточек:', error);
+    } finally {
+      setLoadingExistingCards(false);
+    }
+  };
 
   // Функции для управления выбором тегов
   const handleTagToggle = useCallback((tagId: string) => {
@@ -90,7 +117,7 @@ export function BulkImport({
     setSelectedTagIds(new Set());
   }, []);
 
-  // Парсинг текста в карточки
+  // Парсинг текста в карточки с проверкой дубликатов
   const parseCards = (text: string): ParseResult => {
     const lines = text.split('\n');
     const cards: ParsedCard[] = [];
@@ -134,12 +161,34 @@ export function BulkImport({
       });
     });
 
-    return { cards, errors };
+    // Проверяем дубликаты
+    const existingGermanWords = extractGermanWords(existingCards);
+    const duplicates: ParsedCard[] = [];
+    const newCards: ParsedCard[] = [];
+
+    cards.forEach((card) => {
+      const isDuplicate = isDuplicateGermanWord(
+        card.germanWord,
+        existingGermanWords
+      );
+      if (isDuplicate) {
+        duplicates.push({ ...card, isDuplicate: true });
+      } else {
+        newCards.push({ ...card, isDuplicate: false });
+      }
+    });
+
+    return { cards, errors, duplicates, newCards };
   };
 
   const handlePreview = () => {
     if (!inputText.trim()) {
-      setParseResult({ cards: [], errors: ['Введите текст для парсинга'] });
+      setParseResult({
+        cards: [],
+        errors: ['Введите текст для парсинга'],
+        duplicates: [],
+        newCards: [],
+      });
       return;
     }
 
@@ -149,15 +198,17 @@ export function BulkImport({
   };
 
   const handleImport = async () => {
-    if (!parseResult || parseResult.cards.length === 0) return;
+    if (!parseResult || parseResult.newCards.length === 0) return;
 
     setIsImporting(true);
     try {
-      const cardsToImport: CardFormData[] = parseResult.cards.map((card) => ({
-        germanWord: card.germanWord,
-        translation: card.translation,
-        tagIds: Array.from(selectedTagIds), // Добавляем выбранные теги
-      }));
+      const cardsToImport: CardFormData[] = parseResult.newCards.map(
+        (card) => ({
+          germanWord: card.germanWord,
+          translation: card.translation,
+          tagIds: Array.from(selectedTagIds), // Добавляем выбранные теги
+        })
+      );
 
       await onImport(cardsToImport);
 
@@ -374,9 +425,11 @@ laufen - бегать`;
               variant="outlined"
               onClick={handlePreview}
               startIcon={<Preview />}
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || loadingExistingCards}
             >
-              Предварительный просмотр
+              {loadingExistingCards
+                ? 'Загрузка...'
+                : 'Предварительный просмотр'}
             </Button>
           </Box>
 
@@ -404,8 +457,52 @@ laufen - бегать`;
                 </Alert>
               )}
 
+              {/* Дубликаты */}
+              {parseResult.duplicates.length > 0 && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <Warning color="warning" />
+                    <Typography variant="subtitle2">
+                      Найдены дубликаты ({parseResult.duplicates.length}):
+                    </Typography>
+                  </Box>
+                  <Paper
+                    sx={{
+                      maxHeight: 200,
+                      overflow: 'auto',
+                      p: 1,
+                      bgcolor: 'warning.light',
+                    }}
+                  >
+                    <List dense>
+                      {parseResult.duplicates.map((card, index) => (
+                        <ListItem key={index} divider>
+                          <ListItemText
+                            primary={`${card.germanWord} → ${card.translation}`}
+                            secondary={`Строка ${card.lineNumber} - уже существует`}
+                            sx={{
+                              '& .MuiListItemText-primary': {
+                                color: 'warning.dark',
+                                fontWeight: 'bold',
+                              },
+                            }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                </Alert>
+              )}
+
               {/* Успешно распарсенные карточки */}
-              {parseResult.cards.length > 0 && (
+              {parseResult.newCards.length > 0 && (
                 <Box>
                   <Box
                     sx={{
@@ -416,7 +513,7 @@ laufen - бегать`;
                     }}
                   >
                     <Typography variant="h6" color="primary">
-                      Будет добавлено карточек: {parseResult.cards.length}
+                      Будет добавлено карточек: {parseResult.newCards.length}
                     </Typography>
 
                     {selectedTagIds.size > 0 && (
@@ -458,7 +555,7 @@ laufen - бегать`;
 
                   <Paper sx={{ maxHeight: 300, overflow: 'auto', p: 1 }}>
                     <List dense>
-                      {parseResult.cards.map((card, index) => (
+                      {parseResult.newCards.map((card, index) => (
                         <ListItem key={index} divider>
                           <ListItemText
                             primary={`${card.germanWord} → ${card.translation}`}
@@ -470,6 +567,20 @@ laufen - бегать`;
                   </Paper>
                 </Box>
               )}
+
+              {/* Статистика */}
+              {parseResult.duplicates.length > 0 &&
+                parseResult.newCards.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Alert severity="info">
+                      <Typography variant="body2">
+                        <strong>Статистика:</strong>{' '}
+                        {parseResult.newCards.length} новых карточек,{' '}
+                        {parseResult.duplicates.length} дубликатов пропущено
+                      </Typography>
+                    </Alert>
+                  </Box>
+                )}
             </Box>
           )}
         </DialogContent>
@@ -483,7 +594,7 @@ laufen - бегать`;
               void handleImport();
             }}
             disabled={
-              !parseResult || parseResult.cards.length === 0 || isImporting
+              !parseResult || parseResult.newCards.length === 0 || isImporting
             }
             startIcon={
               isImporting ? <CircularProgress size={16} /> : <Upload />
@@ -491,7 +602,7 @@ laufen - бегать`;
           >
             {isImporting
               ? 'Импорт...'
-              : `Импортировать (${parseResult?.cards.length ?? 0}${
+              : `Импортировать (${parseResult?.newCards.length ?? 0}${
                   selectedTagIds.size > 0
                     ? ` + ${selectedTagIds.size} тег${selectedTagIds.size === 1 ? '' : selectedTagIds.size < 5 ? 'а' : 'ов'}`
                     : ''
