@@ -24,11 +24,13 @@ import {
   RadioButtonUnchecked,
   KeyboardHide,
   Keyboard,
+  Settings,
 } from '@mui/icons-material';
 import { ClientCardService } from '@/services/cardService';
 import { ClientTagService } from '@/services/tagService';
 import { Card } from './Card';
 import { TagFilter } from './TagFilter';
+import { SpeechSettings } from './SpeechSettings';
 import type { Card as CardType, Tag } from '@/types';
 
 interface CardViewerProps {
@@ -42,6 +44,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
   const [shuffledCards, setShuffledCards] = useState<CardType[]>([]);
   const [frontSide, setFrontSide] = useState<'german' | 'russian'>('german');
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
+  const [speechSettingsOpen, setSpeechSettingsOpen] = useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -261,6 +264,11 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
           setFrontSide((prev) => (prev === 'german' ? 'russian' : 'german'));
           setIsFlipped(false);
           break;
+        case 'p':
+        case 'P':
+          event.preventDefault();
+          // Произношение - будет обрабатываться в компоненте Card
+          break;
       }
     };
 
@@ -399,6 +407,22 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
               </ToggleButton>
             </ToggleButtonGroup>
           </Tooltip>
+
+          {/* Кнопка настроек произношения */}
+          <Tooltip title="Настройки произношения">
+            <IconButton
+              size="small"
+              onClick={() => { setSpeechSettingsOpen(true); }}
+              sx={{
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                },
+              }}
+            >
+              <Settings fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
 
@@ -509,13 +533,15 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
               <Chip label="Enter" size="small" variant="outlined" />
               <Chip label="S" size="small" variant="outlined" />
               <Chip label="F" size="small" variant="outlined" />
+              <Chip label="P" size="small" variant="outlined" />
             </Stack>
             <Typography
               variant="caption"
               color="text.disabled"
               sx={{ mt: 1, display: 'block' }}
             >
-              Навигация • Перевернуть • Выучено • Перемешать • Сменить режим
+              Навигация • Перевернуть • Выучено • Перемешать • Сменить режим •
+              Произношение
             </Typography>
           </Box>
         </Collapse>
@@ -587,6 +613,12 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
       >
         Перемешать
       </Button>
+
+      {/* Диалог настроек произношения */}
+      <SpeechSettings
+        open={speechSettingsOpen}
+        onClose={() => { setSpeechSettingsOpen(false); }}
+      />
     </Box>
   );
 }
