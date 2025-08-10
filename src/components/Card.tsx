@@ -1,17 +1,10 @@
 'use client';
 
-import {
-  Card as MUICard,
-  Typography,
-  Box,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
+import { Card as MUICard, Typography, Box } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { VolumeUp } from '@mui/icons-material';
 import type { Card as CardType } from '@/types';
-import { memo, useState, useEffect, useCallback } from 'react';
-import { useSpeech } from '@/services/speechService';
+import { memo } from 'react';
+import { SpeechButton } from './SpeechButton';
 
 interface CardProps {
   card: CardType;
@@ -106,86 +99,22 @@ const TranslationText = styled(Typography)(({ theme }) => ({
   },
 }));
 
-const SpeechButton = styled(IconButton)(({ theme }) => ({
-  position: 'absolute',
-  top: theme.spacing(1),
-  right: theme.spacing(1),
-  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-  backdropFilter: 'blur(4px)',
-  border: `1px solid ${theme.palette.divider}`,
-  '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    transform: 'scale(1.05)',
-  },
-  transition: 'all 0.2s ease-in-out',
-  zIndex: 10,
-}));
-
 export const Card = memo(function Card({
   card,
   isFlipped,
   onFlip,
   frontSide,
 }: CardProps) {
-  const { speak, isSupported } = useSpeech();
-  const [isSpeaking, setIsSpeaking] = useState(false);
-
   // Определяем что показывать на лицевой и обратной стороне
   const frontText = frontSide === 'german' ? card.germanWord : card.translation;
   const backText = frontSide === 'german' ? card.translation : card.germanWord;
 
-  // Определяем какой текст произносить (только немецкие слова)
-  const textToSpeak = card.germanWord; // Всегда произносим немецкое слово
-
   // Определяем когда показывать кнопку произношения
   const shouldShowSpeechButton =
-    isSupported() &&
     // В режиме "de → ru": показываем на лицевой стороне (немецкое слово)
     // В режиме "ru → de": показываем на обратной стороне (немецкое слово)
-    ((frontSide === 'german' && !isFlipped) ||
-      (frontSide === 'russian' && isFlipped));
-
-  const handleSpeak = useCallback(
-    async (event?: React.MouseEvent) => {
-      if (event) {
-        event.stopPropagation(); // Предотвращаем переворот карточки
-      }
-
-      if (!isSupported()) {
-        console.warn('Speech synthesis is not supported');
-        return;
-      }
-
-      setIsSpeaking(true);
-      try {
-        await speak(textToSpeak, {
-          lang: 'de-DE',
-          rate: 0.8, // Немного медленнее для лучшего понимания
-        });
-      } catch (error) {
-        console.error('Speech error:', error);
-        // Можно добавить уведомление пользователю об ошибке
-      } finally {
-        setIsSpeaking(false);
-      }
-    },
-    [speak, isSupported, textToSpeak]
-  );
-
-  // Обработка горячей клавиши P для произношения
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'p' || event.key === 'P') {
-        event.preventDefault();
-        void handleSpeak();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleSpeak]);
+    (frontSide === 'german' && !isFlipped) ||
+    (frontSide === 'russian' && isFlipped);
 
   return (
     <FlipCard onClick={onFlip}>
@@ -194,40 +123,24 @@ export const Card = memo(function Card({
           <CardText variant="h4">{frontText}</CardText>
           {/* Кнопка произношения на лицевой стороне */}
           {shouldShowSpeechButton && !isFlipped && (
-            <Tooltip title="Произнести слово">
-              <SpeechButton
-                size="small"
-                onClick={(event) => {
-                  void handleSpeak(event);
-                }}
-                disabled={isSpeaking}
-                sx={{
-                  color: isSpeaking ? 'text.disabled' : 'primary.main',
-                }}
-              >
-                <VolumeUp fontSize="small" />
-              </SpeechButton>
-            </Tooltip>
+            <SpeechButton
+              text={card.germanWord}
+              tooltip="Произнести слово"
+              size="small"
+              enableHotkey={true}
+            />
           )}
         </CardFront>
         <CardBack>
           <TranslationText variant="h5">{backText}</TranslationText>
           {/* Кнопка произношения на обратной стороне */}
           {shouldShowSpeechButton && isFlipped && (
-            <Tooltip title="Произнести слово">
-              <SpeechButton
-                size="small"
-                onClick={(event) => {
-                  void handleSpeak(event);
-                }}
-                disabled={isSpeaking}
-                sx={{
-                  color: isSpeaking ? 'text.disabled' : 'primary.main',
-                }}
-              >
-                <VolumeUp fontSize="small" />
-              </SpeechButton>
-            </Tooltip>
+            <SpeechButton
+              text={card.germanWord}
+              tooltip="Произнести слово"
+              size="small"
+              enableHotkey={true}
+            />
           )}
         </CardBack>
       </CardInner>

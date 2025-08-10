@@ -4,6 +4,7 @@ import { Card as MUICard, Typography, Box, Chip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import type { Verb } from '@/types';
 import { memo, useState } from 'react';
+import { SpeechButton } from './SpeechButton';
 
 interface VerbCardProps {
   verb: Verb;
@@ -190,6 +191,15 @@ export const VerbCard = memo(function VerbCard({
               size="medium"
             />
           </CardContent>
+          {/* Кнопка произношения на лицевой стороне */}
+          {!isFlipped && (
+            <SpeechButton
+              text={verb.infinitive}
+              tooltip="Произнести глагол"
+              size="small"
+              enableHotkey={true}
+            />
+          )}
         </CardFront>
 
         {/* Обратная сторона - спряжения */}
