@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import type { TimeQuestion } from '@/services/timeService';
+import { SpeechButton } from './SpeechButton';
 
 const TrainingCard = styled(Card)(() => ({
   maxWidth: 800,
@@ -151,8 +152,6 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
       setIsLoading(false);
     }
   }, []);
-
-   
 
   // Инициализация при загрузке компонента
   useEffect(() => {
@@ -352,7 +351,9 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
                           <SelectedWordChip
                             key={`${word}-${index}`}
                             label={word}
-                            onDelete={() => { handleRemoveWord(word); }}
+                            onDelete={() => {
+                              handleRemoveWord(word);
+                            }}
                             deleteIcon={<Cancel />}
                           />
                         ))}
@@ -413,7 +414,9 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
                         key={`${word}-${index}`}
                         label={word}
                         variant="outlined"
-                        onClick={() => { handleWordClick(word); }}
+                        onClick={() => {
+                          handleWordClick(word);
+                        }}
                         disabled={isAnswerVisible}
                         color={
                           selectedWords.includes(word) ? 'primary' : 'default'
@@ -468,16 +471,28 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
                       {isCorrect ? 'Правильно!' : 'Неправильно!'}
                     </Alert>
 
-                    <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                    <Paper
+                      sx={{ p: 2, bgcolor: 'grey.50', position: 'relative' }}
+                    >
                       <Typography variant="h6" gutterBottom>
                         Правильный ответ:
                       </Typography>
-                      <Typography
-                        variant="body1"
-                        sx={{ fontFamily: 'monospace' }}
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                       >
-                        {correctAnswer.join(' ')}
-                      </Typography>
+                        <Typography
+                          variant="body1"
+                          sx={{ fontFamily: 'monospace', flex: 1 }}
+                        >
+                          {correctAnswer.join(' ')}
+                        </Typography>
+                        <SpeechButton
+                          text={correctAnswer.join(' ')}
+                          tooltip="Произнести правильный ответ"
+                          size="small"
+                          enableHotkey={false}
+                        />
+                      </Box>
                     </Paper>
                   </Box>
                 )}
