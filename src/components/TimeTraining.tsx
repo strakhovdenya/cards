@@ -161,19 +161,16 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
 
   // Обработчики
   const handleWordClick = (word: string) => {
-    if (isAnswerVisible) return; // Блокируем изменения после показа ответа
-
     setSelectedWords((prev) => {
-      if (prev.includes(word)) {
-        return prev.filter((w) => w !== word);
-      } else {
-        return [...prev, word];
-      }
+      // Всегда добавляем слово (можно добавлять несколько раз)
+      return [...prev, word];
     });
   };
 
-  const handleRemoveWord = (wordToRemove: string) => {
-    setSelectedWords((prev) => prev.filter((word) => word !== wordToRemove));
+  const handleRemoveWordByIndex = (indexToRemove: number) => {
+    setSelectedWords((prev) =>
+      prev.filter((_, index) => index !== indexToRemove)
+    );
   };
 
   const handleClearAll = () => {
@@ -352,7 +349,7 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
                             key={`${word}-${index}`}
                             label={word}
                             onDelete={() => {
-                              handleRemoveWord(word);
+                              handleRemoveWordByIndex(index);
                             }}
                             deleteIcon={<Cancel />}
                           />
@@ -417,7 +414,6 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
                         onClick={() => {
                           handleWordClick(word);
                         }}
-                        disabled={isAnswerVisible}
                         color={
                           selectedWords.includes(word) ? 'primary' : 'default'
                         }
@@ -437,27 +433,25 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
 
                 {/* Кнопки действий */}
                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-                  {!isAnswerVisible ? (
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleCheckAnswer}
+                    disabled={selectedWords.length === 0}
+                  >
+                    {isAnswerVisible ? 'Проверить снова' : 'Проверить ответ'}
+                  </Button>
+
+                  {isAnswerVisible && (
                     <Button
                       variant="contained"
+                      color="success"
+                      startIcon={<CheckCircle />}
+                      onClick={handleNextQuestion}
                       size="large"
-                      onClick={handleCheckAnswer}
-                      disabled={selectedWords.length === 0}
                     >
-                      Проверить ответ
+                      Следующий вопрос
                     </Button>
-                  ) : (
-                    <>
-                      <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<CheckCircle />}
-                        onClick={handleNextQuestion}
-                        size="large"
-                      >
-                        Следующий вопрос
-                      </Button>
-                    </>
                   )}
                 </Box>
 
