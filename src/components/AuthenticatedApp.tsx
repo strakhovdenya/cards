@@ -34,6 +34,7 @@ import {
   School as SchoolIcon,
   KeyboardArrowDown,
   Upload,
+  Book,
 } from '@mui/icons-material';
 import { App } from './App';
 import { InviteManager } from './auth/InviteManager';
@@ -43,6 +44,7 @@ import { TagManager } from './TagManager';
 import { BulkImport } from './BulkImport';
 import { BulkVerbImport } from './BulkVerbImport';
 import { VerbViewer } from './VerbViewer';
+import { VerbStudy } from './VerbStudy';
 import { CardEditor } from './CardEditor';
 import { TimeTraining } from './TimeTraining';
 import { UserMenu } from './navigation/UserMenu';
@@ -55,7 +57,7 @@ import { useVerbs } from '@/hooks/useVerbs';
 type ViewMode = 'viewer' | 'editor' | 'invites' | 'verbs';
 type MainViewMode = 'study' | 'edit';
 type StudyMode = 'cards' | 'verbs' | 'time';
-type VerbMode = 'view' | 'training';
+type VerbMode = 'view' | 'training' | 'study';
 
 export function AuthenticatedApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
@@ -141,7 +143,7 @@ export function AuthenticatedApp() {
     }
   };
 
-  const handleVerbModeSelect = (mode: 'view' | 'training') => {
+  const handleVerbModeSelect = (mode: 'view' | 'training' | 'study') => {
     setVerbMode(mode);
     setMainViewMode('study');
     setStudyMode('verbs');
@@ -323,6 +325,21 @@ export function AuthenticatedApp() {
                 <ListItemText
                   primary="Тренировка"
                   secondary="Интерактивная тренировка спряжений"
+                />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  handleVerbModeSelect('study');
+                }}
+              >
+                <ListItemIcon>
+                  <Book />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Изучение"
+                  secondary="Изучение инфинитивов глаголов и их переводов"
                 />
               </ListItemButton>
             </ListItem>
@@ -541,6 +558,8 @@ export function AuthenticatedApp() {
             {studyMode === 'verbs' ? (
               verbMode === 'training' ? (
                 <VerbTraining />
+              ) : verbMode === 'study' ? (
+                <VerbStudy />
               ) : (
                 <VerbViewer
                   verbs={verbs}

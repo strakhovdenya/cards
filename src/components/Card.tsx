@@ -5,12 +5,13 @@ import { styled } from '@mui/material/styles';
 import type { Card as CardType } from '@/types';
 import { memo } from 'react';
 import { SpeechButton } from './SpeechButton';
+import { type FrontSide } from './navigation/FrontSideToggle';
 
 interface CardProps {
   card: CardType;
   isFlipped: boolean;
   onFlip: () => void;
-  frontSide: 'german' | 'russian'; // Новый проп для выбора лицевой стороны
+  frontSide: FrontSide; // Новый проп для выбора лицевой стороны
 }
 
 const FlipCard = styled(Box)(({ theme }) => ({

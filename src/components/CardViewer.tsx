@@ -5,12 +5,10 @@ import {
   Box,
   Button,
   Typography,
-  Stack,
   Chip,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
   IconButton,
+  Tooltip,
+  Stack,
   Collapse,
   useMediaQuery,
   useTheme,
@@ -31,6 +29,7 @@ import { ClientTagService } from '@/services/tagService';
 import { Card } from './Card';
 import { TagFilter } from './TagFilter';
 import { SpeechSettings } from './SpeechSettings';
+import { FrontSideToggle, type FrontSide } from './navigation/FrontSideToggle';
 import type { Card as CardType, Tag } from '@/types';
 
 interface CardViewerProps {
@@ -42,7 +41,7 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [shuffledCards, setShuffledCards] = useState<CardType[]>([]);
-  const [frontSide, setFrontSide] = useState<'german' | 'russian'>('german');
+  const [frontSide, setFrontSide] = useState<FrontSide>('german');
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
   const [speechSettingsOpen, setSpeechSettingsOpen] = useState(false);
 
@@ -201,19 +200,6 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
       onCardUpdate(currentCard);
     }
   }, [currentCard, onCardUpdate, shuffledCards]);
-
-  const handleChangeFrontSide = useCallback(
-    (
-      _event: React.MouseEvent<HTMLElement>,
-      newFrontSide: 'german' | 'russian' | null
-    ) => {
-      if (newFrontSide !== null) {
-        setFrontSide(newFrontSide);
-        setIsFlipped(false); // Сбрасываем флип при смене режима
-      }
-    },
-    []
-  );
 
   const toggleKeyboardHints = useCallback(() => {
     setShowKeyboardHints((prev) => !prev);
@@ -384,35 +370,21 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
           </Box>
 
           {/* Переключатель лицевой стороны */}
-          <Tooltip title="Выберите какую сторону показывать первой">
-            <ToggleButtonGroup
-              value={frontSide}
-              exclusive
-              onChange={handleChangeFrontSide}
-              size="small"
-              color="primary"
-              sx={{ height: '32px' }}
-            >
-              <ToggleButton
-                value="german"
-                sx={{ px: 1.5, fontSize: '0.75rem' }}
-              >
-                de → ru
-              </ToggleButton>
-              <ToggleButton
-                value="russian"
-                sx={{ px: 1.5, fontSize: '0.75rem' }}
-              >
-                ru → de
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Tooltip>
+          <FrontSideToggle
+            value={frontSide}
+            onChange={(newFrontSide) => {
+              setFrontSide(newFrontSide);
+              setIsFlipped(false); // Сбрасываем флип при смене режима
+            }}
+          />
 
           {/* Кнопка настроек произношения */}
           <Tooltip title="Настройки произношения">
             <IconButton
               size="small"
-              onClick={() => { setSpeechSettingsOpen(true); }}
+              onClick={() => {
+                setSpeechSettingsOpen(true);
+              }}
               sx={{
                 color: 'text.secondary',
                 '&:hover': {
@@ -617,7 +589,9 @@ export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
       {/* Диалог настроек произношения */}
       <SpeechSettings
         open={speechSettingsOpen}
-        onClose={() => { setSpeechSettingsOpen(false); }}
+        onClose={() => {
+          setSpeechSettingsOpen(false);
+        }}
       />
     </Box>
   );
