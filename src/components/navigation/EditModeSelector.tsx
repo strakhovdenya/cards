@@ -16,7 +16,6 @@ import {
   Upload,
   KeyboardArrowRight,
 } from '@mui/icons-material';
-import { DevelopmentWarning } from '../DevelopmentWarning';
 
 interface EditModeSelectorProps {
   open: boolean;
@@ -95,7 +94,6 @@ export function EditModeSelector({
               <KeyboardArrowRight />
             </ListItemButton>
           </ListItem>
-          <DevelopmentWarning />
         </List>
       </DialogContent>
     </Dialog>

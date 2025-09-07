@@ -16,7 +16,6 @@ import {
   Schedule,
   KeyboardArrowRight,
 } from '@mui/icons-material';
-import { DevelopmentWarning } from '../DevelopmentWarning';
 
 interface StudyModeSelectorProps {
   open: boolean;
@@ -84,7 +83,6 @@ export function StudyModeSelector({
               />
             </ListItemButton>
           </ListItem>
-          <DevelopmentWarning />
         </List>
       </DialogContent>
     </Dialog>
