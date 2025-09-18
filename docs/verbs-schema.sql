@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS verbs (
   infinitive TEXT NOT NULL,
   translation TEXT NOT NULL,
   conjugations JSONB NOT NULL DEFAULT '[]'::jsonb, -- Массив спряжений
+  examples JSONB, -- Примеры предложений (утвердительное, вопрос, краткий ответ)
   user_id UUID NOT NULL, -- ID пользователя (обязательное поле)
   learned BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

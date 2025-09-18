@@ -491,11 +491,58 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
           ) : (
             <TranslationDisplay>
               <Typography variant="h6" color="primary" gutterBottom>
-                Правильный перевод:
+                Перевод:
               </Typography>
               <Typography variant="h4" component="div" fontWeight="bold">
                 {backText}
               </Typography>
+
+              {/* Примеры предложения и вопроса с ответом (если есть) */}
+              {currentVerb.examples && (
+                <Box sx={{ mt: 2, textAlign: 'left', width: '100%' }}>
+                  {currentVerb.examples.affirmativeSentence && (
+                    <>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Утвердительное
+                      </Typography>
+                      <Typography variant="body1">
+                        {currentVerb.examples.affirmativeSentence}
+                      </Typography>
+                      {currentVerb.examples.affirmativeTranslation && (
+                        <Typography variant="body2" color="text.secondary">
+                          {currentVerb.examples.affirmativeTranslation}
+                        </Typography>
+                      )}
+                    </>
+                  )}
+
+                  {currentVerb.examples.questionSentence && (
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Вопрос
+                      </Typography>
+                      <Typography variant="body1">
+                        {currentVerb.examples.questionSentence}
+                      </Typography>
+                      {currentVerb.examples.questionTranslation && (
+                        <Typography variant="body2" color="text.secondary">
+                          {currentVerb.examples.questionTranslation}
+                        </Typography>
+                      )}
+                      {currentVerb.examples.shortAnswer && (
+                        <Typography variant="body1" sx={{ mt: 0.5 }}>
+                          {currentVerb.examples.shortAnswer}
+                        </Typography>
+                      )}
+                      {currentVerb.examples.shortAnswerTranslation && (
+                        <Typography variant="body2" color="text.secondary">
+                          {currentVerb.examples.shortAnswerTranslation}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              )}
 
               <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
                 <Button

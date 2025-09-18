@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Clear } from '@mui/icons-material';
 import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
-import type { Verb } from '@/types';
+import type { Verb, VerbExamples } from '@/types';
 import {
   getVerbs,
   createVerb,
@@ -54,6 +54,14 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       { person: 'ihr', form: '', translation: '' },
       { person: 'sie / Sie', form: '', translation: '' },
     ],
+    examples: {
+      affirmativeSentence: '',
+      affirmativeTranslation: '',
+      questionSentence: '',
+      questionTranslation: '',
+      shortAnswer: '',
+      shortAnswerTranslation: '',
+    } as VerbExamples,
   });
   const [isDuplicate, setIsDuplicate] = useState(false);
 
@@ -114,7 +122,15 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       setFormData({
         infinitive: verb.infinitive,
         translation: verb.translation,
-        conjugations: verb.conjugations || [],
+        conjugations: verb.conjugations ?? [],
+        examples: verb.examples ?? {
+          affirmativeSentence: '',
+          affirmativeTranslation: '',
+          questionSentence: '',
+          questionTranslation: '',
+          shortAnswer: '',
+          shortAnswerTranslation: '',
+        },
       });
     } else {
       setEditingVerb(null);
@@ -129,6 +145,14 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
           { person: 'ihr', form: '', translation: '' },
           { person: 'sie / Sie', form: '', translation: '' },
         ],
+        examples: {
+          affirmativeSentence: '',
+          affirmativeTranslation: '',
+          questionSentence: '',
+          questionTranslation: '',
+          shortAnswer: '',
+          shortAnswerTranslation: '',
+        },
       });
     }
     setError(null);
@@ -150,6 +174,14 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
         { person: 'ihr', form: '', translation: '' },
         { person: 'sie / Sie', form: '', translation: '' },
       ],
+      examples: {
+        affirmativeSentence: '',
+        affirmativeTranslation: '',
+        questionSentence: '',
+        questionTranslation: '',
+        shortAnswer: '',
+        shortAnswerTranslation: '',
+      },
     });
     setError(null);
     setIsDuplicate(false);
@@ -177,6 +209,13 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
     if (field === 'infinitive') {
       checkForDuplicates(value);
     }
+  };
+
+  const handleExamplesChange = (field: keyof VerbExamples, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      examples: { ...prev.examples, [field]: value },
+    }));
   };
 
   const handleConjugationChange = (
@@ -454,6 +493,64 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
                 </Box>
               </Box>
             ))}
+            <Typography variant="h6" sx={{ mt: 2 }}>
+              Примеры
+            </Typography>
+            {/* Отладочная информация */}
+            <Typography
+              variant="caption"
+              sx={{ display: 'block', mb: 1, color: 'text.secondary' }}
+            >
+              Доступные поля: {Object.keys(formData.examples).join(', ')}
+            </Typography>
+            <TextField
+              label="Утвердительное предложение (DE)"
+              value={formData.examples.affirmativeSentence}
+              onChange={(e) => {
+                handleExamplesChange('affirmativeSentence', e.target.value);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Перевод утвердительного (RU)"
+              value={formData.examples.affirmativeTranslation}
+              onChange={(e) => {
+                handleExamplesChange('affirmativeTranslation', e.target.value);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Вопрос (DE)"
+              value={formData.examples.questionSentence}
+              onChange={(e) => {
+                handleExamplesChange('questionSentence', e.target.value);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Перевод вопроса (RU)"
+              value={formData.examples.questionTranslation}
+              onChange={(e) => {
+                handleExamplesChange('questionTranslation', e.target.value);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Краткий ответ (DE)"
+              value={formData.examples.shortAnswer}
+              onChange={(e) => {
+                handleExamplesChange('shortAnswer', e.target.value);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Перевод краткого ответа (RU)"
+              value={formData.examples.shortAnswerTranslation}
+              onChange={(e) => {
+                handleExamplesChange('shortAnswerTranslation', e.target.value);
+              }}
+              fullWidth
+            />
           </Box>
         </DialogContent>
         <DialogActions>

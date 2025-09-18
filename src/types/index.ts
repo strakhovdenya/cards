@@ -178,11 +178,21 @@ export interface VerbConjugation {
   translation: string;
 }
 
+export interface VerbExamples {
+  affirmativeSentence: string; // Утвердительное предложение на нем.
+  affirmativeTranslation: string; // Перевод утвердительного предложения
+  questionSentence: string; // Вопрос с этим глаголом (нем.)
+  questionTranslation: string; // Перевод вопроса
+  shortAnswer: string; // Краткий ответ (нем.)
+  shortAnswerTranslation: string; // Перевод краткого ответа
+}
+
 export interface Verb {
   id: string;
   infinitive: string; // Инфинитив глагола (например, "arbeiten")
   translation: string; // Перевод инфинитива
   conjugations: VerbConjugation[]; // Спряжения по лицам
+  examples?: VerbExamples; // Примеры предложений
   user_id: string;
   learned: boolean;
   createdAt: Date;
@@ -199,6 +209,7 @@ export interface CreateVerbRequest {
   infinitive: string;
   translation: string;
   conjugations: VerbConjugation[];
+  examples?: VerbExamples;
 }
 
 export interface BulkCreateVerbsRequest {
@@ -209,6 +220,7 @@ export interface UpdateVerbRequest {
   infinitive?: string;
   translation?: string;
   conjugations?: VerbConjugation[];
+  examples?: VerbExamples;
   learned?: boolean;
 }
 
@@ -218,6 +230,7 @@ export interface DatabaseVerb {
   infinitive: string;
   translation: string;
   conjugations: VerbConjugation[];
+  examples?: VerbExamples;
   user_id: string;
   learned: boolean;
   created_at: string;

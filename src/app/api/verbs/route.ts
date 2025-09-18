@@ -14,6 +14,7 @@ const transformDatabaseVerb = (dbVerb: DatabaseVerb) => ({
   infinitive: dbVerb.infinitive,
   translation: dbVerb.translation,
   conjugations: dbVerb.conjugations,
+  examples: dbVerb.examples,
   user_id: dbVerb.user_id,
   learned: dbVerb.learned,
   createdAt: new Date(dbVerb.created_at),
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
         infinitive: body.infinitive,
         translation: body.translation,
         conjugations: body.conjugations,
+        examples: body.examples ?? null,
         user_id: user.id,
       })
       .select()

@@ -32,6 +32,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
   const [currentVerbIndex, setCurrentVerbIndex] = useState(0);
   const [shuffledVerbs, setShuffledVerbs] = useState<Verb[]>([]);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [showExamplesImmediately, setShowExamplesImmediately] = useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -163,7 +164,12 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
       {currentVerb && (
         <Box sx={{ mb: 2 }}>
           <VerbCard
-            verb={currentVerb}
+            verb={{
+              ...currentVerb,
+              examples: showExamplesImmediately
+                ? currentVerb.examples
+                : undefined,
+            }}
             isFlipped={isCardFlipped}
             onFlip={handleFlip}
           />
@@ -207,6 +213,20 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
           size="medium"
         >
           Вперёд
+        </Button>
+      </Stack>
+
+      <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
+        <Button
+          variant={showExamplesImmediately ? 'contained' : 'outlined'}
+          onClick={() => {
+            setShowExamplesImmediately((prev) => !prev);
+          }}
+          size="medium"
+        >
+          {showExamplesImmediately
+            ? 'Скрывать примеры'
+            : 'Показывать примеры сразу'}
         </Button>
       </Stack>
 
