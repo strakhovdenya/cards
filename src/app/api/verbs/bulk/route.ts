@@ -13,6 +13,14 @@ interface DbVerb {
     form: string;
     translation: string;
   }>;
+  examples?: {
+    affirmativeSentence: string;
+    affirmativeTranslation: string;
+    questionSentence: string;
+    questionTranslation: string;
+    shortAnswer: string;
+    shortAnswerTranslation: string;
+  } | null;
   user_id: string;
   learned: boolean;
   created_at: string;
@@ -145,6 +153,7 @@ export async function POST(request: NextRequest) {
       infinitive: verb.infinitive,
       translation: verb.translation,
       conjugations: verb.conjugations,
+      examples: verb.examples ?? null,
       user_id: user.id,
       learned: false,
     }));
@@ -169,6 +178,7 @@ export async function POST(request: NextRequest) {
       infinitive: verb.infinitive,
       translation: verb.translation,
       conjugations: verb.conjugations,
+      examples: verb.examples,
       user_id: verb.user_id,
       learned: verb.learned,
       createdAt: new Date(verb.created_at),

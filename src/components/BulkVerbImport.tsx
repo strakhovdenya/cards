@@ -32,7 +32,7 @@ import {
   ExpandMore,
   Warning,
 } from '@mui/icons-material';
-import type { VerbConjugation, Verb } from '@/types';
+import type { VerbConjugation, Verb, VerbExamples } from '@/types';
 import { ClientVerbService } from '@/services/verbService';
 import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
 
@@ -46,12 +46,14 @@ interface CreateVerbData {
   infinitive: string;
   translation: string;
   conjugations: VerbConjugation[];
+  examples?: VerbExamples;
 }
 
 interface ParsedVerb {
   infinitive: string;
   translation: string;
   conjugations: VerbConjugation[];
+  examples?: VerbExamples;
   lineNumber: number;
   isDuplicate?: boolean;
 }
@@ -71,6 +73,14 @@ interface JsonVerbData {
     form: string;
     translation: string;
   }>;
+  examples?: {
+    affirmativeSentence: string;
+    affirmativeTranslation: string;
+    questionSentence: string;
+    questionTranslation: string;
+    shortAnswer: string;
+    shortAnswerTranslation: string;
+  };
 }
 
 interface JsonResponse {
@@ -198,6 +208,7 @@ export function BulkVerbImport({
             infinitive: verbData.infinitive,
             translation: verbData.translation,
             conjugations: verbData.conjugations,
+            examples: verbData.examples,
             lineNumber: index + 1,
           });
         });
@@ -392,6 +403,7 @@ export function BulkVerbImport({
           infinitive: verb.infinitive,
           translation: verb.translation,
           conjugations: verb.conjugations,
+          examples: verb.examples,
         })
       );
 
