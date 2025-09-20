@@ -16,6 +16,9 @@ export interface Card {
   user_id: string; // UUID пользователя
   tags: Tag[]; // Массив объектов тегов вместо строк
   learned: boolean; // Выучена ли карточка
+  word_type?: string; // Тип слова (noun, verb, adjective, etc.)
+  base_form?: string; // Базовая форма слова
+  grammar_data?: Record<string, unknown>; // JSON с грамматическими данными
   createdAt: Date;
   updatedAt: Date;
 }
