@@ -22,6 +22,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Chip,
 } from '@mui/material';
 import {
   Upload,
@@ -36,27 +37,26 @@ import {
 import type { CardFormData, Tag, Card } from '@/types';
 import { TagFilter } from './TagFilter';
 import { ClientCardService } from '@/services/cardService';
-import { BasicBulkImportStrategy } from '@/strategies/BasicBulkImportStrategy';
-import type { ParseResult } from '@/strategies/BulkImportStrategy';
+import {
+  NounBulkImportStrategy,
+  type NounParseResult,
+} from '@/strategies/NounBulkImportStrategy';
 
-interface BulkImportProps {
+interface BulkNounImportProps {
   open: boolean;
   onClose: () => void;
   onImport: (cards: CardFormData[]) => Promise<void>;
-  availableTags?: Tag[]; // Доступные теги для выбора
+  availableTags?: Tag[];
 }
 
-// Создаем экземпляр стратегии
-const importStrategy = new BasicBulkImportStrategy();
-
-export function BulkImport({
+export function BulkNounImport({
   open,
   onClose,
   onImport,
   availableTags = [],
-}: BulkImportProps) {
+}: BulkNounImportProps) {
   const [inputText, setInputText] = useState('');
-  const [parseResult, setParseResult] = useState<ParseResult | null>(null);
+  const [parseResult, setParseResult] = useState<NounParseResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isGptPromptOpen, setIsGptPromptOpen] = useState(false);
@@ -66,6 +66,9 @@ export function BulkImport({
 
   // Состояние для выбора тегов
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+
+  // Создаем экземпляр стратегии
+  const importStrategy = new NounBulkImportStrategy();
 
   // Загружаем существующие карточки при открытии диалога
   useEffect(() => {
@@ -107,11 +110,6 @@ export function BulkImport({
     setSelectedTagIds(new Set());
   }, []);
 
-  // Парсинг текста в карточки с проверкой дубликатов
-  const parseCards = (text: string) => {
-    return importStrategy.parseText(text, existingCards);
-  };
-
   const handlePreview = () => {
     if (!inputText.trim()) {
       setParseResult({
@@ -123,7 +121,7 @@ export function BulkImport({
       return;
     }
 
-    const result = parseCards(inputText);
+    const result = importStrategy.parseText(inputText, existingCards);
     setParseResult(result);
     setShowPreview(true);
   };
@@ -137,8 +135,16 @@ export function BulkImport({
         (card) => ({
           germanWord: card.germanWord,
           translation: card.translation,
-          tagIds: Array.from(selectedTagIds), // Добавляем выбранные теги
-          word_type: 'other', // Устанавливаем тип "other" для обычных карточек
+          tagIds: Array.from(selectedTagIds),
+          word_type: 'noun',
+          base_form: card.base_form,
+          grammar_data:
+            card.article || card.plural
+              ? {
+                  article: card.article,
+                  plural: card.plural,
+                }
+              : undefined,
         })
       );
 
@@ -148,7 +154,7 @@ export function BulkImport({
       setInputText('');
       setParseResult(null);
       setShowPreview(false);
-      setSelectedTagIds(new Set()); // Очищаем выбранные теги
+      setSelectedTagIds(new Set());
       onClose();
     } catch (error) {
       console.error('Ошибка импорта:', error);
@@ -161,15 +167,13 @@ export function BulkImport({
     setInputText('');
     setParseResult(null);
     setShowPreview(false);
-    setSelectedTagIds(new Set()); // Очищаем выбранные теги
+    setSelectedTagIds(new Set());
     onClose();
   };
 
-  const gptPromptText = importStrategy.getGptPrompt();
-
   const handleCopyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(gptPromptText);
+      await navigator.clipboard.writeText(importStrategy.getGptPrompt());
       setCopySuccess(true);
       setTimeout(() => {
         setCopySuccess(false);
@@ -178,8 +182,6 @@ export function BulkImport({
       console.error('Ошибка копирования:', err);
     }
   };
-
-  const formatExample = importStrategy.getFormatExample();
 
   return (
     <>
@@ -195,7 +197,7 @@ export function BulkImport({
         <DialogTitle>
           <Box display="flex" alignItems="center" gap={1}>
             <Upload />
-            Массовый импорт карточек
+            Массовый импорт существительных
           </Box>
         </DialogTitle>
 
@@ -203,8 +205,8 @@ export function BulkImport({
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <Typography variant="body2" color="textSecondary">
-                Введите карточки по одной на строку в формате:
-                &quot;немецкое_слово - русский_перевод&quot;
+                Введите существительные в формате: &quot;артикль слово, артикль
+                множественное_число - русский_перевод&quot;
               </Typography>
 
               <Tooltip title="Получить промпт для GPT">
@@ -227,13 +229,13 @@ export function BulkImport({
                 variant="body2"
                 sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}
               >
-                {formatExample}
+                {importStrategy.getFormatExample()}
               </Typography>
             </Paper>
           </Box>
 
           <TextField
-            label="Текст для импорта"
+            label="Текст для импорта существительных"
             multiline
             rows={8}
             fullWidth
@@ -241,7 +243,7 @@ export function BulkImport({
             onChange={(e) => {
               setInputText(e.target.value);
             }}
-            placeholder="das Haus - дом&#10;die Katze - кошка&#10;der Hund - собака"
+            placeholder="der Mann, die Männer - мужчина&#10;die Frau, die Frauen - женщина&#10;das Kind, die Kinder - ребенок"
             sx={{ mb: 2 }}
           />
 
@@ -266,8 +268,8 @@ export function BulkImport({
               >
                 <AccordionSummary
                   expandIcon={<ExpandMore />}
-                  aria-controls="bulk-import-tags-content"
-                  id="bulk-import-tags-header"
+                  aria-controls="bulk-noun-import-tags-content"
+                  id="bulk-noun-import-tags-header"
                   sx={{
                     backgroundColor: 'primary.main',
                     color: 'white',
@@ -289,7 +291,7 @@ export function BulkImport({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LocalOffer />
                     <Typography fontWeight="500">
-                      Теги для новых карточек
+                      Теги для новых существительных
                     </Typography>
                     {selectedTagIds.size > 0 && (
                       <Box
@@ -326,7 +328,7 @@ export function BulkImport({
                       sx={{ mb: 2 }}
                     >
                       Выберите теги, которые будут добавлены ко всем
-                      импортируемым карточкам:
+                      импортируемым существительным:
                     </Typography>
 
                     <TagFilter
@@ -436,7 +438,8 @@ export function BulkImport({
                     }}
                   >
                     <Typography variant="h6" color="primary">
-                      Будет добавлено карточек: {parseResult.newCards.length}
+                      Будет добавлено существительных:{' '}
+                      {parseResult.newCards.length}
                     </Typography>
 
                     {selectedTagIds.size > 0 && (
@@ -454,21 +457,16 @@ export function BulkImport({
                               (t) => t.id === tagId
                             );
                             return tag ? (
-                              <Box
+                              <Chip
                                 key={tag.id}
+                                label={tag.name}
+                                size="small"
                                 sx={{
-                                  px: 1,
-                                  py: 0.25,
-                                  borderRadius: '8px',
-                                  backgroundColor: tag.color + '20',
-                                  border: `1px solid ${tag.color}`,
+                                  backgroundColor: `${tag.color}20`,
+                                  borderColor: tag.color,
                                   color: tag.color,
-                                  fontSize: '0.75rem',
-                                  fontWeight: '500',
                                 }}
-                              >
-                                {tag.name}
-                              </Box>
+                              />
                             ) : null;
                           })}
                         </Box>
@@ -482,7 +480,29 @@ export function BulkImport({
                         <ListItem key={index} divider>
                           <ListItemText
                             primary={`${card.germanWord} → ${card.translation}`}
-                            secondary={`Строка ${card.lineNumber}`}
+                            secondary={
+                              <Box>
+                                <Typography variant="caption" display="block">
+                                  Строка {card.lineNumber}
+                                </Typography>
+                                {card.article && (
+                                  <Chip
+                                    label={`Артикль: ${card.article}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ mr: 1, mt: 0.5 }}
+                                  />
+                                )}
+                                {card.plural && (
+                                  <Chip
+                                    label={`Мн.ч.: ${card.plural}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ mt: 0.5 }}
+                                  />
+                                )}
+                              </Box>
+                            }
                           />
                         </ListItem>
                       ))}
@@ -498,7 +518,7 @@ export function BulkImport({
                     <Alert severity="info">
                       <Typography variant="body2">
                         <strong>Статистика:</strong>{' '}
-                        {parseResult.newCards.length} новых карточек,{' '}
+                        {parseResult.newCards.length} новых существительных,{' '}
                         {parseResult.duplicates.length} дубликатов пропущено
                       </Typography>
                     </Alert>
@@ -525,7 +545,7 @@ export function BulkImport({
           >
             {isImporting
               ? 'Импорт...'
-              : `Импортировать (${parseResult?.newCards.length ?? 0}${
+              : `Импортировать существительные (${parseResult?.newCards.length ?? 0}${
                   selectedTagIds.size > 0
                     ? ` + ${selectedTagIds.size} тег${selectedTagIds.size === 1 ? '' : selectedTagIds.size < 5 ? 'а' : 'ов'}`
                     : ''
@@ -551,7 +571,7 @@ export function BulkImport({
           >
             <Box display="flex" alignItems="center" gap={1}>
               <SmartToy />
-              Промпт для GPT
+              Промпт для GPT - Существительные
             </Box>
             <IconButton
               onClick={() => {
@@ -567,7 +587,7 @@ export function BulkImport({
         <DialogContent>
           <Typography variant="body2" color="textSecondary" gutterBottom>
             Скопируйте этот текст и вставьте в ChatGPT, добавив в конце ваши
-            русские слова:
+            русские существительные:
           </Typography>
 
           <Paper sx={{ p: 2, bgcolor: 'grey.50', mt: 2, position: 'relative' }}>
@@ -579,7 +599,7 @@ export function BulkImport({
                 wordBreak: 'break-word',
               }}
             >
-              {gptPromptText}
+              {importStrategy.getGptPrompt()}
             </Typography>
 
             <Tooltip title={copySuccess ? 'Скопировано!' : 'Копировать'}>
@@ -608,7 +628,7 @@ export function BulkImport({
               <br />
               2. Откройте ChatGPT
               <br />
-              3. Вставьте промпт и добавьте ваши русские слова
+              3. Вставьте промпт и добавьте ваши русские существительные
               <br />
               4. Скопируйте ответ GPT в поле импорта выше
             </Typography>

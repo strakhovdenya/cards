@@ -35,6 +35,7 @@ import {
   KeyboardArrowDown,
   Upload,
   Book,
+  ChevronRight,
 } from '@mui/icons-material';
 import { App } from './App';
 import { InviteManager } from './auth/InviteManager';
@@ -43,6 +44,7 @@ import { VerbEditor } from './VerbEditor';
 import { TagManager } from './TagManager';
 import { BulkImport } from './BulkImport';
 import { BulkVerbImport } from './BulkVerbImport';
+import { BulkNounImport } from './BulkNounImport';
 import { VerbViewer } from './VerbViewer';
 import { VerbStudy } from './VerbStudy';
 import { CardEditor } from './CardEditor';
@@ -71,7 +73,9 @@ export function AuthenticatedApp() {
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isBulkVerbImportOpen, setIsBulkVerbImportOpen] = useState(false);
+  const [isBulkNounImportOpen, setIsBulkNounImportOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
+  const [isCardImportSubmenuOpen, setIsCardImportSubmenuOpen] = useState(false);
 
   // Используем новые хуки
   const {
@@ -453,7 +457,7 @@ export function AuthenticatedApp() {
               <ListItemButton
                 onClick={() => {
                   setIsImportMenuOpen(false);
-                  setIsBulkImportOpen(true);
+                  setIsCardImportSubmenuOpen(true);
                 }}
               >
                 <ListItemIcon>
@@ -461,8 +465,9 @@ export function AuthenticatedApp() {
                 </ListItemIcon>
                 <ListItemText
                   primary="Импорт карточек"
-                  secondary="Массовый импорт карточек из текста"
+                  secondary="Массовый импорт карточек"
                 />
+                <ChevronRight />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
@@ -478,6 +483,54 @@ export function AuthenticatedApp() {
                 <ListItemText
                   primary="Импорт глаголов"
                   secondary="Массовый импорт глаголов с спряжениями"
+                />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог подменю импорта карточек */}
+      <Dialog
+        open={isCardImportSubmenuOpen}
+        onClose={() => {
+          setIsCardImportSubmenuOpen(false);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Импорт карточек</DialogTitle>
+        <DialogContent>
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  setIsCardImportSubmenuOpen(false);
+                  setIsBulkImportOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <Upload />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Обычные карточки"
+                  secondary="Массовый импорт обычных карточек из текста"
+                />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  setIsCardImportSubmenuOpen(false);
+                  setIsBulkNounImportOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <Upload />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Существительные"
+                  secondary="Массовый импорт существительных с артиклями и множественным числом"
                 />
               </ListItemButton>
             </ListItem>
@@ -525,6 +578,25 @@ export function AuthenticatedApp() {
         onImport={async (verbs) => {
           await handleBulkVerbImport(verbs);
         }}
+      />
+
+      {/* Диалог массового импорта существительных */}
+      <BulkNounImport
+        open={isBulkNounImportOpen}
+        onClose={() => {
+          setIsBulkNounImportOpen(false);
+        }}
+        onImport={async (cards) => {
+          try {
+            setError(null);
+            await handleBulkImport(cards);
+            setIsBulkNounImportOpen(false);
+          } catch (error) {
+            console.error('Error importing noun cards:', error);
+            setError('Ошибка импорта существительных');
+          }
+        }}
+        availableTags={availableTags}
       />
 
       {/* Основной контент */}
