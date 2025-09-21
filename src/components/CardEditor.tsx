@@ -23,6 +23,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Add,
@@ -36,6 +40,8 @@ import {
   Clear,
 } from '@mui/icons-material';
 import type { Card as CardType, CardFormData, Tag } from '@/types';
+import type { EditorFormData } from '@/types/cardEditorStrategy';
+import { AdaptiveCardEditorStrategy } from '@/strategies/AdaptiveCardEditorStrategy';
 import { ClientTagService } from '@/services/tagService';
 import { TagFilter } from './TagFilter';
 import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
@@ -55,14 +61,32 @@ export function CardEditor({
 }: CardEditorProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
-  const [formData, setFormData] = useState<CardFormData>({
+  const [formData, setFormData] = useState<EditorFormData>({
     germanWord: '',
     translation: '',
     tags: [],
   });
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const [errors, setErrors] = useState<Partial<CardFormData>>({});
+  const [errors, setErrors] = useState<Partial<EditorFormData>>({});
   const [isDuplicate, setIsDuplicate] = useState(false);
+
+  // Создаем экземпляр стратегии
+  const editorStrategy = new AdaptiveCardEditorStrategy();
+
+  // Эффект для динамического обновления полей при изменении типа слова
+  useEffect(() => {
+    if (isModalOpen && formData.word_type) {
+      // При изменении типа слова очищаем специфичные поля
+      if (formData.word_type !== 'noun') {
+        setFormData((prev) => ({
+          ...prev,
+          article: '',
+          plural: '',
+          base_form: '',
+        }));
+      }
+    }
+  }, [formData.word_type, isModalOpen]);
 
   // Состояние для фильтрации
   const [searchText, setSearchText] = useState('');
@@ -150,18 +174,10 @@ export function CardEditor({
   const handleOpenModal = (card?: CardType) => {
     if (card) {
       setEditingCard(card);
-      setFormData({
-        germanWord: card.germanWord,
-        translation: card.translation,
-        tags: card.tags?.map((tag) => tag.name) ?? [],
-      });
+      setFormData(editorStrategy.getInitialFormData(card));
     } else {
       setEditingCard(null);
-      setFormData({
-        germanWord: '',
-        translation: '',
-        tags: [],
-      });
+      setFormData(editorStrategy.getInitialFormData());
     }
     setErrors({});
     setIsDuplicate(false);
@@ -171,17 +187,13 @@ export function CardEditor({
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingCard(null);
-    setFormData({
-      germanWord: '',
-      translation: '',
-      tags: [],
-    });
+    setFormData(editorStrategy.getInitialFormData());
     setErrors({});
     setIsDuplicate(false);
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<CardFormData> = {};
+    const newErrors: Partial<EditorFormData> = {};
 
     if (!formData.germanWord.trim()) {
       newErrors.germanWord = 'Немецкое слово обязательно';
@@ -194,6 +206,10 @@ export function CardEditor({
     if (isDuplicate && !editingCard) {
       newErrors.germanWord = 'Карточка с таким немецким словом уже существует';
     }
+
+    // Валидация через стратегию
+    const strategyErrors = editorStrategy.validateFields(formData);
+    Object.assign(newErrors, strategyErrors);
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -220,10 +236,29 @@ export function CardEditor({
         tagIds.push(tagId);
       }
 
-      const cardDataWithTags: CardFormData = {
-        ...formData,
+      // Формируем данные карточки с дополнительными полями
+      const cardDataWithTags: CardFormData & {
+        word_type?: string;
+        base_form?: string;
+        grammar_data?: Record<string, unknown>;
+      } = {
+        germanWord: formData.germanWord,
+        translation: formData.translation,
         tagIds,
+        word_type: formData.word_type,
+        base_form: formData.base_form,
       };
+
+      // Если это существительное, добавляем грамматические данные
+      if (
+        formData.word_type === 'noun' &&
+        (formData.article || formData.plural)
+      ) {
+        cardDataWithTags.grammar_data = {
+          article: formData.article,
+          plural: formData.plural,
+        };
+      }
 
       if (editingCard) {
         onUpdateCard(editingCard.id, cardDataWithTags);
@@ -239,7 +274,7 @@ export function CardEditor({
   };
 
   const handleInputChange =
-    (field: keyof CardFormData) =>
+    (field: keyof EditorFormData) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
 
@@ -634,6 +669,92 @@ export function CardEditor({
             helperText={errors.translation}
             sx={{ mb: 2 }}
           />
+
+          {/* Динамические поля на основе стратегии */}
+          {editorStrategy
+            .getEditorFields(editingCard ?? undefined, formData.word_type)
+            .map((field) => {
+              if (field.type === 'select') {
+                return (
+                  <FormControl
+                    key={field.name}
+                    fullWidth
+                    margin="dense"
+                    error={!!errors[field.name as keyof EditorFormData]}
+                    sx={{ mb: 2 }}
+                  >
+                    <InputLabel>{field.label}</InputLabel>
+                    <Select
+                      value={formData[field.name as keyof EditorFormData] ?? ''}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          [field.name]: e.target.value,
+                        }));
+                        // Очищаем ошибку при изменении
+                        if (errors[field.name as keyof EditorFormData]) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            [field.name]: undefined,
+                          }));
+                        }
+                      }}
+                      label={field.label}
+                    >
+                      <MenuItem value="">
+                        <em>Выберите...</em>
+                      </MenuItem>
+                      {field.options?.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {(errors[field.name as keyof EditorFormData] ??
+                      field.helperText) && (
+                      <Typography
+                        variant="caption"
+                        color={
+                          errors[field.name as keyof EditorFormData]
+                            ? 'error'
+                            : 'text.secondary'
+                        }
+                        sx={{ mt: 0.5, ml: 1.75 }}
+                      >
+                        {String(
+                          errors[field.name as keyof EditorFormData] ??
+                            field.helperText ??
+                            ''
+                        )}
+                      </Typography>
+                    )}
+                  </FormControl>
+                );
+              }
+
+              return (
+                <TextField
+                  key={field.name}
+                  margin="dense"
+                  label={field.label}
+                  fullWidth
+                  variant="outlined"
+                  value={formData[field.name as keyof EditorFormData] ?? ''}
+                  onChange={handleInputChange(
+                    field.name as keyof EditorFormData
+                  )}
+                  error={!!errors[field.name as keyof EditorFormData]}
+                  helperText={String(
+                    errors[field.name as keyof EditorFormData] ??
+                      field.helperText ??
+                      ''
+                  )}
+                  placeholder={field.placeholder}
+                  sx={{ mb: 2 }}
+                />
+              );
+            })}
+
           <Autocomplete
             multiple
             freeSolo

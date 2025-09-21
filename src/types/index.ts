@@ -36,6 +36,9 @@ export interface CreateCardRequest {
   translation: string;
   tagIds?: string[]; // Массив ID тегов
   tags?: string[]; // Для обратной совместимости
+  word_type?: string;
+  base_form?: string;
+  grammar_data?: Record<string, unknown>;
 }
 
 export interface BulkCreateCardsRequest {
@@ -47,6 +50,9 @@ export interface UpdateCardRequest {
   translation?: string;
   tagIds?: string[]; // Массив ID тегов
   learned?: boolean;
+  word_type?: string;
+  base_form?: string;
+  grammar_data?: Record<string, unknown>;
 }
 
 // Новые типы для работы с тегами
@@ -90,6 +96,9 @@ export interface DatabaseCard {
   translation: string;
   user_id: string;
   learned: boolean;
+  word_type?: string;
+  base_form?: string;
+  grammar_data?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   tags?: DatabaseCardTag[];

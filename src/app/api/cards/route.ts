@@ -40,6 +40,9 @@ export async function GET() {
       translation: card.translation,
       user_id: card.user_id,
       learned: card.learned,
+      word_type: card.word_type,
+      base_form: card.base_form,
+      grammar_data: card.grammar_data,
       createdAt: new Date(card.created_at),
       updatedAt: new Date(card.updated_at),
       tags:
@@ -126,6 +129,9 @@ export async function POST(request: NextRequest) {
         {
           german_word: body.germanWord,
           translation: body.translation,
+          word_type: body.word_type,
+          base_form: body.base_form,
+          grammar_data: body.grammar_data,
         },
       ])
       .select()
@@ -195,6 +201,9 @@ export async function POST(request: NextRequest) {
       translation: fullCard!.translation,
       user_id: fullCard!.user_id,
       learned: fullCard!.learned,
+      word_type: fullCard!.word_type,
+      base_form: fullCard!.base_form,
+      grammar_data: fullCard!.grammar_data,
       createdAt: new Date(fullCard!.created_at),
       updatedAt: new Date(fullCard!.updated_at),
       tags:
