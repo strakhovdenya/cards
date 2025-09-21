@@ -124,6 +124,7 @@ export function BulkImport({
     }
 
     const result = parseCards(inputText);
+    console.log('result basic', result);
     setParseResult(result);
     setShowPreview(true);
   };
@@ -133,12 +134,21 @@ export function BulkImport({
 
     setIsImporting(true);
     try {
+      const ensureText = (v: unknown): string | undefined =>
+        typeof v === 'string' && v.trim().length ? v.trim() : undefined;
+
+      const ensureRecord = (v: unknown): Record<string, unknown> | undefined =>
+        v && typeof v === 'object' && !Array.isArray(v)
+          ? (v as Record<string, unknown>)
+          : undefined;
       const cardsToImport: CardFormData[] = parseResult.newCards.map(
         (card) => ({
           germanWord: card.germanWord,
           translation: card.translation,
           tagIds: Array.from(selectedTagIds), // Добавляем выбранные теги
-          word_type: 'other', // Устанавливаем тип "other" для обычных карточек
+          word_type: ensureText(card.word_type) ?? 'other', // "" | false | null | undefined -> "other"
+          base_form: ensureText(card.base_form) ?? '', // "" | false | null | undefined -> ""
+          grammar_data: ensureRecord(card.grammar_data) ?? {},
         })
       );
 

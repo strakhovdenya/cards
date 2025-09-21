@@ -8,7 +8,7 @@ import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
 
 export interface ParsedNounCard extends ParsedCard {
   word_type: 'noun';
-  base_form?: string;
+  base_form: string;
   article?: string;
   plural?: string;
 }
@@ -21,10 +21,11 @@ export interface NounParseResult extends ParseResult {
 
 export class NounBulkImportStrategy implements BulkImportStrategy {
   parseText(text: string, existingCards: Card[]): NounParseResult {
+    console.log('parseText', text);
     const lines = text.split('\n');
     const cards: ParsedNounCard[] = [];
     const errors: string[] = [];
-
+    console.log('lines', lines);
     lines.forEach((line, index) => {
       let trimmedLine = line.trim();
       // Заменяем все виды дефисов на обычный дефис
@@ -44,6 +45,7 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
       }
 
       const germanWord = trimmedLine.substring(0, separatorIndex).trim();
+      console.log('germanWord', germanWord);
       const translation = trimmedLine.substring(separatorIndex + 3).trim();
 
       if (!germanWord) {
@@ -91,7 +93,7 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
   }
 
   private parseNoun(germanWord: string): {
-    base_form?: string;
+    base_form: string;
     article?: string;
     plural?: string;
   } {
@@ -99,6 +101,7 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
     const articleMatch = germanWord.match(/^(der|die|das)\s+(.+)$/i);
 
     if (articleMatch) {
+      const base_form = germanWord.replace(/^(der|die|das)\s+([^,]+).*/i, '$2');
       const article = articleMatch[1].toLowerCase();
 
       // Проверяем, есть ли множественное число в формате "der Mann, die Männer"
@@ -108,7 +111,7 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
 
       if (pluralMatch) {
         return {
-          base_form: germanWord,
+          base_form,
           article: article,
           plural: `${pluralMatch[3].toLowerCase()} ${pluralMatch[4]}`,
         };
@@ -123,8 +126,9 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
     // Если нет артикля, но есть запятая, возможно это формат "Mann, Männer"
     const simplePluralMatch = germanWord.match(/^([^,]+),\s*(.+)$/);
     if (simplePluralMatch) {
+      const base_form = germanWord.split(',')[0].trim();
       return {
-        base_form: germanWord,
+        base_form,
         plural: simplePluralMatch[2],
       };
     }

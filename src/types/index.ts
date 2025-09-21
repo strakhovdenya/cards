@@ -25,6 +25,9 @@ export interface Card {
 
 export interface CardFormData {
   germanWord: string;
+  word_type?: string;
+  base_form?: string;
+  grammar_data?: Record<string, unknown>;
   translation: string;
   tagIds?: string[]; // Массив ID тегов вместо массива строк
   tags?: string[]; // Для обратной совместимости (имена тегов для UI)

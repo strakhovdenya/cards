@@ -1,5 +1,8 @@
 export interface ParsedCard {
   germanWord: string;
+  base_form: string;
+  word_type: string;
+  grammar_data?: Record<string, unknown>;
   translation: string;
   lineNumber: number;
   isDuplicate?: boolean;

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    console.log('body.cards', body.cards);
     // Валидируем каждую карточку
     for (const [index, card] of body.cards.entries()) {
       if (!card.germanWord || !card.translation) {
@@ -45,6 +45,9 @@ export async function POST(request: NextRequest) {
           {
             german_word: cardData.germanWord,
             translation: cardData.translation,
+            base_form: cardData.base_form,
+            word_type: cardData.word_type,
+            grammar_data: cardData.grammar_data,
           },
         ])
         .select()

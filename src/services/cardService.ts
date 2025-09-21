@@ -63,6 +63,9 @@ export class ClientCardService {
     const cardsData: CreateCardRequest[] = cards.map((card) => ({
       germanWord: card.germanWord,
       translation: card.translation,
+      base_form: card.base_form,
+      grammar_data: card.grammar_data,
+      word_type: card.word_type,
       tagIds: card.tagIds ?? [],
     }));
 
