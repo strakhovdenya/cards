@@ -45,9 +45,6 @@ export class BasicBulkImportStrategy implements BulkImportStrategy {
 
       cards.push({
         germanWord,
-        base_form: germanWord,
-        word_type: 'other',
-        grammar_data: {},
         translation,
         lineNumber,
       });
@@ -74,11 +71,12 @@ export class BasicBulkImportStrategy implements BulkImportStrategy {
   }
 
   getGptPrompt(): string {
-    return `мне надо следующие слова перевести на немецкий, 
-    ответ дать в формате 
-    normal - нормальный; 
-    Wie geht es dir? - как дела?
-    обычно в ответе не должно быть пустых строк между строк ответов вот слова`;
+    return `мне надо следующие слова перевести на немецкий, ответ дать в формате
+die Lampe, die Lampen - Лампа
+die Tasche, die Taschen - Сумка
+в ответе не должно быть пустых строк между строк ответов
+
+вот слова на русском языке`;
   }
 
   getFormatExample(): string {

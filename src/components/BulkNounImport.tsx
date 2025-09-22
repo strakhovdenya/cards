@@ -122,7 +122,6 @@ export function BulkNounImport({
     }
 
     const result = importStrategy.parseText(inputText, existingCards);
-    console.log('result', result);
     setParseResult(result);
     setShowPreview(true);
   };
@@ -148,7 +147,7 @@ export function BulkNounImport({
               : undefined,
         })
       );
-      console.log('cardsToImport', cardsToImport);
+
       await onImport(cardsToImport);
 
       // Очистка после успешного импорта
@@ -504,6 +503,7 @@ export function BulkNounImport({
                                 )}
                               </Box>
                             }
+                            secondaryTypographyProps={{ component: 'div' }}
                           />
                         </ListItem>
                       ))}
