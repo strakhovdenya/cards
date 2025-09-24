@@ -47,9 +47,10 @@ export function StudyModeSelector({
                 <LocalOffer />
               </ListItemIcon>
               <ListItemText
-                primary="Карточки"
-                secondary="Изучение немецких слов с помощью карточек"
+                primary="Слова"
+                secondary="Изучение слов и артиклей"
               />
+              <KeyboardArrowRight />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>

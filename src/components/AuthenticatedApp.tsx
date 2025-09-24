@@ -38,6 +38,7 @@ import {
   ChevronRight,
 } from '@mui/icons-material';
 import { App } from './App';
+import { ArticlesTrainer } from './ArticlesTrainer';
 import { InviteManager } from './auth/InviteManager';
 import { VerbTraining } from './VerbTraining';
 import { VerbEditor } from './VerbEditor';
@@ -68,6 +69,8 @@ export function AuthenticatedApp() {
   const [verbMode, setVerbMode] = useState<VerbMode>('view');
   const [isStudyDialogOpen, setIsStudyDialogOpen] = useState(false);
   const [isVerbModeDialogOpen, setIsVerbModeDialogOpen] = useState(false);
+  const [isWordsSubmenuOpen, setIsWordsSubmenuOpen] = useState(false);
+  const [wordsMode, setWordsMode] = useState<'cards' | 'articles'>('cards');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isVerbEditDialogOpen, setIsVerbEditDialogOpen] = useState(false);
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
@@ -126,7 +129,8 @@ export function AuthenticatedApp() {
     setIsStudyDialogOpen(false);
 
     if (mode === 'cards') {
-      setViewMode('viewer');
+      // Открываем подменю "Слова"
+      setIsWordsSubmenuOpen(true);
     } else if (mode === 'verbs') {
       setIsVerbModeDialogOpen(true);
     } else if (mode === 'time') {
@@ -221,7 +225,9 @@ export function AuthenticatedApp() {
                     : 'Изучение глаголов'
                   : studyMode === 'time'
                     ? 'Изучение времени'
-                    : 'German Word Cards'
+                    : wordsMode === 'articles'
+                      ? 'Артикли'
+                      : 'German Word Cards'
                 : mainViewMode === 'edit'
                   ? viewMode === 'verbs'
                     ? 'Редактирование глаголов'
@@ -274,6 +280,56 @@ export function AuthenticatedApp() {
         }}
         onModeSelect={handleStudyModeSelect}
       />
+
+      {/* Диалог подменю "Слова" */}
+      <Dialog
+        open={isWordsSubmenuOpen}
+        onClose={() => {
+          setIsWordsSubmenuOpen(false);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Слова</DialogTitle>
+        <DialogContent>
+          <List>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  setIsWordsSubmenuOpen(false);
+                  setWordsMode('cards');
+                  setViewMode('viewer');
+                }}
+              >
+                <ListItemIcon>
+                  <Style />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Карточки"
+                  secondary="Изучение немецких слов с помощью карточек"
+                />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  setIsWordsSubmenuOpen(false);
+                  setWordsMode('articles');
+                  setViewMode('viewer');
+                }}
+              >
+                <ListItemIcon>
+                  <Book />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Артикли"
+                  secondary="Изучение артиклей (в разработке)"
+                />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </DialogContent>
+      </Dialog>
 
       {/* Диалог выбора режима редактирования */}
       <EditModeSelector
@@ -643,6 +699,8 @@ export function AuthenticatedApp() {
               )
             ) : studyMode === 'time' ? (
               <TimeTraining />
+            ) : wordsMode === 'articles' ? (
+              <ArticlesTrainer />
             ) : (
               <App
                 showNavigation={false}
