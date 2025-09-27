@@ -52,6 +52,20 @@ export function ArticlesTrainer() {
     void load();
   }, []);
 
+  // Обработчик изменения размера окна - сбрасываем летящий ответ
+  useEffect(() => {
+    const handleResize = () => {
+      if (flyingAnswer) {
+        setFlyingAnswer(null);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [flyingAnswer]);
+
   const filtered = useMemo(() => {
     if (selectedTagIds.size === 0) return nouns;
     return nouns.filter((card) =>
@@ -103,15 +117,30 @@ export function ArticlesTrainer() {
 
       if (!button || !targetCounter) return;
 
-      const buttonRect = button.getBoundingClientRect();
-      const counterRect = targetCounter.getBoundingClientRect();
+      // Функция для получения точных координат
+      const getElementCenter = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        const scrollX =
+          window.pageXOffset || document.documentElement.scrollLeft || 0;
+        const scrollY =
+          window.pageYOffset || document.documentElement.scrollTop || 0;
+
+        return {
+          x: rect.left + scrollX + rect.width / 2,
+          y: rect.top + scrollY + rect.height / 2,
+        };
+      };
+
+      // Получаем центры элементов
+      const fromCenter = getElementCenter(button);
+      const toCenter = getElementCenter(targetCounter);
 
       setFlyingAnswer({
         isFlying: true,
-        fromX: buttonRect.left + buttonRect.width / 2,
-        fromY: buttonRect.top + buttonRect.height / 2,
-        toX: counterRect.left + counterRect.width / 2,
-        toY: counterRect.top + counterRect.height / 2,
+        fromX: fromCenter.x,
+        fromY: fromCenter.y,
+        toX: toCenter.x,
+        toY: toCenter.y,
         article,
         isCorrect,
       });
@@ -409,7 +438,7 @@ export function ArticlesTrainer() {
       {flyingAnswer && (
         <Box
           sx={{
-            position: 'fixed',
+            position: 'absolute',
             left: flyingAnswer.fromX,
             top: flyingAnswer.fromY,
             zIndex: 9999,
@@ -418,15 +447,23 @@ export function ArticlesTrainer() {
               'flyToCounter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
             '@keyframes flyToCounter': {
               '0%': {
-                transform: 'translate(0, 0) scale(1)',
+                transform: 'translate(0, 0) scale(1) rotate(0deg)',
                 opacity: 1,
               },
+              '25%': {
+                transform: `translate(${(flyingAnswer.toX - flyingAnswer.fromX) * 0.25}px, ${(flyingAnswer.toY - flyingAnswer.fromY) * 0.05}px) scale(1.15) rotate(5deg)`,
+                opacity: 0.95,
+              },
               '50%': {
-                transform: `translate(${(flyingAnswer.toX - flyingAnswer.fromX) * 0.5}px, ${(flyingAnswer.toY - flyingAnswer.fromY) * 0.3}px) scale(1.2)`,
+                transform: `translate(${(flyingAnswer.toX - flyingAnswer.fromX) * 0.5}px, ${(flyingAnswer.toY - flyingAnswer.fromY) * 0.3}px) scale(1.3) rotate(-5deg)`,
                 opacity: 0.8,
               },
+              '75%': {
+                transform: `translate(${(flyingAnswer.toX - flyingAnswer.fromX) * 0.75}px, ${(flyingAnswer.toY - flyingAnswer.fromY) * 0.7}px) scale(1.1) rotate(2deg)`,
+                opacity: 0.6,
+              },
               '100%': {
-                transform: `translate(${flyingAnswer.toX - flyingAnswer.fromX}px, ${flyingAnswer.toY - flyingAnswer.fromY}px) scale(0.3)`,
+                transform: `translate(${flyingAnswer.toX - flyingAnswer.fromX}px, ${flyingAnswer.toY - flyingAnswer.fromY}px) scale(0.1) rotate(0deg)`,
                 opacity: 0,
               },
             },
