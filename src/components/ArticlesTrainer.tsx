@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Box, Button, Chip, Stack, Typography, Paper } from '@mui/material';
 import { ArrowBack, ArrowForward, Shuffle } from '@mui/icons-material';
 import { ClientNounService } from '@/services/nounService';
@@ -21,6 +21,20 @@ export function ArticlesTrainer() {
   const [selectedArticle, setSelectedArticle] = useState<
     null | 'der' | 'die' | 'das'
   >(null);
+  const [flyingAnswer, setFlyingAnswer] = useState<{
+    isFlying: boolean;
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    article: string;
+    isCorrect: boolean;
+  } | null>(null);
+
+  // Refs для получения позиций элементов
+  const articleButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const correctCounterRef = useRef<HTMLDivElement | null>(null);
+  const errorCounterRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -80,6 +94,36 @@ export function ArticlesTrainer() {
     setSelectedTagIds(new Set());
   }, []);
 
+  const startFlyingAnimation = useCallback(
+    (article: string, isCorrect: boolean, buttonIndex: number) => {
+      const button = articleButtonRefs.current[buttonIndex];
+      const targetCounter = isCorrect
+        ? correctCounterRef.current
+        : errorCounterRef.current;
+
+      if (!button || !targetCounter) return;
+
+      const buttonRect = button.getBoundingClientRect();
+      const counterRect = targetCounter.getBoundingClientRect();
+
+      setFlyingAnswer({
+        isFlying: true,
+        fromX: buttonRect.left + buttonRect.width / 2,
+        fromY: buttonRect.top + buttonRect.height / 2,
+        toX: counterRect.left + counterRect.width / 2,
+        toY: counterRect.top + counterRect.height / 2,
+        article,
+        isCorrect,
+      });
+
+      // Останавливаем анимацию через 800ms
+      setTimeout(() => {
+        setFlyingAnswer(null);
+      }, 800);
+    },
+    []
+  );
+
   const next = useCallback(() => {
     if (ordered.length === 0) return;
     setCurrentIndex((i) => (i + 1) % ordered.length);
@@ -122,14 +166,51 @@ export function ArticlesTrainer() {
           variant="outlined"
         />
         <Chip
+          ref={correctCounterRef}
           label={`Верно: ${correctCount}`}
           color="success"
           variant="outlined"
+          sx={{
+            animation:
+              answerResult === 'correct' ? 'bounceIn 0.6s ease-out' : 'none',
+            '@keyframes bounceIn': {
+              '0%': {
+                transform: 'scale(0.3)',
+                opacity: 0,
+              },
+              '50%': {
+                transform: 'scale(1.1)',
+              },
+              '70%': {
+                transform: 'scale(0.9)',
+              },
+              '100%': {
+                transform: 'scale(1)',
+                opacity: 1,
+              },
+            },
+          }}
         />
         <Chip
+          ref={errorCounterRef}
           label={`Ошибки: ${errorCount}`}
           color="error"
           variant="outlined"
+          sx={{
+            animation:
+              answerResult === 'wrong' ? 'shakeIn 0.6s ease-out' : 'none',
+            '@keyframes shakeIn': {
+              '0%, 100%': {
+                transform: 'translateX(0)',
+              },
+              '10%, 30%, 50%, 70%, 90%': {
+                transform: 'translateX(-3px)',
+              },
+              '20%, 40%, 60%, 80%': {
+                transform: 'translateX(3px)',
+              },
+            },
+          }}
         />
       </Stack>
 
@@ -159,11 +240,24 @@ export function ArticlesTrainer() {
         <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: 0.2 }}>
           {baseForm}
         </Typography>
+        {current?.translation && (
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 500,
+              color: 'text.secondary',
+              mt: 2,
+              opacity: 0.8,
+            }}
+          >
+            {current.translation}
+          </Typography>
+        )}
       </Paper>
 
       {/* Выбор артикля */}
       <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
-        {(['der', 'die', 'das'] as const).map((art) => {
+        {(['der', 'die', 'das'] as const).map((art, index) => {
           const correctArticle = (() => {
             const gd = current?.grammar_data;
             const article =
@@ -183,12 +277,19 @@ export function ArticlesTrainer() {
           return (
             <Button
               key={art}
+              ref={(el) => {
+                articleButtonRefs.current[index] = el;
+              }}
               variant="contained"
               color={color}
               onClick={() => {
                 if (!current || answerResult) return;
                 const isCorrect = correctArticle === art;
                 setSelectedArticle(art);
+
+                // Запускаем анимацию полета
+                startFlyingAnimation(art, isCorrect, index);
+
                 if (isCorrect) setCorrectCount((c) => c + 1);
                 else setErrorCount((c) => c + 1);
                 setAnswerResult(isCorrect ? 'correct' : 'wrong');
@@ -248,10 +349,34 @@ export function ArticlesTrainer() {
           Перемешать
         </Button>
         <Button
-          variant="outlined"
+          variant={answerResult !== null ? 'contained' : 'outlined'}
+          color={answerResult !== null ? 'success' : undefined}
           endIcon={<ArrowForward />}
           onClick={next}
           disabled={filtered.length <= 1}
+          sx={
+            answerResult !== null
+              ? {
+                  boxShadow: 4,
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                  '&:hover': {
+                    boxShadow: 6,
+                    transform: 'scale(1.02)',
+                  },
+                  '@keyframes pulse': {
+                    '0%': {
+                      boxShadow: '0 0 0 0 rgba(76, 175, 80, 0.7)',
+                    },
+                    '70%': {
+                      boxShadow: '0 0 0 10px rgba(76, 175, 80, 0)',
+                    },
+                    '100%': {
+                      boxShadow: '0 0 0 0 rgba(76, 175, 80, 0)',
+                    },
+                  },
+                }
+              : {}
+          }
         >
           Вперёд
         </Button>
@@ -278,6 +403,56 @@ export function ArticlesTrainer() {
         >
           {answerResult === 'correct' ? 'Верно' : 'Неверно'}
         </Paper>
+      )}
+
+      {/* Летящий ответ */}
+      {flyingAnswer && (
+        <Box
+          sx={{
+            position: 'fixed',
+            left: flyingAnswer.fromX,
+            top: flyingAnswer.fromY,
+            zIndex: 9999,
+            pointerEvents: 'none',
+            animation:
+              'flyToCounter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+            '@keyframes flyToCounter': {
+              '0%': {
+                transform: 'translate(0, 0) scale(1)',
+                opacity: 1,
+              },
+              '50%': {
+                transform: `translate(${(flyingAnswer.toX - flyingAnswer.fromX) * 0.5}px, ${(flyingAnswer.toY - flyingAnswer.fromY) * 0.3}px) scale(1.2)`,
+                opacity: 0.8,
+              },
+              '100%': {
+                transform: `translate(${flyingAnswer.toX - flyingAnswer.fromX}px, ${flyingAnswer.toY - flyingAnswer.fromY}px) scale(0.3)`,
+                opacity: 0,
+              },
+            },
+          }}
+        >
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              borderRadius: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: flyingAnswer.isCorrect
+                ? 'success.main'
+                : 'error.main',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              border: '2px solid white',
+            }}
+          >
+            {flyingAnswer.article}
+          </Box>
+        </Box>
       )}
     </Box>
   );
