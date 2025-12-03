@@ -7,8 +7,17 @@ import type {
   BulkCreateVerbsRequest,
 } from '@/types';
 
+interface ServiceOptions {
+  guest?: boolean;
+}
+
 // Базовый URL для API
 const API_BASE_URL = '/api/verbs';
+
+const buildUrl = (path: string, options?: ServiceOptions) => {
+  if (!options?.guest) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
+};
 
 // Утилита для обработки ответов API
 async function handleApiResponse<T>(response: Response): Promise<T> {
@@ -28,8 +37,8 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 // Клиентский сервис для работы с глаголами
 export class ClientVerbService {
   // Получить глаголы текущего пользователя
-  static async getVerbs(): Promise<Verb[]> {
-    const response = await fetch(API_BASE_URL, {
+  static async getVerbs(options?: ServiceOptions): Promise<Verb[]> {
+    const response = await fetch(buildUrl(API_BASE_URL, options), {
       credentials: 'include', // Важно для передачи cookies с сессией
     });
     return handleApiResponse<Verb[]>(response);
@@ -67,9 +76,12 @@ export class ClientVerbService {
   }
 
   // Получить глагол по ID
-  static async getVerbById(id: string): Promise<Verb | null> {
+  static async getVerbById(
+    id: string,
+    options?: ServiceOptions
+  ): Promise<Verb | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(buildUrl(`${API_BASE_URL}/${id}`, options), {
         credentials: 'include',
       });
 
@@ -110,11 +122,14 @@ export class ClientVerbService {
   }
 
   // Получить случайный глагол для тренировки
-  static async getRandomVerb(): Promise<Verb | null> {
+  static async getRandomVerb(options?: ServiceOptions): Promise<Verb | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/random`, {
-        credentials: 'include',
-      });
+      const response = await fetch(
+        buildUrl(`${API_BASE_URL}/random`, options),
+        {
+          credentials: 'include',
+        }
+      );
 
       if (response.status === 404) {
         return null;
@@ -128,9 +143,12 @@ export class ClientVerbService {
   }
 
   // Получить глаголы по статусу изучения
-  static async getVerbsByLearnedStatus(learned: boolean): Promise<Verb[]> {
+  static async getVerbsByLearnedStatus(
+    learned: boolean,
+    options?: ServiceOptions
+  ): Promise<Verb[]> {
     const response = await fetch(
-      `${API_BASE_URL}/by-learned-status?learned=${learned}`,
+      buildUrl(`${API_BASE_URL}/by-learned-status?learned=${learned}`, options),
       {
         credentials: 'include',
       }
@@ -139,9 +157,15 @@ export class ClientVerbService {
   }
 
   // Поиск глаголов по инфинитиву
-  static async searchVerbs(query: string): Promise<Verb[]> {
+  static async searchVerbs(
+    query: string,
+    options?: ServiceOptions
+  ): Promise<Verb[]> {
     const response = await fetch(
-      `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`,
+      buildUrl(
+        `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`,
+        options
+      ),
       {
         credentials: 'include',
       }

@@ -8,7 +8,11 @@ import { ClientTagService } from '@/services/tagService';
 import { TagFilter } from './TagFilter';
 import type { Card, Tag } from '@/types';
 
-export function ArticlesTrainer() {
+interface ArticlesTrainerProps {
+  isGuest?: boolean;
+}
+
+export function ArticlesTrainer({ isGuest = false }: ArticlesTrainerProps) {
   const [nouns, setNouns] = useState<Card[]>([]);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
@@ -40,8 +44,8 @@ export function ArticlesTrainer() {
     const load = async () => {
       try {
         const [n, t] = await Promise.all([
-          ClientNounService.getNouns(),
-          ClientTagService.getTags(),
+          ClientNounService.getNouns({ guest: isGuest }),
+          ClientTagService.getTags(false, { guest: isGuest }),
         ]);
         setNouns(n);
         setAvailableTags(t);
@@ -50,7 +54,7 @@ export function ArticlesTrainer() {
       }
     };
     void load();
-  }, []);
+  }, [isGuest]);
 
   // Обработчик изменения размера окна - сбрасываем летящий ответ
   useEffect(() => {

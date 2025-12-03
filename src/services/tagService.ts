@@ -5,8 +5,17 @@ import type {
   ApiResponse,
 } from '@/types';
 
+interface ServiceOptions {
+  guest?: boolean;
+}
+
 // Базовый URL для API тегов
 const API_BASE_URL = '/api/tags';
+
+const buildUrl = (path: string, options?: ServiceOptions) => {
+  if (!options?.guest) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
+};
 
 // Кеш для тегов
 let tagsCache: Tag[] | null = null;
@@ -43,24 +52,31 @@ function invalidateCache(): void {
 // Клиентский сервис для работы с тегами
 export class ClientTagService {
   // Получить теги текущего пользователя (с кешированием)
-  static async getTags(forceRefresh = false): Promise<Tag[]> {
+  static async getTags(
+    forceRefresh = false,
+    options?: ServiceOptions
+  ): Promise<Tag[]> {
+    const allowCache = !options?.guest;
+
     // Если кеш актуален и не требуется принудительное обновление
-    if (!forceRefresh && isCacheValid()) {
+    if (allowCache && !forceRefresh && isCacheValid()) {
       console.log('Using cached tags:', tagsCache!.length);
       return tagsCache!;
     }
 
     console.log('Fetching tags from API...');
     // Загружаем теги из API
-    const response = await fetch(API_BASE_URL, {
+    const response = await fetch(buildUrl(API_BASE_URL, options), {
       credentials: 'include', // Важно для передачи cookies с сессией
     });
     const tags = await handleApiResponse<Tag[]>(response);
 
-    // Обновляем кеш
-    tagsCache = tags;
-    cacheTimestamp = Date.now();
-    console.log('Updated cache with', tags.length, 'tags');
+    if (allowCache) {
+      // Обновляем кеш
+      tagsCache = tags;
+      cacheTimestamp = Date.now();
+      console.log('Updated cache with', tags.length, 'tags');
+    }
 
     return tags;
   }

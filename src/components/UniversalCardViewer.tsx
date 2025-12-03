@@ -38,6 +38,7 @@ interface UniversalCardViewerProps<T extends CardData = CardData> {
   strategy: CardStrategy<T>;
   onCardUpdate?: (updatedCard: T) => void;
   toggleLearnedService?: (id: string, learned: boolean) => Promise<void>;
+  isGuest?: boolean;
 }
 
 export function UniversalCardViewer<T extends CardData>({
@@ -45,6 +46,7 @@ export function UniversalCardViewer<T extends CardData>({
   strategy,
   onCardUpdate,
   toggleLearnedService,
+  isGuest = false,
 }: UniversalCardViewerProps<T>) {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -70,14 +72,14 @@ export function UniversalCardViewer<T extends CardData>({
   useEffect(() => {
     const loadTags = async () => {
       try {
-        const tags = await ClientTagService.getTags();
+        const tags = await ClientTagService.getTags(false, { guest: isGuest });
         setAvailableTags(tags);
       } catch (error) {
         console.error('Error loading tags:', error);
       }
     };
     void loadTags();
-  }, []);
+  }, [isGuest]);
 
   // Фильтрация карточек по выбранным тегам
   useEffect(() => {
@@ -187,7 +189,7 @@ export function UniversalCardViewer<T extends CardData>({
   }, [shuffledCards]);
 
   const handleToggleLearned = useCallback(async () => {
-    if (!currentCard || !onCardUpdate) return;
+    if (!currentCard || !onCardUpdate || isGuest) return;
 
     // Оптимистичное обновление UI
     const optimisticCard = { ...currentCard, learned: !currentCard.learned };
@@ -213,7 +215,7 @@ export function UniversalCardViewer<T extends CardData>({
       setShuffledCards(shuffledCards);
       onCardUpdate(currentCard);
     }
-  }, [currentCard, onCardUpdate, shuffledCards, toggleLearnedService]);
+  }, [currentCard, onCardUpdate, shuffledCards, toggleLearnedService, isGuest]);
 
   const toggleKeyboardHints = useCallback(() => {
     setShowKeyboardHints((prev) => !prev);
@@ -444,6 +446,7 @@ export function UniversalCardViewer<T extends CardData>({
             currentCard.learned ? <CheckCircle /> : <RadioButtonUnchecked />
           }
           size="medium"
+          disabled={isGuest}
         >
           {currentCard.learned ? 'Выучено' : 'Отметить как выученное'}
         </Button>

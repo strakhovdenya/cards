@@ -8,20 +8,30 @@ import type { Card as CardType } from '@/types';
 interface CardViewerProps {
   cards: CardType[];
   onCardUpdate?: (updatedCard: CardType) => void;
+  isGuest?: boolean;
 }
 
-// Создаем единственный экземпляр адаптер-стратегии для оптимизации
+// Гибкий просмотрщик слайдов карточек
 const adaptiveCardStrategy = new AdaptiveCardStrategy();
 
-export function CardViewer({ cards, onCardUpdate }: CardViewerProps) {
+export function CardViewer({
+  cards,
+  onCardUpdate,
+  isGuest = false,
+}: CardViewerProps) {
   return (
     <UniversalCardViewer
       cards={cards}
       strategy={adaptiveCardStrategy}
       onCardUpdate={onCardUpdate}
-      toggleLearnedService={async (id: string, learned: boolean) => {
-        await ClientCardService.toggleLearnedStatus(id, learned);
-      }}
+      toggleLearnedService={
+        isGuest
+          ? undefined
+          : async (id: string, learned: boolean) => {
+              await ClientCardService.toggleLearnedStatus(id, learned);
+            }
+      }
+      isGuest={isGuest}
     />
   );
 }

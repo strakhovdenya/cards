@@ -1,6 +1,15 @@
 import type { ApiResponse, Card } from '@/types';
 
+interface ServiceOptions {
+  guest?: boolean;
+}
+
 const API_BASE_URL = '/api/nouns';
+
+const buildUrl = (path: string, options?: ServiceOptions) => {
+  if (!options?.guest) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
+};
 
 async function handleApiResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -17,8 +26,8 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 }
 
 export class ClientNounService {
-  static async getNouns(): Promise<Card[]> {
-    const response = await fetch(API_BASE_URL, {
+  static async getNouns(options?: ServiceOptions): Promise<Card[]> {
+    const response = await fetch(buildUrl(API_BASE_URL, options), {
       credentials: 'include',
     });
     return handleApiResponse<Card[]>(response);

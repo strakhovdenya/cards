@@ -10,6 +10,15 @@ import type {
 // Базовый URL для API
 const API_BASE_URL = '/api/cards';
 
+interface ServiceOptions {
+  guest?: boolean;
+}
+
+const buildUrl = (path: string, options?: ServiceOptions) => {
+  if (!options?.guest) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
+};
+
 // Утилита для обработки ответов API
 async function handleApiResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -28,8 +37,8 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 // Клиентский сервис для работы с карточками
 export class ClientCardService {
   // Получить карточки текущего пользователя
-  static async getCards(): Promise<Card[]> {
-    const response = await fetch(API_BASE_URL, {
+  static async getCards(options?: ServiceOptions): Promise<Card[]> {
+    const response = await fetch(buildUrl(API_BASE_URL, options), {
       credentials: 'include', // Важно для передачи cookies с сессией
     });
     return handleApiResponse<Card[]>(response);
@@ -86,10 +95,16 @@ export class ClientCardService {
   }
 
   // Получить карточку по ID
-  static async getCardById(cardId: string): Promise<Card> {
-    const response = await fetch(`${API_BASE_URL}/${cardId}`, {
-      credentials: 'include',
-    });
+  static async getCardById(
+    cardId: string,
+    options?: ServiceOptions
+  ): Promise<Card> {
+    const response = await fetch(
+      buildUrl(`${API_BASE_URL}/${cardId}`, options),
+      {
+        credentials: 'include',
+      }
+    );
     return handleApiResponse<Card>(response);
   }
 
@@ -127,12 +142,12 @@ export class ClientCardService {
   }
 
   // Получить статистику карточек
-  static async getCardStats(): Promise<{
+  static async getCardStats(options?: ServiceOptions): Promise<{
     total: number;
     learned: number;
     unlearned: number;
   }> {
-    const cards = await this.getCards();
+    const cards = await this.getCards(options);
     const learned = cards.filter((card) => card.learned).length;
 
     return {

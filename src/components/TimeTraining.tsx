@@ -68,9 +68,8 @@ const SelectedWordChip = styled(Chip)(({ theme }) => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface TimeTrainingProps {
-  // Компонент не принимает props, так как навигация происходит через меню
+  isGuest?: boolean;
 }
 
 interface TimeApiResponse {
@@ -80,7 +79,9 @@ interface TimeApiResponse {
 
 type TrainingMode = 'formal' | 'informal';
 
-export const TimeTraining: React.FC<TimeTrainingProps> = () => {
+export const TimeTraining: React.FC<TimeTrainingProps> = ({
+  isGuest = false,
+}) => {
   const [currentQuestion, setCurrentQuestion] = useState<TimeQuestion | null>(
     null
   );
@@ -140,7 +141,9 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
     setSelectedWords([]);
 
     try {
-      const response = await fetch('/api/time/random');
+      const response = await fetch(
+        isGuest ? '/api/time/random?guest=1' : '/api/time/random'
+      );
       const question = await handleApiResponse(response);
       setCurrentQuestion(question);
     } catch (error) {
@@ -151,7 +154,7 @@ export const TimeTraining: React.FC<TimeTrainingProps> = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isGuest]);
 
   // Инициализация при загрузке компонента
   useEffect(() => {
