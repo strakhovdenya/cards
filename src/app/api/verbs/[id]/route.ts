@@ -8,9 +8,9 @@ import type {
 } from '@/types';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // Преобразование данных из базы в клиентский формат
@@ -29,12 +29,13 @@ const transformDatabaseVerb = (dbVerb: DatabaseVerb) => ({
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
+    const { id } = await params;
 
     // Получаем глагол только если он принадлежит текущему пользователю
     const { data, error } = (await supabase
       .from('verbs')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .single()) as { data: DatabaseVerb | null; error: unknown };
 
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
+    const { id } = await params;
     const body = (await request.json()) as UpdateVerbRequest;
 
     // Валидация данных
@@ -88,7 +90,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { data, error } = (await supabase
       .from('verbs')
       .update(body)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .select()
       .single()) as { data: DatabaseVerb | null; error: unknown };
@@ -125,12 +127,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
+    const { id } = await params;
 
     // Удаляем глагол только если он принадлежит текущему пользователю
     const { error } = await supabase
       .from('verbs')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id);
 
     if (error) {

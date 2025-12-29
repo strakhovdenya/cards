@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const hasSafeNext = next && next.startsWith('/') && !next.startsWith('//');
 
   if (code) {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createRouteHandlerClient({
+      cookies: async () => await cookies(),
+    });
     await supabase.auth.exchangeCodeForSession(code);
   }
 

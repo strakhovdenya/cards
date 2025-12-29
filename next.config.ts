@@ -1,12 +1,10 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+const nextConfig = {
   /* config options here */
-  // Игнорируем предупреждения о синхронных API
+  // Ignore ESLint build errors so lint does not block API routes
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Подавляем предупреждения о cookies()
+  // Ignore TypeScript build errors (temporary)
   typescript: {
     ignoreBuildErrors: true,
   },

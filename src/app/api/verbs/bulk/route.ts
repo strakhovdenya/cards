@@ -29,7 +29,9 @@ interface DbVerb {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createRouteHandlerClient({
+      cookies: async () => await cookies(),
+    });
 
     // Проверяем аутентификацию
     const {
