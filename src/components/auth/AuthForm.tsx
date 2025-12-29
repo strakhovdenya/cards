@@ -16,6 +16,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { signInWithEmail } from '@/lib/auth';
 import NextLink from 'next/link';
+import { ForgotPasswordDialog } from './ForgotPasswordDialog';
 
 interface AuthFormProps {
   showSignupLink?: boolean;
@@ -27,13 +28,14 @@ export function AuthForm({ showSignupLink = false }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email.trim() || !password.trim()) {
-      setError('Пожалуйста, заполните все поля');
+      setError('Введите email и пароль.');
       return;
     }
 
@@ -44,7 +46,7 @@ export function AuthForm({ showSignupLink = false }: AuthFormProps) {
       await signInWithEmail(email.trim(), password);
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка входа');
+      setError(err instanceof Error ? err.message : 'Не удалось войти.');
     } finally {
       setLoading(false);
     }
@@ -110,10 +112,21 @@ export function AuthForm({ showSignupLink = false }: AuthFormProps) {
           variant="contained"
           size="large"
           disabled={loading}
-          sx={{ mt: 3, mb: 2 }}
+          sx={{ mt: 3, mb: 1 }}
         >
-          {loading ? 'Вход...' : 'ВОЙТИ'}
+          {loading ? 'Входим...' : 'Войти'}
         </Button>
+
+        <Box sx={{ textAlign: 'center', mb: 1 }}>
+          <Button
+            size="small"
+            onClick={() => {
+              setResetDialogOpen(true);
+            }}
+          >
+            Забыли пароль?
+          </Button>
+        </Box>
 
         {showSignupLink && (
           <Box sx={{ textAlign: 'center' }}>
@@ -126,6 +139,14 @@ export function AuthForm({ showSignupLink = false }: AuthFormProps) {
           </Box>
         )}
       </form>
+
+      <ForgotPasswordDialog
+        open={resetDialogOpen}
+        onClose={() => {
+          setResetDialogOpen(false);
+        }}
+        initialEmail={email}
+      />
     </Paper>
   );
 }

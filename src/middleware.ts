@@ -5,11 +5,11 @@ import type { Invite, SupabaseResponse } from '@/types';
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
-  
+
   // Создаем Supabase клиент
-  const supabase = createMiddlewareClient({ 
-    req, 
-    res 
+  const supabase = createMiddlewareClient({
+    req,
+    res,
   });
 
   const {
@@ -22,7 +22,11 @@ export async function middleware(req: NextRequest) {
   }
 
   // Если пользователь аутентифицирован и пытается попасть на страницы авторизации
-  if (session && req.nextUrl.pathname.startsWith('/auth')) {
+  const isAuthRoute = req.nextUrl.pathname.startsWith('/auth');
+  const isResetPasswordRoute = req.nextUrl.pathname === '/auth/reset-password';
+  const isAuthCallbackRoute = req.nextUrl.pathname === '/auth/callback';
+
+  if (session && isAuthRoute && !isResetPasswordRoute && !isAuthCallbackRoute) {
     return NextResponse.redirect(new URL('/', req.url));
   }
 

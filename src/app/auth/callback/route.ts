@@ -5,12 +5,14 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  const next = requestUrl.searchParams.get('next');
+  const hasSafeNext = next && next.startsWith('/') && !next.startsWith('//');
 
   if (code) {
     const supabase = createRouteHandlerClient({ cookies });
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // Перенаправляем на главную страницу после успешной авторизации
-  return NextResponse.redirect(new URL('/', request.url));
+  const redirectPath = hasSafeNext ? next : '/';
+  return NextResponse.redirect(new URL(redirectPath, request.url));
 }
