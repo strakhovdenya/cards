@@ -1,9 +1,11 @@
 'use client';
 
-import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
-import { ThemeProvider } from '@mui/material/styles';
+import * as React from 'react';
+import { CacheProvider } from '@emotion/react';
+import createCache from '@emotion/cache';
+import { useServerInsertedHTML } from 'next/navigation';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
@@ -106,13 +108,32 @@ interface CustomThemeProviderProps {
   children: React.ReactNode;
 }
 
+function EmotionCacheProvider({ children }: { children: React.ReactNode }) {
+  const [cache] = React.useState(() => {
+    const cache = createCache({ key: 'mui', prepend: true });
+    cache.compat = true;
+    return cache;
+  });
+
+  useServerInsertedHTML(() => (
+    <style
+      data-emotion={`${cache.key} ${Object.keys(cache.inserted).join(' ')}`}
+      dangerouslySetInnerHTML={{
+        __html: Object.values(cache.inserted).join(' '),
+      }}
+    />
+  ));
+
+  return <CacheProvider value={cache}>{children}</CacheProvider>;
+}
+
 export function CustomThemeProvider({ children }: CustomThemeProviderProps) {
   return (
-    <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+    <EmotionCacheProvider>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         {children}
       </ThemeProvider>
-    </AppRouterCacheProvider>
+    </EmotionCacheProvider>
   );
 }
