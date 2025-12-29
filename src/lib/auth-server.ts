@@ -4,8 +4,9 @@ import { cookies } from 'next/headers';
 
 // Helper для получения аутентифицированного пользователя в API routes
 export async function getAuthenticatedUser() {
+  const cookieStore = await cookies();
   const supabase = createRouteHandlerClient({
-    cookies: async () => await cookies(),
+    cookies: () => cookieStore,
   });
 
   const {
