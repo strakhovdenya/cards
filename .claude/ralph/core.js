@@ -38,9 +38,10 @@ const DEFAULT_REVIEW_MAX_TURNS = 40;
 
 // How many review-FAIL -> point-fix -> re-review cycles to allow before
 // giving up and treating the iteration as blocked. Bounds cost/turns on a
-// review that keeps finding new things — 2 gives a genuine chance to
-// self-correct without turning one issue into an unbounded loop.
-const MAX_REVIEW_FIX_ATTEMPTS = 2;
+// review that keeps finding new things — 4 gives a genuine chance to
+// self-correct on multiple distinct findings in a row without turning one
+// issue into an unbounded loop.
+const MAX_REVIEW_FIX_ATTEMPTS = 4;
 
 // Same idea, separate budget, for the post-self-review code-review pass below
 // (buildCodeReviewPrompt()/writeCodeReviewPermissions()). Deliberately its own
