@@ -50,15 +50,21 @@ npm run dev           # next dev --turbopack
 npm run check         # lint:strict + format:check + tsc --noEmit — основной гейт
 npm run build         # то, что реально валит прод-деплой, если сломано
 npm run fix           # lint:fix + prettier --write
+npm run test          # vitest run — юнит/интеграционные тесты (Vitest)
+npm run test:watch    # vitest в watch-режиме
+npm run test:coverage # vitest run --coverage
 ```
 
 `npm run check` — обязателен перед каждым коммитом. `npm run build` — обязателен, если изменения
 могут повлиять на сборку (новые импорты, server/client-компоненты, `next.config.ts`,
 `NEXT_PUBLIC_*` переменные).
 
-Автотестов в проекте пока нет. Это известный пробел, а не позиция: `check`/`build` ловят
-"не собралось", но не ловят "логика посчитала неправильно". Пока тестов нет, эту категорию
-ошибок ловит только человек на preview-деплое.
+Юнит-тесты покрывают: `src/utils/` (cardUtils, verbUtils — полностью), `src/strategies/` (все 9
+файлов — полностью), `src/services/` (cardService, tagService, nounService, verbService через мок
+`fetch`; timeService через мок `getServiceSupabase()`). `speechService.ts` и `migrateData.ts` вне
+скоупа: первый требует DOM-окружения (jsdom/happy-dom), второй — только приватная логика без
+публичных точек входа. `npm run test` — добавить к обязательным проверкам перед коммитом,
+если изменения затрагивают services/utils/strategies.
 
 ## Архитектурные правила
 
