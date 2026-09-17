@@ -19,8 +19,8 @@ Supabase — один и тот же проект для прода и для pr
 
 ## Стек и структура
 
-Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · MUI 7 (основная UI-библиотека) ·
-Tailwind CSS 4 · Supabase (БД + auth).
+Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · MUI 7 (единственная UI-библиотека) ·
+Supabase (БД + auth).
 
 ```
 src/
@@ -73,6 +73,8 @@ npm run fix           # lint:fix + prettier --write
   card-tags security. Изменение, расширяющее доступ, требует явного решения человека.
 - **Мобильный вид — основной.** Приложением пользуются в основном с телефона, есть нижняя
   навигация; проверяй изменения в узком вьюпорте, а не только на десктопе.
+- **Стили — только MUI** (`sx`, `styled`, тема в `ThemeProvider.tsx`); глобальные правила — через
+  `MuiCssBaseline.styleOverrides`, без отдельных CSS-файлов и без Tailwind.
 
 ## Изменения схемы БД
 
