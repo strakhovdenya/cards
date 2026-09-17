@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check (lint + format + types)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # All four are required for the build to even start, and all four are
+      # deliberately placeholders — CI proves the project compiles, it never
+      # talks to a real Supabase project.
+      #
+      # NEXT_PUBLIC_* are inlined into the client bundle at build time.
+      # SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are needed because
+      # `src/lib/supabase.ts` throws at module evaluation when they are
+      # missing, and Next collects page data for the API routes (which import
+      # it) during the build. Verified live: without them the build fails with
+      # "Failed to collect page data for /api/cards".
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-key

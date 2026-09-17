@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ralph loop (autonomous agent) runtime files — see .claude/ralph/README.md
+.claude/ralph/config.json
+.claude/ralph/state.json
+.claude/ralph/run.lock
+.ralph-runs/
+
+# claude code local overrides + hook logs
+.claude/settings.local.json
+scripts/*.log
