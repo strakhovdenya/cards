@@ -1,0 +1,8 @@
+# Normalize line endings: store LF in the repository, check out LF everywhere.
+#
+# Without this, a Windows checkout (core.autocrlf=true) produces CRLF working
+# files, while Prettier's default `endOfLine: "lf"` expects LF — so
+# `npm run format:check` (part of `npm run check`) failed locally on nearly
+# every file while passing in CI on Linux. Same gate, two different answers
+# depending on who runs it.
+* text=auto eol=lf

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check (lint + format + types)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # NEXT_PUBLIC_* are inlined into the client bundle at build time, so the
+      # build needs some value for them. Deliberately placeholders — CI proves
+      # the project compiles, it never talks to a real Supabase project.
+      #
+      # SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are deliberately NOT set: the
+      # service client is created lazily (see `getServiceSupabase()`), so the
+      # build must succeed without them. If this job ever starts failing with
+      # "Failed to collect page data", something has reintroduced a
+      # module-evaluation-time dependency on those secrets — fix that, don't
+      # add the secrets here (see issue #4).
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key

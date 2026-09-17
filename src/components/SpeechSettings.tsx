@@ -159,9 +159,9 @@ export function SpeechSettings({ open, onClose }: SpeechSettingsProps) {
             control={
               <Switch
                 checked={settings.enabled}
-                onChange={(e) =>
-                  { handleSettingChange('enabled', e.target.checked); }
-                }
+                onChange={(e) => {
+                  handleSettingChange('enabled', e.target.checked);
+                }}
               />
             }
             label="Включить произношение"
@@ -173,7 +173,9 @@ export function SpeechSettings({ open, onClose }: SpeechSettingsProps) {
             <InputLabel>Голос</InputLabel>
             <Select
               value={settings.voice}
-              onChange={(e) => { handleSettingChange('voice', e.target.value); }}
+              onChange={(e) => {
+                handleSettingChange('voice', e.target.value);
+              }}
               label="Голос"
             >
               {voices.map((voice) => (
@@ -200,7 +202,9 @@ export function SpeechSettings({ open, onClose }: SpeechSettingsProps) {
             </Typography>
             <Slider
               value={settings.rate}
-              onChange={(_, value) => { handleSettingChange('rate', value); }}
+              onChange={(_, value) => {
+                handleSettingChange('rate', value);
+              }}
               min={0.5}
               max={2.0}
               step={0.1}
@@ -219,7 +223,9 @@ export function SpeechSettings({ open, onClose }: SpeechSettingsProps) {
             </Typography>
             <Slider
               value={settings.pitch}
-              onChange={(_, value) => { handleSettingChange('pitch', value); }}
+              onChange={(_, value) => {
+                handleSettingChange('pitch', value);
+              }}
               min={0.5}
               max={2.0}
               step={0.1}
@@ -238,7 +244,9 @@ export function SpeechSettings({ open, onClose }: SpeechSettingsProps) {
             </Typography>
             <Slider
               value={settings.volume}
-              onChange={(_, value) => { handleSettingChange('volume', value); }}
+              onChange={(_, value) => {
+                handleSettingChange('volume', value);
+              }}
               min={0.1}
               max={1.0}
               step={0.1}

@@ -1,0 +1,18 @@
+{
+  "issues": [
+    {
+      "id": 2,
+      "dependsOn": []
+    },
+    {
+      "id": 3,
+      "dependsOn": [
+        2
+      ]
+    }
+  ],
+  "maxIterations": 1,
+  "maxTurns": 50,
+  "reviewMaxTurns": 40,
+  "branchPrefix": "task/ISSUE-"
+}

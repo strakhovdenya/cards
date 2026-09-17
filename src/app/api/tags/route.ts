@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
-import { supabase as serviceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import type {
   CreateTagRequest,
   ApiResponse,
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const { data: tags, error } = await serviceSupabase
+      const { data: tags, error } = await getServiceSupabase()
         .from('tags')
         .select('*')
         .eq('user_id', demoUserId)

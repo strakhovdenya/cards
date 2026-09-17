@@ -82,7 +82,6 @@ const SpeechButton = styled(IconButton)(({ theme }) => ({
   zIndex: 10,
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface VerbStudyProps {
   // Компонент для изучения инфинитивов глаголов
   // Пока не требует дополнительных пропсов

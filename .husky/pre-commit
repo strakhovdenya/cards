@@ -1,1 +1,6 @@
-# Type check\nnpx tsc --noEmit\n\n# Lint staged files\nnpx lint-staged\n\n# Lint with zero warnings allowed\nnpm run lint:strict\n
+# Lint + format staged files (eslint --max-warnings=0 + prettier)
+npx lint-staged
+
+# Type check the whole project — staged-file linting cannot catch type errors
+# that a change introduces elsewhere.
+npx tsc --noEmit

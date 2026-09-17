@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(src/**)",
+      "Bash(npm run check*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run type-check*)",
+      "Bash(npm run build*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/pre-commit-gate-hook.js",
+            "statusMessage": "Checking pre-commit gate..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/lint-hook.js || true",
+            "statusMessage": "Auto-fixing lint..."
+          },
+          {
+            "type": "command",
+            "command": "node scripts/typecheck-hook.js || true",
+            "statusMessage": "Type-checking..."
+          }
+        ]
+      }
+    ]
+  }
+}

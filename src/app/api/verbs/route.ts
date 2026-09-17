@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
-import { supabase as serviceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
 import type {
   CreateVerbRequest,
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const { data, error } = await serviceSupabase
+      const { data, error } = await getServiceSupabase()
         .from('verbs')
         .select('*')
         .eq('user_id', demoUserId)

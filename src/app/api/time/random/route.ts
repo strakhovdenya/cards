@@ -1,14 +1,14 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
-import { supabase as serviceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import type { ApiResponse, TimeQuestion } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
     const isGuest = request.nextUrl.searchParams.get('guest') === '1';
     const supabase = isGuest
-      ? serviceSupabase
+      ? getServiceSupabase()
       : (await getAuthenticatedUser()).supabase;
 
     // Получаем параметры запроса

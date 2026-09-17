@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   Card,
   CreateCardRequest,
@@ -8,20 +8,42 @@ import type {
   UpdateTagRequest,
 } from '@/types';
 
-// Создаем серверный клиент с Service Role Key для полного доступа к базе данных
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+let serviceClient: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
+/**
+ * Серверный клиент с Service Role Key — полный доступ к базе, в обход RLS.
+ * Использовать только в серверном коде (API routes), никогда в компонентах.
+ *
+ * Создаётся лениво, при первом обращении, и намеренно НЕ на верхнем уровне
+ * модуля. Раньше клиент создавался при вычислении модуля и бросал исключение,
+ * если переменных окружения нет — а Next на этапе сборки собирает page data
+ * для API-роутов, то есть импортирует этот модуль. В результате сборка
+ * требовала боевых секретов, и любой preview-деплой падал с
+ * "Failed to collect page data for /api/cards", потому что в Vercel эти
+ * переменные заданы только для Production. См. issue #4.
+ *
+ * Теперь отсутствие конфигурации — это ошибка конкретного запроса, а не
+ * ошибка сборки.
+ */
+export function getServiceSupabase(): SupabaseClient {
+  if (serviceClient) return serviceClient;
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  serviceClient = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  return serviceClient;
 }
-
-export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
 
 // Интерфейс для ошибок Supabase
 interface SupabaseError {
@@ -149,7 +171,7 @@ export class CardService {
       data,
       error,
     }: { data: SupabaseCardWithTags[] | null; error: SupabaseError | null } =
-      await supabase
+      await getServiceSupabase()
         .from(this.tableName)
         .select(
           `
@@ -186,7 +208,7 @@ export class CardService {
       data,
       error,
     }: { data: SupabaseCardWithTags[] | null; error: SupabaseError | null } =
-      await supabase
+      await getServiceSupabase()
         .from(this.tableName)
         .select(
           `
@@ -231,7 +253,11 @@ export class CardService {
       data,
       error,
     }: { data: DatabaseCard | null; error: SupabaseError | null } =
-      await supabase.from(this.tableName).insert(dbCard).select().single();
+      await getServiceSupabase()
+        .from(this.tableName)
+        .insert(dbCard)
+        .select()
+        .single();
 
     if (error) {
       throw new Error(`Failed to create card: ${getErrorMessage(error)}`);
@@ -251,7 +277,7 @@ export class CardService {
         tag_id: tagId,
       }));
 
-      const { error: tagError } = await supabase
+      const { error: tagError } = await getServiceSupabase()
         .from('card_tags')
         .insert(cardTagData);
 
@@ -285,7 +311,7 @@ export class CardService {
 
     updateData.updated_at = new Date().toISOString();
 
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from(this.tableName)
       .update(updateData)
       .eq('id', cardId)
@@ -299,7 +325,10 @@ export class CardService {
     // Обновляем теги, если они указаны
     if (updates.tagIds !== undefined) {
       // Удаляем старые связи
-      await supabase.from('card_tags').delete().eq('card_id', cardId);
+      await getServiceSupabase()
+        .from('card_tags')
+        .delete()
+        .eq('card_id', cardId);
 
       // Добавляем новые связи
       if (updates.tagIds.length > 0) {
@@ -308,7 +337,7 @@ export class CardService {
           tag_id: tagId,
         }));
 
-        const { error: tagError } = await supabase
+        const { error: tagError } = await getServiceSupabase()
           .from('card_tags')
           .insert(cardTagData);
 
@@ -330,7 +359,7 @@ export class CardService {
 
   // Удалить карточку
   static async deleteCard(cardId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from(this.tableName)
       .delete()
       .eq('id', cardId);
@@ -346,7 +375,7 @@ export class CardService {
       data,
       error,
     }: { data: SupabaseCardWithTags | null; error: SupabaseError | null } =
-      await supabase
+      await getServiceSupabase()
         .from(this.tableName)
         .select(
           `
@@ -385,7 +414,7 @@ export class CardService {
 
   // Получить карточки по тегам
   static async getCardsByTags(userId: string, tags: string[]): Promise<Card[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getServiceSupabase()
       .from(this.tableName)
       .select('*')
       .eq('user_id', userId)
@@ -406,7 +435,7 @@ export class CardService {
     userId: string,
     learned: boolean
   ): Promise<Card[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getServiceSupabase()
       .from(this.tableName)
       .select('*')
       .eq('user_id', userId)
@@ -433,7 +462,7 @@ export class TagService {
       data,
       error,
     }: { data: DatabaseTag[] | null; error: SupabaseError | null } =
-      await supabase
+      await getServiceSupabase()
         .from(this.tableName)
         .select('*')
         .eq('user_id', userId)
@@ -458,7 +487,11 @@ export class TagService {
       data,
       error,
     }: { data: DatabaseTag | null; error: SupabaseError | null } =
-      await supabase.from(this.tableName).insert(dbTag).select().single();
+      await getServiceSupabase()
+        .from(this.tableName)
+        .insert(dbTag)
+        .select()
+        .single();
 
     if (error) {
       throw new Error(`Failed to create tag: ${getErrorMessage(error)}`);
@@ -487,7 +520,7 @@ export class TagService {
       data,
       error,
     }: { data: DatabaseTag | null; error: SupabaseError | null } =
-      await supabase
+      await getServiceSupabase()
         .from(this.tableName)
         .update(updateData)
         .eq('id', tagId)
@@ -507,7 +540,7 @@ export class TagService {
 
   // Удалить тег
   static async deleteTag(tagId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from(this.tableName)
       .delete()
       .eq('id', tagId);
@@ -523,7 +556,11 @@ export class TagService {
       data,
       error,
     }: { data: DatabaseTag | null; error: SupabaseError | null } =
-      await supabase.from(this.tableName).select('*').eq('id', tagId).single();
+      await getServiceSupabase()
+        .from(this.tableName)
+        .select('*')
+        .eq('id', tagId)
+        .single();
 
     if (error) {
       const errorCode = getErrorCode(error);

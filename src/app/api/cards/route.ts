@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
-import { supabase as serviceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
 import type {
   CreateCardRequest,
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const { data: cards, error } = await serviceSupabase
+      const { data: cards, error } = await getServiceSupabase()
         .from('cards')
         .select(
           `

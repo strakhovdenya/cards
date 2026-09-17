@@ -52,7 +52,6 @@ const ConjugationDisplay = styled(Box)(({ theme }) => ({
   margin: theme.spacing(2, 0),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface VerbTrainingProps {
   // Компонент больше не принимает onBack, так как навигация происходит через меню
 }

@@ -31,7 +31,6 @@ import {
   deleteVerb,
 } from '@/services/verbService';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface VerbEditorProps {
   // Компонент больше не принимает onTrainingMode
 }

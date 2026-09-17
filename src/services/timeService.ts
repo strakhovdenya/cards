@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export interface TimeQuestion {
   id: string;
@@ -37,7 +37,7 @@ class TimeService {
   ): Promise<TimeQuestion | null> {
     try {
       // Сначала получаем общее количество активных вопросов
-      let countQuery = supabase
+      let countQuery = getServiceSupabase()
         .from('time_questions')
         .select('id', { count: 'exact', head: true })
         .eq('is_active', true);
@@ -57,7 +57,7 @@ class TimeService {
       const randomOffset = Math.floor(Math.random() * count);
 
       // Получаем вопрос по случайному смещению
-      let query = supabase
+      let query = getServiceSupabase()
         .from('time_questions')
         .select('*')
         .eq('is_active', true);
@@ -88,7 +88,7 @@ class TimeService {
    */
   async getTimeQuestionById(id: string): Promise<TimeQuestion | null> {
     try {
-      const { data, error } = (await supabase
+      const { data, error } = (await getServiceSupabase()
         .from('time_questions')
         .select('*')
         .eq('id', id)
@@ -114,7 +114,7 @@ class TimeService {
     timeValue: string
   ): Promise<TimeQuestion | null> {
     try {
-      const { data, error } = (await supabase
+      const { data, error } = (await getServiceSupabase()
         .from('time_questions')
         .select('*')
         .eq('time_value', timeValue)
@@ -138,7 +138,7 @@ class TimeService {
    */
   async getAllTimeQuestions(): Promise<TimeQuestion[]> {
     try {
-      const { data, error } = (await supabase
+      const { data, error } = (await getServiceSupabase()
         .from('time_questions')
         .select('*')
         .order('hour, minute')) as {
@@ -165,7 +165,7 @@ class TimeService {
     difficulty: number
   ): Promise<TimeQuestion[]> {
     try {
-      const { data, error } = (await supabase
+      const { data, error } = (await getServiceSupabase()
         .from('time_questions')
         .select('*')
         .eq('difficulty_level', difficulty)
@@ -194,7 +194,7 @@ class TimeService {
     question: TimeQuestionRequest
   ): Promise<TimeQuestion | null> {
     try {
-      const { data, error } = (await supabase
+      const { data, error } = (await getServiceSupabase()
         .from('time_questions')
         .insert(question)
         .select()
@@ -220,7 +220,7 @@ class TimeService {
     updates: Partial<TimeQuestionRequest>
   ): Promise<TimeQuestion | null> {
     try {
-      const { data, error } = (await supabase
+      const { data, error } = (await getServiceSupabase()
         .from('time_questions')
         .update(updates)
         .eq('id', id)
@@ -244,7 +244,7 @@ class TimeService {
    */
   async deleteTimeQuestion(id: string): Promise<boolean> {
     try {
-      const { error } = await supabase
+      const { error } = await getServiceSupabase()
         .from('time_questions')
         .delete()
         .eq('id', id);
@@ -269,7 +269,7 @@ class TimeService {
     isActive: boolean
   ): Promise<boolean> {
     try {
-      const { error } = await supabase
+      const { error } = await getServiceSupabase()
         .from('time_questions')
         .update({ is_active: isActive })
         .eq('id', id);
@@ -295,7 +295,7 @@ class TimeService {
     byDifficulty: Record<number, number>;
   }> {
     try {
-      const { data, error } = (await supabase
+      const { data, error } = (await getServiceSupabase()
         .from('time_questions')
         .select('difficulty_level, is_active')) as {
         data: Array<{ difficulty_level: number; is_active: boolean }> | null;
