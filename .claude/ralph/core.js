@@ -1103,7 +1103,8 @@ function postTestEvidenceComment(
   acItems,
   selfReport,
   allCovered,
-  checkedOff
+  checkedOff,
+  reviewFixSummaries = []
 ) {
   const date = new Date().toISOString().slice(0, 10);
   const sections = [];
@@ -1130,16 +1131,28 @@ function postTestEvidenceComment(
     sections.push(`${acHeader}\n\n${acLines.join('\n\n')}`);
   }
 
-  sections.push(
-    [
-      `**Test evidence** — ${date}, branch \`${branchName}\`.`,
+  const evidenceLines = [
+    `**Test evidence** — ${date}, branch \`${branchName}\`.`,
+    '',
+    'Agent-reported DONE — self-reported by the autonomous agent, not independently re-verified by the controller.',
+    '',
+    `- TYPE: ${verdict.type}`,
+    `- SUMMARY: ${verdict.summary}`,
+  ];
+  // Review-driven fixes (self-review and/or code-review passes found a real
+  // issue and patched it) are real work, but not the headline — TYPE/SUMMARY
+  // above stay the original implementer's DONE (see the comment on
+  // `reviewFixSummaries` in runIssue()). List them here instead, so nothing
+  // is silently dropped but the commit/PR title doesn't get overwritten by
+  // whichever one-line fix happened to run last.
+  if (reviewFixSummaries.length > 0) {
+    evidenceLines.push(
       '',
-      'Agent-reported DONE — self-reported by the autonomous agent, not independently re-verified by the controller.',
-      '',
-      `- TYPE: ${verdict.type}`,
-      `- SUMMARY: ${verdict.summary}`,
-    ].join('\n')
-  );
+      '**Review fixes applied after the initial DONE:**',
+      ...reviewFixSummaries.map((s, i) => `${i + 1}. ${s}`)
+    );
+  }
+  sections.push(evidenceLines.join('\n'));
 
   gh([
     'issue',
@@ -1287,9 +1300,24 @@ async function runIssue(config, byId, chosen) {
   }
 
   let verdict = parseVerdict(agentResult.output);
-  // Tracks whichever agent invocation produced the CURRENT verdict — a fix
-  // pass's own self-report supersedes the original DONE's (see the two
-  // reassignments below), same reasoning as `verdict` itself being reassigned.
+  // `verdict.type`/`verdict.summary` stay the ORIGINAL implementer's DONE for
+  // the rest of this function — they drive the commit message, PR title, and
+  // the issue comment's headline, and those must describe the whole task, not
+  // whichever review pass happened to patch it last. A review-driven fix (see
+  // the two loops below) is real work worth recording, but as a footnote, not
+  // as the headline: it usually corrects one narrow finding (e.g. one
+  // inaccurate comment) against an implementation that is otherwise the
+  // actual substance of the PR. Each fix's own summary is collected in
+  // `reviewFixSummaries` instead and surfaced as a separate list in the issue
+  // comment (see `postTestEvidenceComment`) — found via a misleading PR title
+  // after issue #13's run overwrote it with a one-line comment-wording fix.
+  const reviewFixSummaries = [];
+  // Tracks whichever agent invocation produced the CURRENT self-report — a
+  // fix pass's own self-report supersedes the original DONE's for Acceptance
+  // Criteria reconciliation (see the two reassignments below), since it
+  // reflects the code as it now actually stands. This is deliberately
+  // independent from `verdict` above: AC reconciliation wants the latest
+  // state, the commit/PR headline wants the original intent.
   let finalOutput = agentResult.output;
 
   if (verdict.kind === 'blocked' || verdict.kind === 'blocked-db-change') {
@@ -1446,10 +1474,11 @@ async function runIssue(config, byId, chosen) {
         };
       }
 
-      // Fix applied — re-verify there's still an actual diff, adopt the
-      // fixer's TYPE/SUMMARY as the current verdict (it superseeds the
-      // original one for commit-message purposes), and loop back to review
-      // it again from scratch.
+      // Fix applied — re-verify there's still an actual diff, record the
+      // fixer's own summary as a footnote (see `reviewFixSummaries` above —
+      // `verdict` itself is NOT reassigned, it stays the original DONE for
+      // commit/PR-title purposes), take its self-report as current for AC
+      // reconciliation, and loop back to review it again from scratch.
       diff = git(['status', '--porcelain'], { cwd: runDir });
       if (!diff) {
         return {
@@ -1458,7 +1487,7 @@ async function runIssue(config, byId, chosen) {
           runDir,
         };
       }
-      verdict = fixVerdict;
+      reviewFixSummaries.push(fixVerdict.summary);
       finalOutput = fixAgentResult.output;
       reviewAttempt++;
     }
@@ -1604,7 +1633,9 @@ async function runIssue(config, byId, chosen) {
           runDir,
         };
       }
-      verdict = codeReviewFixVerdict;
+      // Same reasoning as the self-review fix loop above: `verdict` is not
+      // reassigned, only its summary is recorded as a footnote.
+      reviewFixSummaries.push(codeReviewFixVerdict.summary);
       finalOutput = codeReviewFixAgentResult.output;
       codeReviewAttempt++;
     }
@@ -1656,7 +1687,8 @@ async function runIssue(config, byId, chosen) {
       acItems,
       selfReport,
       allCovered,
-      checkedOff
+      checkedOff,
+      reviewFixSummaries
     );
   } catch (err) {
     console.log(
