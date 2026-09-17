@@ -26,25 +26,25 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
     const errors: string[] = [];
 
     lines.forEach((line, index) => {
-      let trimmedLine = line.trim();
-      // Заменяем все виды дефисов на обычный дефис
-      trimmedLine = trimmedLine.replace(/[‐‑‒–—−﹘﹣－]/g, '-');
+      // Нормализуем дефисы ДО trim — та же причина, что в BasicBulkImportStrategy
+      const normalizedLine = line.replace(/[‐‑‒–—−﹘﹣－]/g, '-');
+      const trimmedLine = normalizedLine.trim();
 
       const lineNumber = index + 1;
 
       // Пропускаем пустые строки
       if (!trimmedLine) return;
 
-      // Ищем разделитель " - "
-      const separatorIndex = trimmedLine.indexOf(' - ');
+      // Ищем разделитель " - " в нормализованной строке до trim
+      const separatorIndex = normalizedLine.indexOf(' - ');
 
       if (separatorIndex === -1) {
         errors.push(`Строка ${lineNumber}: не найден разделитель " - "`);
         return;
       }
 
-      const germanWord = trimmedLine.substring(0, separatorIndex).trim();
-      const translation = trimmedLine.substring(separatorIndex + 3).trim();
+      const germanWord = normalizedLine.substring(0, separatorIndex).trim();
+      const translation = normalizedLine.substring(separatorIndex + 3).trim();
 
       if (!germanWord) {
         errors.push(`Строка ${lineNumber}: пустое немецкое слово`);

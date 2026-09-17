@@ -13,25 +13,27 @@ export class BasicBulkImportStrategy implements BulkImportStrategy {
     const errors: string[] = [];
 
     lines.forEach((line, index) => {
-      let trimmedLine = line.trim();
-      // Заменяем все виды дефисов на обычный дефис
-      trimmedLine = trimmedLine.replace(/[‐‑‒–—−﹘﹣－]/g, '-');
+      // Нормализуем дефисы ДО trim, чтобы разделитель " - " находился корректно
+      // даже если строка начинается/заканчивается пробелом рядом с дефисом
+      const normalizedLine = line.replace(/[‐‑‒–—−﹘﹣－]/g, '-');
+      const trimmedLine = normalizedLine.trim();
 
       const lineNumber = index + 1;
 
       // Пропускаем пустые строки
       if (!trimmedLine) return;
 
-      // Ищем разделитель " - "
-      const separatorIndex = trimmedLine.indexOf(' - ');
+      // Ищем разделитель " - " в нормализованной строке до trim —
+      // иначе " - dog" после trim даёт "- dog" и разделитель не находится
+      const separatorIndex = normalizedLine.indexOf(' - ');
 
       if (separatorIndex === -1) {
         errors.push(`Строка ${lineNumber}: не найден разделитель " - "`);
         return;
       }
 
-      const germanWord = trimmedLine.substring(0, separatorIndex).trim();
-      const translation = trimmedLine.substring(separatorIndex + 3).trim();
+      const germanWord = normalizedLine.substring(0, separatorIndex).trim();
+      const translation = normalizedLine.substring(separatorIndex + 3).trim();
 
       if (!germanWord) {
         errors.push(`Строка ${lineNumber}: пустое немецкое слово`);
