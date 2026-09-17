@@ -8,9 +8,14 @@ This repository includes a public demo mode that showcases the app without requi
 - UI is read-only in guest mode; mutations (create/edit/delete/learned) are disabled.
 
 ## Running the demo locally
-1) Configure environment:
+1) Configure environment — copy `.env.example` to `.env.local` and fill in the values:
+   ```bash
+   cp .env.example .env.local
+   ```
+   The file documents all five required variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_URL` (server-side copy of the same URL — see `.env.example` for details)
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `DEMO_USER_ID` (Supabase user whose data will be exposed to guests)
 2) Ensure the demo user has seed data (cards, tags, verbs, time_questions).
