@@ -411,6 +411,26 @@ function installDependencies(runDir) {
 // permissions at all. It only edits code and reports DONE/BLOCKED; every
 // git/gh mutation (commit, push, PR, issue comments/labels) is owned by
 // this controller. See .claude/ralph/README.md for why.
+// Reads whichever skills are actually installed under `.claude/skills/` in
+// the clone (one subdirectory per skill, e.g. `.claude/skills/vitest/`) so
+// writeAgentPermissions() can allow exactly those, by name, without this
+// file having to hardcode and maintain a list that drifts out of sync with
+// `.claude/skills/` every time a skill is added or removed from the repo.
+function listInstalledSkillNames(runDir) {
+  const skillsDir = path.join(runDir, '.claude', 'skills');
+  try {
+    return fs
+      .readdirSync(skillsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+  } catch {
+    // No .claude/skills/ at all (or unreadable) — not an error, just means
+    // no skills to allow.
+    return [];
+  }
+}
+
 function writeAgentPermissions(runDir) {
   // Self-sufficient on purpose — must not depend on whatever happens to be
   // committed in the repo's own .claude/settings.json at clone time (e.g.
@@ -440,6 +460,19 @@ function writeAgentPermissions(runDir) {
         // script, any npx tool, with any flags."
         'Bash(npm run *)',
         'Bash(npx *)',
+        // One entry per skill actually installed under `.claude/skills/`
+        // (see listInstalledSkillNames()) — the Skill tool needs its own
+        // explicit allow entry, unlike Edit/Write/Bash which work off the
+        // blanket entries above (same finding as
+        // writeCodeReviewPermissions()'s 'Skill(code-review)' below, minus
+        // that one being scoped to a single skill on purpose). Without
+        // this, an issue that references an installed skill by name (e.g.
+        // issue #9 -> `vitest`) would have the implementer silently denied
+        // the call and fall back to guessing instead. Scoped to the
+        // installed set rather than a blanket 'Skill' — same
+        // minimal-privilege reasoning as the code-review pass, just derived
+        // automatically instead of hand-maintained.
+        ...listInstalledSkillNames(runDir).map((name) => `Skill(${name})`),
       ],
       // Backstop for two of the prompt's own rules — a prompt instruction is
       // only a request, not an enforcement. Deny rules take precedence over
