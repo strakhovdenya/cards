@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createRouteClient } from '@/lib/auth-server';
 import { cookies } from 'next/headers';
 import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
 import type { BulkCreateVerbsRequest, ApiResponse } from '@/types';
@@ -30,9 +30,7 @@ interface DbVerb {
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({
-      cookies: () => cookieStore,
-    });
+    const supabase = createRouteClient(cookieStore);
 
     // Проверяем аутентификацию
     const {

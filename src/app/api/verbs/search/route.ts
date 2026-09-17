@@ -17,11 +17,11 @@ const transformDatabaseVerb = (dbVerb: DatabaseVerb) => ({
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    
+
     // Получаем параметр поиска из URL
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
-    
+
     if (!query) {
       return NextResponse.json<ApiResponse<null>>(
         { error: 'Search query parameter q is required' },
@@ -65,4 +65,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

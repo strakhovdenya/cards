@@ -2,12 +2,31 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+type NextCookieStore = Awaited<ReturnType<typeof cookies>>;
+
+/**
+ * Единая точка создания route-handler клиента Supabase.
+ *
+ * `@supabase/auth-helpers-nextjs@0.10.0` объявляет аксессор как
+ * `cookies: () => ReturnType<typeof cookies>`, а в Next 16 это
+ * `Promise<ReadonlyRequestCookies>`. При этом рантайм библиотеки вызывает
+ * аксессор синхронно (`this.context.cookies().get(name)`), то есть передать
+ * туда сам `cookies` — пройти проверку типов и сломаться в рантайме.
+ * Единственное корректное значение — уже разрезолвленное хранилище; приведение
+ * типа ниже закрывает устаревшую типизацию библиотеки, не меняя поведения.
+ *
+ * Настоящее решение — миграция на `@supabase/ssr` (см. issue #2).
+ */
+export function createRouteClient(cookieStore: NextCookieStore) {
+  return createRouteHandlerClient({
+    cookies: () => cookieStore as unknown as ReturnType<typeof cookies>,
+  });
+}
+
 // Helper для получения аутентифицированного пользователя в API routes
 export async function getAuthenticatedUser() {
   const cookieStore = await cookies();
-  const supabase = createRouteHandlerClient({
-    cookies: () => cookieStore,
-  });
+  const supabase = createRouteClient(cookieStore);
 
   const {
     data: { session },

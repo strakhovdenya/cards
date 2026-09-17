@@ -17,11 +17,11 @@ const transformDatabaseVerb = (dbVerb: DatabaseVerb) => ({
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await getAuthenticatedUser();
-    
+
     // Получаем параметр learned из URL
     const { searchParams } = new URL(request.url);
     const learnedParam = searchParams.get('learned');
-    
+
     if (learnedParam === null) {
       return NextResponse.json<ApiResponse<null>>(
         { error: 'Learned parameter is required' },
@@ -67,4 +67,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
