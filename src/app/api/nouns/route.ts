@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
-import { supabase as serviceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import type { ApiResponse, Card, DatabaseCard } from '@/types';
 
 // GET /api/nouns - получить только существительные для пользователя или демо
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const { data: cards, error } = await serviceSupabase
+      const { data: cards, error } = await getServiceSupabase()
         .from('cards')
         .select(
           `
