@@ -411,6 +411,26 @@ function installDependencies(runDir) {
 // permissions at all. It only edits code and reports DONE/BLOCKED; every
 // git/gh mutation (commit, push, PR, issue comments/labels) is owned by
 // this controller. See .claude/ralph/README.md for why.
+// Reads whichever skills are actually installed under `.claude/skills/` in
+// the clone (one subdirectory per skill, e.g. `.claude/skills/vitest/`) so
+// writeAgentPermissions() can allow exactly those, by name, without this
+// file having to hardcode and maintain a list that drifts out of sync with
+// `.claude/skills/` every time a skill is added or removed from the repo.
+function listInstalledSkillNames(runDir) {
+  const skillsDir = path.join(runDir, '.claude', 'skills');
+  try {
+    return fs
+      .readdirSync(skillsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+  } catch {
+    // No .claude/skills/ at all (or unreadable) — not an error, just means
+    // no skills to allow.
+    return [];
+  }
+}
+
 function writeAgentPermissions(runDir) {
   // Self-sufficient on purpose — must not depend on whatever happens to be
   // committed in the repo's own .claude/settings.json at clone time (e.g.
@@ -440,6 +460,19 @@ function writeAgentPermissions(runDir) {
         // script, any npx tool, with any flags."
         'Bash(npm run *)',
         'Bash(npx *)',
+        // One entry per skill actually installed under `.claude/skills/`
+        // (see listInstalledSkillNames()) — the Skill tool needs its own
+        // explicit allow entry, unlike Edit/Write/Bash which work off the
+        // blanket entries above (same finding as
+        // writeCodeReviewPermissions()'s 'Skill(code-review)' below, minus
+        // that one being scoped to a single skill on purpose). Without
+        // this, an issue that references an installed skill by name (e.g.
+        // issue #9 -> `vitest`) would have the implementer silently denied
+        // the call and fall back to guessing instead. Scoped to the
+        // installed set rather than a blanket 'Skill' — same
+        // minimal-privilege reasoning as the code-review pass, just derived
+        // automatically instead of hand-maintained.
+        ...listInstalledSkillNames(runDir).map((name) => `Skill(${name})`),
       ],
       // Backstop for two of the prompt's own rules — a prompt instruction is
       // only a request, not an enforcement. Deny rules take precedence over
@@ -545,9 +578,13 @@ function writeCodeReviewPermissions(runDir) {
 // same standing rules (organizational-protocol exclusions, BLOCKED
 // conditions, mutation-testing/real-file discipline, final-answer format),
 // only the opening framing and DONE-triggering task differ.
-function buildTaskRules(maxTurns) {
+function buildTaskRules(maxTurns, skillNames = []) {
   return [
     'Реализуй задачу строго согласно Context, Affects, Docs to Read, Key Invariants, Acceptance Criteria, Test Requirement и Definition of Done из тела issue выше и из корневого CLAUDE.md. После финальных изменений обязательно прогоняй `npm run check` (это lint:strict + format:check + tsc --noEmit) — он должен быть зелёным. Если изменения могут повлиять на сборку (новые импорты, server/client-компоненты, next.config, env-переменные) — прогоняй ещё и `npm run build`: именно он ловит то, что реально валит прод-деплой на Vercel.',
+    '',
+    skillNames.length > 0
+      ? `В этом репозитории установлены скиллы (\`.claude/skills/\`), доступные тебе через Skill tool: ${skillNames.join(', ')}. Прежде чем писать код по теме, которую покрывает один из них (например: задача про тесты → скилл \`vitest\`, задача про MUI/стили → \`material-ui-*\`), вызови этот скилл — он даёт проверенные паттерны/API вместо угадывания по памяти. Если ни один явно не подходит к этой конкретной issue — не вызывай скиллы просто "на всякий случай", это трата ходов.`
+      : null,
     '',
     maxTurns != null
       ? `У тебя есть примерно ${maxTurns} ходов на всю задачу (сообщение + вызов инструмента = один ход), и на этом бюджет заканчивается — если ты не успеешь ответить DONE/BLOCKED до его исчерпания, вся проделанная работа теряется (следующий прогон начнётся с нуля, без памяти о том, что ты уже сделал). Не трать больше примерно трети бюджета на изучение кодовой базы перед тем, как начать писать реализацию — читай целенаправленно то, что реально нужно для этой задачи (issue уже указывает Docs to Read), а не исследуй широко "на всякий случай".`
@@ -615,7 +652,7 @@ function buildTaskRules(maxTurns) {
   ];
 }
 
-function buildPrompt(chosen, maxTurns) {
+function buildPrompt(chosen, maxTurns, skillNames = []) {
   return [
     `Ты реализуешь GitHub Issue #${chosen.id} в этой рабочей директории (уже на правильной ветке, ответвлённой от правильного base branch — не переключай и не создавай ветку).`,
     '',
@@ -623,7 +660,7 @@ function buildPrompt(chosen, maxTurns) {
     chosen.body || '(тело issue пустое)',
     '=== END ISSUE ===',
     '',
-    ...buildTaskRules(maxTurns),
+    ...buildTaskRules(maxTurns, skillNames),
   ].join('\n');
 }
 
@@ -631,7 +668,7 @@ function buildPrompt(chosen, maxTurns) {
 // runDir/branch as the original DONE, same agent role and standing rules,
 // but framed around fixing exactly what an independent reviewer (no shared
 // memory, no Edit/Write access) found wrong, not redoing the whole task.
-function buildFixPrompt(chosen, reviewFindings, maxTurns) {
+function buildFixPrompt(chosen, reviewFindings, maxTurns, skillNames = []) {
   return [
     `Ты дорабатываешь свою же предыдущую реализацию GitHub Issue #${chosen.id} в этой же рабочей директории (та же ветка, тот же клон, ничего не переключай и не создавай заново). Независимый ревьюер — отдельный запуск без доступа к Edit/Write и без общей с тобой памяти — проверил твой предыдущий ответ DONE и нашёл проблему, которую нужно исправить.`,
     '',
@@ -645,7 +682,7 @@ function buildFixPrompt(chosen, reviewFindings, maxTurns) {
     '',
     'Исправь именно то, что описано выше, точечно — не переделывай всю реализацию заново и не трогай то, что ревью не упомянул. Если, разобравшись, ты считаешь находку ложным срабатыванием — не меняй код ради самого изменения; опиши в самоотчёте перед DONE, почему находка не применима, и оставь код как есть, объяснение попадёт в SUMMARY. Если находка реальна, но её нельзя исправить, не нарушив что-то другое из этой же issue — это BLOCKED (см. правило про конфликт AC/Key Invariants ниже), а не молчаливый компромисс.',
     '',
-    ...buildTaskRules(maxTurns),
+    ...buildTaskRules(maxTurns, skillNames),
   ].join('\n');
 }
 
@@ -1284,16 +1321,22 @@ async function runIssue(config, byId, chosen) {
   const reviewMaxTurns = config.reviewMaxTurns ?? DEFAULT_REVIEW_MAX_TURNS;
 
   console.log(`🌱 Клон ${runDir}, ветка ${branchName} от ${baseRef}.`);
+  let skillNames = [];
   try {
     prepareClone(runDir, baseRef, branchName);
     trustRunDir(runDir);
     writeAgentPermissions(runDir);
     installDependencies(runDir);
+    // Same source writeAgentPermissions() itself reads to build the Skill
+    // allow-list — computed once here and threaded into every prompt below
+    // (initial + both fix passes) so the agent is actually told which
+    // skills it's allowed to use, not just silently granted the permission.
+    skillNames = listInstalledSkillNames(runDir);
   } catch (err) {
     return { status: 'prepare_failed', error: err.message };
   }
 
-  const prompt = buildPrompt(chosen, config.maxTurns);
+  const prompt = buildPrompt(chosen, config.maxTurns, skillNames);
   const agentResult = await runAgent(prompt, runDir, config.maxTurns);
   if (!agentResult.ok) {
     return { status: 'agent_failed', error: agentResult.error, runDir };
@@ -1433,7 +1476,8 @@ async function runIssue(config, byId, chosen) {
       const fixPrompt = buildFixPrompt(
         chosen,
         reviewVerdict.reason,
-        config.maxTurns
+        config.maxTurns,
+        skillNames
       );
       const fixAgentResult = await runAgent(fixPrompt, runDir, config.maxTurns);
       if (!fixAgentResult.ok) {
@@ -1574,7 +1618,8 @@ async function runIssue(config, byId, chosen) {
       const codeReviewFixPrompt = buildFixPrompt(
         chosen,
         codeReviewVerdict.reason,
-        config.maxTurns
+        config.maxTurns,
+        skillNames
       );
       const codeReviewFixAgentResult = await runAgent(
         codeReviewFixPrompt,
