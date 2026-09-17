@@ -108,7 +108,10 @@ function writeState(patch) {
     // no prior state, start fresh
   }
   fs.mkdirSync(RALPH_DIR, { recursive: true });
-  fs.writeFileSync(STATE_PATH, JSON.stringify({ ...current, ...patch }, null, 2) + '\n');
+  fs.writeFileSync(
+    STATE_PATH,
+    JSON.stringify({ ...current, ...patch }, null, 2) + '\n'
+  );
 }
 
 // --- lock: refuse to run two orchestrators against the same repo at once ---
@@ -124,11 +127,22 @@ function acquireLock() {
       alive = false;
     }
     if (alive) {
-      throw new Error(`Another Ralph run is already active (PID ${prior.pid}, started ${prior.startedAt}). Refusing to start a second one.`);
+      throw new Error(
+        `Another Ralph run is already active (PID ${prior.pid}, started ${prior.startedAt}). Refusing to start a second one.`
+      );
     }
-    console.log(`⚠️ Stale lock from PID ${prior.pid} (no longer running) — taking over.`);
+    console.log(
+      `⚠️ Stale lock from PID ${prior.pid} (no longer running) — taking over.`
+    );
   }
-  fs.writeFileSync(LOCK_PATH, JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }, null, 2) + '\n');
+  fs.writeFileSync(
+    LOCK_PATH,
+    JSON.stringify(
+      { pid: process.pid, startedAt: new Date().toISOString() },
+      null,
+      2
+    ) + '\n'
+  );
 }
 
 function releaseLock() {
@@ -151,7 +165,13 @@ function gh(args, opts) {
 
 function issueState(id) {
   try {
-    const out = gh(['issue', 'view', String(id), '--json', 'number,title,body,url,state,labels']);
+    const out = gh([
+      'issue',
+      'view',
+      String(id),
+      '--json',
+      'number,title,body,url,state,labels',
+    ]);
     return JSON.parse(out);
   } catch {
     return null;
@@ -160,7 +180,16 @@ function issueState(id) {
 
 function hasExistingPr(config, id) {
   try {
-    const out = gh(['pr', 'list', '--state', 'all', '--search', `head:${config.branchPrefix}${id}-`, '--json', 'number,state']);
+    const out = gh([
+      'pr',
+      'list',
+      '--state',
+      'all',
+      '--search',
+      `head:${config.branchPrefix}${id}-`,
+      '--json',
+      'number,state',
+    ]);
     return JSON.parse(out).length > 0;
   } catch {
     return false;
@@ -190,9 +219,25 @@ function classify(config) {
   const raw = config.issues.map((entry) => {
     const info = issueState(entry.id);
     if (!info) return { ...entry, status: 'unknown' };
-    if (info.state !== 'OPEN') return { ...entry, status: 'done', title: info.title };
-    if ((info.labels || []).some((l) => l.name === BLOCK_LABEL || l.name === GENERIC_BLOCK_LABEL)) return { ...entry, status: 'blocked', title: info.title, body: info.body };
-    return { ...entry, status: hasExistingPr(config, entry.id) ? 'in-flight' : 'not-started', title: info.title, body: info.body };
+    if (info.state !== 'OPEN')
+      return { ...entry, status: 'done', title: info.title };
+    if (
+      (info.labels || []).some(
+        (l) => l.name === BLOCK_LABEL || l.name === GENERIC_BLOCK_LABEL
+      )
+    )
+      return {
+        ...entry,
+        status: 'blocked',
+        title: info.title,
+        body: info.body,
+      };
+    return {
+      ...entry,
+      status: hasExistingPr(config, entry.id) ? 'in-flight' : 'not-started',
+      title: info.title,
+      body: info.body,
+    };
   });
 
   const byId = new Map(raw.map((e) => [e.id, e]));
@@ -203,11 +248,16 @@ function classify(config) {
     const entry = byId.get(id);
     if (!entry) return false;
     if (entry.status === 'blocked') return true;
-    return (entry.dependsOn || []).some((depId) => isBlockedTransitively(depId, seen));
+    return (entry.dependsOn || []).some((depId) =>
+      isBlockedTransitively(depId, seen)
+    );
   }
 
   const withBlocking = raw.map((entry) => {
-    if (entry.status === 'not-started' && isBlockedTransitively(entry.id, new Set())) {
+    if (
+      entry.status === 'not-started' &&
+      isBlockedTransitively(entry.id, new Set())
+    ) {
       return { ...entry, status: 'blocked-by-dependency' };
     }
     return entry;
@@ -260,7 +310,9 @@ function removeRunDirIfExists(runDir) {
   try {
     fs.rmSync(runDir, { recursive: true, force: true });
   } catch (err) {
-    console.log(`⚠️ Не удалось удалить ${runDir} (не критично, продолжаю): ${err.message}`);
+    console.log(
+      `⚠️ Не удалось удалить ${runDir} (не критично, продолжаю): ${err.message}`
+    );
   }
 }
 
@@ -301,25 +353,34 @@ function trustRunDir(runDir) {
   // "d:/projects_js/.../.ralph-runs/issue-215" as separate project keys from
   // earlier runs. Writing both casings is cheap and removes the guesswork —
   // whichever one the CLI actually looks up will be trusted.
-  const keys =
-    /^[A-Za-z]:\//.test(resolved)
-      ? [resolved.charAt(0).toUpperCase() + resolved.slice(1), resolved.charAt(0).toLowerCase() + resolved.slice(1)]
-      : [resolved];
+  const keys = /^[A-Za-z]:\//.test(resolved)
+    ? [
+        resolved.charAt(0).toUpperCase() + resolved.slice(1),
+        resolved.charAt(0).toLowerCase() + resolved.slice(1),
+      ]
+    : [resolved];
   let config;
   try {
     config = JSON.parse(fs.readFileSync(claudeConfigPath, 'utf8'));
   } catch (err) {
-    console.log(`⚠️ Не удалось прочитать ${claudeConfigPath} для доверия рабочей директории (не критично): ${err.message}`);
+    console.log(
+      `⚠️ Не удалось прочитать ${claudeConfigPath} для доверия рабочей директории (не критично): ${err.message}`
+    );
     return;
   }
   config.projects = config.projects || {};
   for (const key of keys) {
-    config.projects[key] = { ...(config.projects[key] || {}), hasTrustDialogAccepted: true };
+    config.projects[key] = {
+      ...(config.projects[key] || {}),
+      hasTrustDialogAccepted: true,
+    };
   }
   try {
     fs.writeFileSync(claudeConfigPath, JSON.stringify(config, null, 2) + '\n');
   } catch (err) {
-    console.log(`⚠️ Не удалось записать ${claudeConfigPath} для доверия рабочей директории (не критично): ${err.message}`);
+    console.log(
+      `⚠️ Не удалось записать ${claudeConfigPath} для доверия рабочей директории (не критично): ${err.message}`
+    );
   }
 }
 
@@ -337,7 +398,11 @@ function installDependencies(runDir) {
   // `npm` is a .cmd shim on Windows — execFileSync needs shell:true to
   // resolve it (unlike git/gh, which are plain .exe). Found via a real
   // ENOENT on a live smoke test.
-  execFileSync('npm', ['install'], { cwd: runDir, stdio: 'inherit', shell: true });
+  execFileSync('npm', ['install'], {
+    cwd: runDir,
+    stdio: 'inherit',
+    shell: true,
+  });
 }
 
 // A fresh clone only ever gets tracked files — .claude/settings.local.json
@@ -398,7 +463,10 @@ function writeAgentPermissions(runDir) {
   };
   const dir = path.join(runDir, '.claude');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'settings.local.json'), JSON.stringify(settings, null, 2) + '\n');
+  fs.writeFileSync(
+    path.join(dir, 'settings.local.json'),
+    JSON.stringify(settings, null, 2) + '\n'
+  );
 }
 
 // Overwrites the same settings.local.json with a strictly read-only profile
@@ -424,7 +492,10 @@ function writeReviewerPermissions(runDir) {
   };
   const dir = path.join(runDir, '.claude');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'settings.local.json'), JSON.stringify(settings, null, 2) + '\n');
+  fs.writeFileSync(
+    path.join(dir, 'settings.local.json'),
+    JSON.stringify(settings, null, 2) + '\n'
+  );
 }
 
 // Same read-only rationale as writeReviewerPermissions() above, plus explicit
@@ -461,7 +532,10 @@ function writeCodeReviewPermissions(runDir) {
   };
   const dir = path.join(runDir, '.claude');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'settings.local.json'), JSON.stringify(settings, null, 2) + '\n');
+  fs.writeFileSync(
+    path.join(dir, 'settings.local.json'),
+    JSON.stringify(settings, null, 2) + '\n'
+  );
 }
 
 // --- prompt + verdict parsing ---
@@ -493,7 +567,7 @@ function buildTaskRules(maxTurns) {
     '',
     'У тебя НЕТ живого окружения: нет поднятого `next dev`, нет доступа к реальной Supabase (ни к БД, ни к auth), нет браузера и нет инструментов Playwright. Поднимать dev-сервер в фоне запрещено — именно так один из прошлых прогонов оставил осиротевший процесс, державший файловые локи и уронивший контроллер. Поэтому любой пункт `## Test Requirement` или правило CLAUDE.md, которые требуют реально поднятого стека ("проверь в браузере", "прогони через настоящую БД", "проверь живой HTTP-запрос", "сверь визуально") — ты выполнить не можешь. НЕ блокируйся из-за этого и НЕ имитируй живую проверку кодом, который её не покрывает. Сделай всё, что реально в твоих силах (`npm run check`, `npm run build`, чтение кода), а в самоотчёте перед DONE явно перечисли, какой конкретно пункт остаётся непокрытым и требует ручной проверки человеком на Vercel preview уже после создания PR — не отмечай его как выполненный.',
     '',
-    'При этом ВСЁ содержательное из CLAUDE.md применяется к тебе в полном объёме, и его нарушение — это плохо сделанная задача: структура проекта и границы слоёв (`src/app` / `src/components` / `src/hooks` / `src/services` / `src/strategies` / `src/lib`), правила работы с Supabase и с демо-режимом, правило про обратную совместимость схемы БД, конвенции TypeScript/MUI/Tailwind и общий стиль кода. Кратко: организационные протоколы вокруг задачи — не твои; правила о том, каким должен быть сам код, — твои.',
+    'При этом ВСЁ содержательное из CLAUDE.md применяется к тебе в полном объёме, и его нарушение — это плохо сделанная задача: структура проекта и границы слоёв (`src/app` / `src/components` / `src/hooks` / `src/services` / `src/strategies` / `src/lib`), правила работы с Supabase и с демо-режимом, правило про обратную совместимость схемы БД, конвенции TypeScript/MUI и общий стиль кода. Кратко: организационные протоколы вокруг задачи — не твои; правила о том, каким должен быть сам код, — твои.',
     '',
     'Отдельно про прод: `main` этого репозитория автоматически деплоится на Vercel, а Supabase — один и тот же для прода и для preview. Поэтому изменение, которое ломает сборку или меняет форму данных так, что старый уже задеплоенный код перестаёт работать, — это не "поправим после мержа", а падение живого приложения. Предпочитай аддитивные изменения (новое поле/новый компонент/новая ветка логики) ломающим (переименование/удаление/сужение типа существующего). Если задача по существу требует ломающего изменения — это допустимо, но явно скажи об этом в SUMMARY.',
     '',
@@ -709,7 +783,10 @@ function runAgent(prompt, runDir, maxTurns) {
     // ENAMETOOLONG before the process even starts (found live on a real
     // review-pass run once the diff grew past a few hundred lines). `claude
     // -p` reads the prompt from stdin when none is given positionally.
-    const child = spawn('claude', args, { cwd: runDir, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn('claude', args, {
+      cwd: runDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     child.stdin.write(prompt);
     child.stdin.end();
 
@@ -717,7 +794,11 @@ function runAgent(prompt, runDir, maxTurns) {
     let lineBuffer = '';
 
     function handleEvent(evt) {
-      if (evt.type === 'assistant' && evt.message && Array.isArray(evt.message.content)) {
+      if (
+        evt.type === 'assistant' &&
+        evt.message &&
+        Array.isArray(evt.message.content)
+      ) {
         for (const block of evt.message.content) {
           if (block.type === 'text' && block.text) {
             output += block.text;
@@ -728,8 +809,11 @@ function runAgent(prompt, runDir, maxTurns) {
         }
       } else if (evt.type === 'result') {
         const turns = evt.num_turns ?? evt.turns;
-        const seconds = evt.duration_ms != null ? Math.round(evt.duration_ms / 1000) : null;
-        process.stdout.write(`\n🏁 ${turns != null ? `ходов: ${turns}` : 'завершено'}${seconds != null ? `, ${seconds}s` : ''}\n`);
+        const seconds =
+          evt.duration_ms != null ? Math.round(evt.duration_ms / 1000) : null;
+        process.stdout.write(
+          `\n🏁 ${turns != null ? `ходов: ${turns}` : 'завершено'}${seconds != null ? `, ${seconds}s` : ''}\n`
+        );
       }
     }
 
@@ -775,7 +859,10 @@ function runAgent(prompt, runDir, maxTurns) {
 // real, final verdict. Matching the first occurrence risked treating that
 // as the verdict instead of what the agent actually concluded with.
 function lastMatch(text, re) {
-  const global = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
+  const global = new RegExp(
+    re.source,
+    re.flags.includes('g') ? re.flags : `${re.flags}g`
+  );
   let match;
   let last = null;
   while ((match = global.exec(text)) !== null) {
@@ -809,13 +896,26 @@ function stripLineMarkdownEmphasis(text) {
 // "BLOCKED-DB-CHANGE:" win over a legitimate final DONE.
 function parseVerdict(rawOutput) {
   const output = stripLineMarkdownEmphasis(rawOutput);
-  const blockedPromptMatch = lastMatch(output, /^BLOCKED-DB-CHANGE:\s*([\s\S]*)$/m);
+  const blockedPromptMatch = lastMatch(
+    output,
+    /^BLOCKED-DB-CHANGE:\s*([\s\S]*)$/m
+  );
   const blockedMatch = lastMatch(output, /^BLOCKED:\s*([\s\S]*)$/m);
   const doneMatch = lastMatch(output, /^DONE\s*$/m);
 
   const candidates = [];
-  if (blockedPromptMatch) candidates.push({ index: blockedPromptMatch.index, kind: 'blocked-db-change', reason: blockedPromptMatch[1].trim() });
-  if (blockedMatch) candidates.push({ index: blockedMatch.index, kind: 'blocked', reason: blockedMatch[1].trim() });
+  if (blockedPromptMatch)
+    candidates.push({
+      index: blockedPromptMatch.index,
+      kind: 'blocked-db-change',
+      reason: blockedPromptMatch[1].trim(),
+    });
+  if (blockedMatch)
+    candidates.push({
+      index: blockedMatch.index,
+      kind: 'blocked',
+      reason: blockedMatch[1].trim(),
+    });
   if (doneMatch) candidates.push({ index: doneMatch.index, kind: 'done' });
 
   if (candidates.length === 0) return { kind: 'unknown' };
@@ -849,9 +949,13 @@ function extractAcceptanceCriteriaItems(issueBody) {
   // index sidesteps both problems.
   const headingMatch = /^##\s*Acceptance Criteria\s*$/m.exec(issueBody);
   if (!headingMatch) return [];
-  const afterHeading = issueBody.slice(headingMatch.index + headingMatch[0].length);
+  const afterHeading = issueBody.slice(
+    headingMatch.index + headingMatch[0].length
+  );
   const nextHeadingMatch = /^##\s/m.exec(afterHeading);
-  const section = nextHeadingMatch ? afterHeading.slice(0, nextHeadingMatch.index) : afterHeading;
+  const section = nextHeadingMatch
+    ? afterHeading.slice(0, nextHeadingMatch.index)
+    : afterHeading;
   const items = [];
   const lineRe = /^-\s*\[[ xX]\]\s*(.+)$/gm;
   let m;
@@ -872,7 +976,8 @@ function extractAcceptanceCriteriaItems(issueBody) {
 // safely rather than throwing.
 function parseAcceptanceCriteriaSelfReport(rawOutput) {
   const output = stripLineMarkdownEmphasis(rawOutput);
-  const blockRe = /=== ACCEPTANCE CRITERIA SELF-REPORT ===([\s\S]*?)=== END ACCEPTANCE CRITERIA SELF-REPORT ===/g;
+  const blockRe =
+    /=== ACCEPTANCE CRITERIA SELF-REPORT ===([\s\S]*?)=== END ACCEPTANCE CRITERIA SELF-REPORT ===/g;
   let last = null;
   let m;
   while ((m = blockRe.exec(output)) !== null) last = m;
@@ -899,12 +1004,14 @@ function parseAcceptanceCriteriaSelfReport(rawOutput) {
 // is fine for batch autonomy — resolveBaseRef() never waits on this).
 function reconcileAcceptanceCriteria(acItems, selfReport) {
   if (acItems.length === 0) return { allCovered: false, coveredIndices: [] };
-  if (selfReport.length !== acItems.length) return { allCovered: false, coveredIndices: [] };
+  if (selfReport.length !== acItems.length)
+    return { allCovered: false, coveredIndices: [] };
   const byIndex = new Map(selfReport.map((e) => [e.index, e]));
   const coveredIndices = [];
   for (let i = 1; i <= acItems.length; i++) {
     const entry = byIndex.get(i);
-    if (!entry || entry.status !== 'covered') return { allCovered: false, coveredIndices: [] };
+    if (!entry || entry.status !== 'covered')
+      return { allCovered: false, coveredIndices: [] };
     coveredIndices.push(i);
   }
   return { allCovered: true, coveredIndices };
@@ -918,7 +1025,12 @@ function parseReviewVerdict(rawOutput) {
   const passMatch = lastMatch(output, /^REVIEW: PASS\s*$/m);
 
   const candidates = [];
-  if (failMatch) candidates.push({ index: failMatch.index, kind: 'fail', reason: failMatch[1].trim() });
+  if (failMatch)
+    candidates.push({
+      index: failMatch.index,
+      kind: 'fail',
+      reason: failMatch[1].trim(),
+    });
   if (passMatch) candidates.push({ index: passMatch.index, kind: 'pass' });
 
   if (candidates.length === 0) return { kind: 'unknown' };
@@ -931,12 +1043,25 @@ function parseReviewVerdict(rawOutput) {
 function parseCodeReviewVerdict(rawOutput) {
   const output = stripLineMarkdownEmphasis(rawOutput);
   const failMatch = lastMatch(output, /^CODEREVIEW: FAIL:\s*([\s\S]*)$/m);
-  const outOfScopeMatch = lastMatch(output, /^CODEREVIEW: PASS-OUT-OF-SCOPE:\s*([\s\S]*)$/m);
+  const outOfScopeMatch = lastMatch(
+    output,
+    /^CODEREVIEW: PASS-OUT-OF-SCOPE:\s*([\s\S]*)$/m
+  );
   const passMatch = lastMatch(output, /^CODEREVIEW: PASS\s*$/m);
 
   const candidates = [];
-  if (failMatch) candidates.push({ index: failMatch.index, kind: 'fail', reason: failMatch[1].trim() });
-  if (outOfScopeMatch) candidates.push({ index: outOfScopeMatch.index, kind: 'pass-out-of-scope', reason: outOfScopeMatch[1].trim() });
+  if (failMatch)
+    candidates.push({
+      index: failMatch.index,
+      kind: 'fail',
+      reason: failMatch[1].trim(),
+    });
+  if (outOfScopeMatch)
+    candidates.push({
+      index: outOfScopeMatch.index,
+      kind: 'pass-out-of-scope',
+      reason: outOfScopeMatch[1].trim(),
+    });
   if (passMatch) candidates.push({ index: passMatch.index, kind: 'pass' });
 
   if (candidates.length === 0) return { kind: 'unknown' };
@@ -971,7 +1096,15 @@ function postBlockedComment(id, reason, dbChange) {
 // agree is honest, and the controller can only report what it actually
 // observed (the agent's own DONE verdict) — hence the explicit "self-reported,
 // not independently re-verified" framing kept below.
-function postTestEvidenceComment(chosen, verdict, branchName, acItems, selfReport, allCovered, checkedOff) {
+function postTestEvidenceComment(
+  chosen,
+  verdict,
+  branchName,
+  acItems,
+  selfReport,
+  allCovered,
+  checkedOff
+) {
   const date = new Date().toISOString().slice(0, 10);
   const sections = [];
 
@@ -980,7 +1113,9 @@ function postTestEvidenceComment(chosen, verdict, branchName, acItems, selfRepor
     const acLines = acItems.map((text, i) => {
       const entry = byIndex.get(i + 1);
       const mark = entry && entry.status === 'covered' ? '✅' : '⏳';
-      const detail = entry ? entry.detail : 'нет соответствующей строки в самоотчёте агента';
+      const detail = entry
+        ? entry.detail
+        : 'нет соответствующей строки в самоотчёте агента';
       return `${mark} ${i + 1}. ${text}\n   ${detail}`;
     });
     // `checkedOff` (not `allCovered`) drives the wording — allCovered only
@@ -1003,10 +1138,16 @@ function postTestEvidenceComment(chosen, verdict, branchName, acItems, selfRepor
       '',
       `- TYPE: ${verdict.type}`,
       `- SUMMARY: ${verdict.summary}`,
-    ].join('\n'),
+    ].join('\n')
   );
 
-  gh(['issue', 'comment', String(chosen.id), '--body', sections.join('\n\n---\n\n')]);
+  gh([
+    'issue',
+    'comment',
+    String(chosen.id),
+    '--body',
+    sections.join('\n\n---\n\n'),
+  ]);
 }
 
 // The only place the controller mutates an issue's Acceptance Criteria
@@ -1019,7 +1160,15 @@ function postTestEvidenceComment(chosen, verdict, branchName, acItems, selfRepor
 // classify() time and could be stale) so this can't clobber an edit someone
 // made to the issue in the meantime.
 function checkOffAcceptanceCriteria(id) {
-  const freshBody = gh(['issue', 'view', String(id), '--json', 'body', '-q', '.body']);
+  const freshBody = gh([
+    'issue',
+    'view',
+    String(id),
+    '--json',
+    'body',
+    '-q',
+    '.body',
+  ]);
   // Same index-slicing approach as extractAcceptanceCriteriaItems() above, for
   // the same reason (no `\Z` in JS, `$` under `/m` is line-scoped not
   // string-scoped) — isolate the Acceptance Criteria section's exact span,
@@ -1029,11 +1178,16 @@ function checkOffAcceptanceCriteria(id) {
   const sectionStart = headingMatch.index + headingMatch[0].length;
   const afterHeading = freshBody.slice(sectionStart);
   const nextHeadingMatch = /^##\s/m.exec(afterHeading);
-  const sectionEnd = nextHeadingMatch ? sectionStart + nextHeadingMatch.index : freshBody.length;
+  const sectionEnd = nextHeadingMatch
+    ? sectionStart + nextHeadingMatch.index
+    : freshBody.length;
   const section = freshBody.slice(sectionStart, sectionEnd);
   const updatedSection = section.replace(/^-\s*\[ \]/gm, '- [x]');
   if (updatedSection === section) return; // nothing to change — already checked
-  const updated = freshBody.slice(0, sectionStart) + updatedSection + freshBody.slice(sectionEnd);
+  const updated =
+    freshBody.slice(0, sectionStart) +
+    updatedSection +
+    freshBody.slice(sectionEnd);
   gh(['issue', 'edit', String(id), '--body', updated]);
 }
 
@@ -1055,8 +1209,20 @@ const TECH_DEBT_TRACKER_ISSUE = 1;
 // pointer comment left on the current issue too so the connection is visible
 // from either side.
 function postOutOfScopeNote(id, findings) {
-  gh(['issue', 'comment', String(TECH_DEBT_TRACKER_ISSUE), '--body', `From issue #${id} (code-review, Ralph loop, out-of-scope for that issue — not auto-fixed):\n\n${findings}`]);
-  gh(['issue', 'comment', String(id), '--body', `code-review (Ralph loop) found out-of-scope finding(s) while reviewing this issue's diff — filed to tech-debt tracker #${TECH_DEBT_TRACKER_ISSUE} instead of fixing here: ${findings}`]);
+  gh([
+    'issue',
+    'comment',
+    String(TECH_DEBT_TRACKER_ISSUE),
+    '--body',
+    `From issue #${id} (code-review, Ralph loop, out-of-scope for that issue — not auto-fixed):\n\n${findings}`,
+  ]);
+  gh([
+    'issue',
+    'comment',
+    String(id),
+    '--body',
+    `code-review (Ralph loop) found out-of-scope finding(s) while reviewing this issue's diff — filed to tech-debt tracker #${TECH_DEBT_TRACKER_ISSUE} instead of fixing here: ${findings}`,
+  ]);
 }
 
 function commitChanges(runDir, chosen, verdict) {
@@ -1082,7 +1248,18 @@ function createPr(chosen, branchName, baseRef, commitMessage) {
   // would go unread for however long the chain keeps running. An honest, unchecked box is the
   // correct state until someone actually reviews it — no prompt needed or wanted.
   const body = `Closes #${chosen.id}\n\nImplemented by Ralph loop. Passed an automated post-DONE self-review pass (separate read-only agent invocation) — still review the diff yourself before merging.`;
-  return gh(['pr', 'create', '--base', base, '--head', branchName, '--title', commitMessage, '--body', body]);
+  return gh([
+    'pr',
+    'create',
+    '--base',
+    base,
+    '--head',
+    branchName,
+    '--title',
+    commitMessage,
+    '--body',
+    body,
+  ]);
 }
 
 // --- one issue, full state machine ---
@@ -1117,21 +1294,40 @@ async function runIssue(config, byId, chosen) {
 
   if (verdict.kind === 'blocked' || verdict.kind === 'blocked-db-change') {
     try {
-      postBlockedComment(chosen.id, verdict.reason, verdict.kind === 'blocked-db-change');
+      postBlockedComment(
+        chosen.id,
+        verdict.reason,
+        verdict.kind === 'blocked-db-change'
+      );
     } catch (err) {
-      console.log(`⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`);
+      console.log(
+        `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+      );
     }
     removeRunDirIfExists(runDir);
-    return { status: 'blocked', reason: verdict.reason, dbChange: verdict.kind === 'blocked-db-change' };
+    return {
+      status: 'blocked',
+      reason: verdict.reason,
+      dbChange: verdict.kind === 'blocked-db-change',
+    };
   }
 
   if (verdict.kind !== 'done') {
-    return { status: 'agent_failed', error: 'agent did not return DONE or BLOCKED', runDir, output: agentResult.output.slice(-2000) };
+    return {
+      status: 'agent_failed',
+      error: 'agent did not return DONE or BLOCKED',
+      runDir,
+      output: agentResult.output.slice(-2000),
+    };
   }
 
   let diff = git(['status', '--porcelain'], { cwd: runDir });
   if (!diff) {
-    return { status: 'validate_failed', error: 'agent said DONE but produced no diff', runDir };
+    return {
+      status: 'validate_failed',
+      error: 'agent said DONE but produced no diff',
+      runDir,
+    };
   }
 
   // Post-DONE self-review — only for diffs that actually touch code, not
@@ -1153,19 +1349,31 @@ async function runIssue(config, byId, chosen) {
   if (hasCodeChanges(diff)) {
     let reviewAttempt = 0;
     for (;;) {
-      console.log(`🔎 Пост-DONE self-review для issue #${chosen.id} (попытка ${reviewAttempt + 1}/${MAX_REVIEW_FIX_ATTEMPTS + 1})...`);
+      console.log(
+        `🔎 Пост-DONE self-review для issue #${chosen.id} (попытка ${reviewAttempt + 1}/${MAX_REVIEW_FIX_ATTEMPTS + 1})...`
+      );
       writeReviewerPermissions(runDir);
       const diffText = git(['diff', 'HEAD'], { cwd: runDir });
       const reviewPrompt = buildReviewPrompt(chosen, diffText);
-      const reviewAgentResult = await runAgent(reviewPrompt, runDir, reviewMaxTurns);
+      const reviewAgentResult = await runAgent(
+        reviewPrompt,
+        runDir,
+        reviewMaxTurns
+      );
       if (!reviewAgentResult.ok) {
-        return { status: 'review_failed', error: reviewAgentResult.error, runDir };
+        return {
+          status: 'review_failed',
+          error: reviewAgentResult.error,
+          runDir,
+        };
       }
 
       const reviewVerdict = parseReviewVerdict(reviewAgentResult.output);
 
       if (reviewVerdict.kind === 'pass') {
-        console.log(`✅ Self-review пройден для issue #${chosen.id}${reviewAttempt > 0 ? ` (после ${reviewAttempt} фикс-итераци${reviewAttempt === 1 ? 'и' : 'й'})` : ''}.`);
+        console.log(
+          `✅ Self-review пройден для issue #${chosen.id}${reviewAttempt > 0 ? ` (после ${reviewAttempt} фикс-итераци${reviewAttempt === 1 ? 'и' : 'й'})` : ''}.`
+        );
         break;
       }
 
@@ -1179,7 +1387,9 @@ async function runIssue(config, byId, chosen) {
         try {
           postBlockedComment(chosen.id, reason, false);
         } catch (err) {
-          console.log(`⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`);
+          console.log(
+            `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+          );
         }
         removeRunDirIfExists(runDir);
         return { status: 'review_blocked', reason };
@@ -1188,9 +1398,15 @@ async function runIssue(config, byId, chosen) {
       // Real, fixable-in-principle finding, and attempts remain — try a
       // point fix. Restore full Edit/Write permissions (writeReviewerPermissions()
       // above stripped them) before running the fixer.
-      console.log(`🔧 Self-review нашёл проблему для issue #${chosen.id}, пробую точечный фикс: ${reviewVerdict.reason}`);
+      console.log(
+        `🔧 Self-review нашёл проблему для issue #${chosen.id}, пробую точечный фикс: ${reviewVerdict.reason}`
+      );
       writeAgentPermissions(runDir);
-      const fixPrompt = buildFixPrompt(chosen, reviewVerdict.reason, config.maxTurns);
+      const fixPrompt = buildFixPrompt(
+        chosen,
+        reviewVerdict.reason,
+        config.maxTurns
+      );
       const fixAgentResult = await runAgent(fixPrompt, runDir, config.maxTurns);
       if (!fixAgentResult.ok) {
         return { status: 'agent_failed', error: fixAgentResult.error, runDir };
@@ -1198,18 +1414,36 @@ async function runIssue(config, byId, chosen) {
 
       const fixVerdict = parseVerdict(fixAgentResult.output);
 
-      if (fixVerdict.kind === 'blocked' || fixVerdict.kind === 'blocked-db-change') {
+      if (
+        fixVerdict.kind === 'blocked' ||
+        fixVerdict.kind === 'blocked-db-change'
+      ) {
         try {
-          postBlockedComment(chosen.id, fixVerdict.reason, fixVerdict.kind === 'blocked-db-change');
+          postBlockedComment(
+            chosen.id,
+            fixVerdict.reason,
+            fixVerdict.kind === 'blocked-db-change'
+          );
         } catch (err) {
-          console.log(`⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`);
+          console.log(
+            `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+          );
         }
         removeRunDirIfExists(runDir);
-        return { status: 'blocked', reason: fixVerdict.reason, dbChange: fixVerdict.kind === 'blocked-db-change' };
+        return {
+          status: 'blocked',
+          reason: fixVerdict.reason,
+          dbChange: fixVerdict.kind === 'blocked-db-change',
+        };
       }
 
       if (fixVerdict.kind !== 'done') {
-        return { status: 'agent_failed', error: 'fix agent did not return DONE or BLOCKED', runDir, output: fixAgentResult.output.slice(-2000) };
+        return {
+          status: 'agent_failed',
+          error: 'fix agent did not return DONE or BLOCKED',
+          runDir,
+          output: fixAgentResult.output.slice(-2000),
+        };
       }
 
       // Fix applied — re-verify there's still an actual diff, adopt the
@@ -1218,7 +1452,11 @@ async function runIssue(config, byId, chosen) {
       // it again from scratch.
       diff = git(['status', '--porcelain'], { cwd: runDir });
       if (!diff) {
-        return { status: 'validate_failed', error: 'fix agent said DONE but produced no diff', runDir };
+        return {
+          status: 'validate_failed',
+          error: 'fix agent said DONE but produced no diff',
+          runDir,
+        };
       }
       verdict = fixVerdict;
       finalOutput = fixAgentResult.output;
@@ -1239,27 +1477,45 @@ async function runIssue(config, byId, chosen) {
   if (hasCodeChanges(diff)) {
     let codeReviewAttempt = 0;
     for (;;) {
-      console.log(`🔎 Пост-self-review code-review (skill) для issue #${chosen.id} (попытка ${codeReviewAttempt + 1}/${MAX_CODE_REVIEW_FIX_ATTEMPTS + 1})...`);
+      console.log(
+        `🔎 Пост-self-review code-review (skill) для issue #${chosen.id} (попытка ${codeReviewAttempt + 1}/${MAX_CODE_REVIEW_FIX_ATTEMPTS + 1})...`
+      );
       writeCodeReviewPermissions(runDir);
       const codeReviewPrompt = buildCodeReviewPrompt(chosen);
-      const codeReviewAgentResult = await runAgent(codeReviewPrompt, runDir, reviewMaxTurns);
+      const codeReviewAgentResult = await runAgent(
+        codeReviewPrompt,
+        runDir,
+        reviewMaxTurns
+      );
       if (!codeReviewAgentResult.ok) {
-        return { status: 'code_review_failed', error: codeReviewAgentResult.error, runDir };
+        return {
+          status: 'code_review_failed',
+          error: codeReviewAgentResult.error,
+          runDir,
+        };
       }
 
-      const codeReviewVerdict = parseCodeReviewVerdict(codeReviewAgentResult.output);
+      const codeReviewVerdict = parseCodeReviewVerdict(
+        codeReviewAgentResult.output
+      );
 
       if (codeReviewVerdict.kind === 'pass') {
-        console.log(`✅ Code-review (skill) пройден для issue #${chosen.id}${codeReviewAttempt > 0 ? ` (после ${codeReviewAttempt} фикс-итераци${codeReviewAttempt === 1 ? 'и' : 'й'})` : ''}.`);
+        console.log(
+          `✅ Code-review (skill) пройден для issue #${chosen.id}${codeReviewAttempt > 0 ? ` (после ${codeReviewAttempt} фикс-итераци${codeReviewAttempt === 1 ? 'и' : 'й'})` : ''}.`
+        );
         break;
       }
 
       if (codeReviewVerdict.kind === 'pass-out-of-scope') {
-        console.log(`✅ Code-review (skill) пройден для issue #${chosen.id} — есть находки вне скоупа этой issue, не блокируют: ${codeReviewVerdict.reason}`);
+        console.log(
+          `✅ Code-review (skill) пройден для issue #${chosen.id} — есть находки вне скоупа этой issue, не блокируют: ${codeReviewVerdict.reason}`
+        );
         try {
           postOutOfScopeNote(chosen.id, codeReviewVerdict.reason);
         } catch (err) {
-          console.log(`⚠️ Не удалось записать out-of-scope находку в issue #${chosen.id}: ${err.message}`);
+          console.log(
+            `⚠️ Не удалось записать out-of-scope находку в issue #${chosen.id}: ${err.message}`
+          );
         }
         break;
       }
@@ -1274,39 +1530,79 @@ async function runIssue(config, byId, chosen) {
         try {
           postBlockedComment(chosen.id, reason, false);
         } catch (err) {
-          console.log(`⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`);
+          console.log(
+            `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+          );
         }
         removeRunDirIfExists(runDir);
         return { status: 'code_review_blocked', reason };
       }
 
-      console.log(`🔧 Code-review (skill) нашёл проблему для issue #${chosen.id}, пробую точечный фикс: ${codeReviewVerdict.reason}`);
+      console.log(
+        `🔧 Code-review (skill) нашёл проблему для issue #${chosen.id}, пробую точечный фикс: ${codeReviewVerdict.reason}`
+      );
       writeAgentPermissions(runDir);
-      const codeReviewFixPrompt = buildFixPrompt(chosen, codeReviewVerdict.reason, config.maxTurns);
-      const codeReviewFixAgentResult = await runAgent(codeReviewFixPrompt, runDir, config.maxTurns);
+      const codeReviewFixPrompt = buildFixPrompt(
+        chosen,
+        codeReviewVerdict.reason,
+        config.maxTurns
+      );
+      const codeReviewFixAgentResult = await runAgent(
+        codeReviewFixPrompt,
+        runDir,
+        config.maxTurns
+      );
       if (!codeReviewFixAgentResult.ok) {
-        return { status: 'agent_failed', error: codeReviewFixAgentResult.error, runDir };
+        return {
+          status: 'agent_failed',
+          error: codeReviewFixAgentResult.error,
+          runDir,
+        };
       }
 
-      const codeReviewFixVerdict = parseVerdict(codeReviewFixAgentResult.output);
+      const codeReviewFixVerdict = parseVerdict(
+        codeReviewFixAgentResult.output
+      );
 
-      if (codeReviewFixVerdict.kind === 'blocked' || codeReviewFixVerdict.kind === 'blocked-db-change') {
+      if (
+        codeReviewFixVerdict.kind === 'blocked' ||
+        codeReviewFixVerdict.kind === 'blocked-db-change'
+      ) {
         try {
-          postBlockedComment(chosen.id, codeReviewFixVerdict.reason, codeReviewFixVerdict.kind === 'blocked-db-change');
+          postBlockedComment(
+            chosen.id,
+            codeReviewFixVerdict.reason,
+            codeReviewFixVerdict.kind === 'blocked-db-change'
+          );
         } catch (err) {
-          console.log(`⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`);
+          console.log(
+            `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+          );
         }
         removeRunDirIfExists(runDir);
-        return { status: 'blocked', reason: codeReviewFixVerdict.reason, dbChange: codeReviewFixVerdict.kind === 'blocked-db-change' };
+        return {
+          status: 'blocked',
+          reason: codeReviewFixVerdict.reason,
+          dbChange: codeReviewFixVerdict.kind === 'blocked-db-change',
+        };
       }
 
       if (codeReviewFixVerdict.kind !== 'done') {
-        return { status: 'agent_failed', error: 'code-review fix agent did not return DONE or BLOCKED', runDir, output: codeReviewFixAgentResult.output.slice(-2000) };
+        return {
+          status: 'agent_failed',
+          error: 'code-review fix agent did not return DONE or BLOCKED',
+          runDir,
+          output: codeReviewFixAgentResult.output.slice(-2000),
+        };
       }
 
       diff = git(['status', '--porcelain'], { cwd: runDir });
       if (!diff) {
-        return { status: 'validate_failed', error: 'code-review fix agent said DONE but produced no diff', runDir };
+        return {
+          status: 'validate_failed',
+          error: 'code-review fix agent said DONE but produced no diff',
+          runDir,
+        };
       }
       verdict = codeReviewFixVerdict;
       finalOutput = codeReviewFixAgentResult.output;
@@ -1347,13 +1643,25 @@ async function runIssue(config, byId, chosen) {
       }
     }
   } catch (err) {
-    console.log(`⚠️ Не удалось сверить/отметить Acceptance Criteria для issue #${chosen.id}: ${err.message}`);
+    console.log(
+      `⚠️ Не удалось сверить/отметить Acceptance Criteria для issue #${chosen.id}: ${err.message}`
+    );
   }
 
   try {
-    postTestEvidenceComment(chosen, verdict, branchName, acItems, selfReport, allCovered, checkedOff);
+    postTestEvidenceComment(
+      chosen,
+      verdict,
+      branchName,
+      acItems,
+      selfReport,
+      allCovered,
+      checkedOff
+    );
   } catch (err) {
-    console.log(`⚠️ Не удалось запостить test evidence комментарий в issue #${chosen.id}: ${err.message}`);
+    console.log(
+      `⚠️ Не удалось запостить test evidence комментарий в issue #${chosen.id}: ${err.message}`
+    );
   }
 
   let commitMessage;

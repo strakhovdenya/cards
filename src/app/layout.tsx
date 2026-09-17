@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import './globals.css';
 import { CustomThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
