@@ -16,6 +16,8 @@ export default [
       'node_modules/**',
       '*.config.js',
       '*.config.mjs',
+      'playwright.config.ts',
+      'e2e/**',
     ],
   },
   {
