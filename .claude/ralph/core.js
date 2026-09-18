@@ -43,6 +43,7 @@ const {
   writeReviewerPermissions,
   writeCodeReviewPermissions,
   applyDelRalphMarkersIfAny,
+  runVerificationChecks,
 } = require('./workspace');
 const {
   buildPrompt,
@@ -510,6 +511,35 @@ async function runIssue(config, byId, chosen) {
       reviewFixSummaries.push(codeReviewFixVerdict.summary);
       finalOutput = codeReviewFixAgentResult.output;
       codeReviewAttempt++;
+    }
+  }
+
+  // Final mandatory build/check verification — the controller's own gate,
+  // run unconditionally right before a PR can be created, independent of
+  // whatever the agent self-reported or a review pass accepted as "expected
+  // intermediate state". Exists because ISSUE-28 (2026-09-18) shipped a PR
+  // with a failing `npm run build` (E900: middleware.ts + proxy.ts coexist)
+  // that every pass along the way waved through — self-review and the
+  // code-review skill both accepted "the controller will rename the
+  // DEL_RALPH-marked file" as sufficient without anyone actually re-running
+  // the build against the final state, and applyDelRalphMarkersIfAny() only
+  // verifies when it finds a marker to act on, so a silent miss in marker
+  // detection (or any other reason the tree ends up unbuildable) had nothing
+  // left to catch it before the PR shipped. Skipped for doc-only diffs, same
+  // as the two review passes above — there is no build to break.
+  if (hasCodeChanges(diff)) {
+    const finalVerify = runVerificationChecks(runDir);
+    if (!finalVerify.ok) {
+      const reason = `Финальная проверка npm run check/build перед коммитом не прошла: ${finalVerify.error}`;
+      try {
+        postBlockedComment(chosen.id, reason, false);
+      } catch (err) {
+        console.log(
+          `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+        );
+      }
+      removeRunDirIfExists(runDir);
+      return { status: 'blocked', reason };
     }
   }
 

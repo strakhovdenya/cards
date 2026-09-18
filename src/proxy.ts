@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { Invite, SupabaseResponse } from '@/types';
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const res = NextResponse.next();
 
   // Создаем Supabase клиент
@@ -70,7 +70,7 @@ export async function middleware(req: NextRequest) {
         }
       }
     } catch (error) {
-      console.error('Middleware error:', error);
+      console.error('Proxy error:', error);
       // В случае ошибки разрешаем доступ
     }
   }
