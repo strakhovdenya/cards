@@ -1,32 +1,61 @@
-# Demo Mode Overview (MVP)
+# Cards — German Vocabulary Trainer
 
-This repository includes a public demo mode that showcases the app without requiring sign-in. It is intentionally lightweight and serves as a proof-of-concept MVP. Code was authored with AI assistance and may deviate from best practices; expect rough edges.
+A mobile-first web app for learning German with flashcards: study mode, articles trainer, verbs
+viewer, and a tenses mini-quiz. Includes a public read-only demo at `/demo` — no sign-in required.
 
-## What’s in the demo
-- Guest-only read access backed by Supabase demo data (`DEMO_USER_ID`).
-- Study modes: cards (flashcards), articles trainer, verbs viewer, and time-training mini quiz.
-- UI is read-only in guest mode; mutations (create/edit/delete/learned) are disabled.
+**Live demo:** https://cards-indol-eight.vercel.app/demo
 
-## Running the demo locally
-1) Configure environment — copy `.env.example` to `.env.local` and fill in the values:
+## Stack
+
+- **Next.js 16** (App Router, Turbopack) · **React 19** · **TypeScript**
+- **MUI 7** — sole UI library; theme in `ThemeProvider.tsx`, no Tailwind or separate CSS files
+- **Supabase** — PostgreSQL + authentication with row-level security
+- **Upstash Redis** — shared sliding-window rate limiting for guest API endpoints and `/auth`;
+  degrades to per-instance in-memory limiter if Redis is unavailable
+
+## Running locally
+
+1. Copy environment variables and fill in the values:
    ```bash
    cp .env.example .env.local
    ```
-   The file documents all five required variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_URL` (server-side copy of the same URL — see `.env.example` for details)
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `DEMO_USER_ID` (Supabase user whose data will be exposed to guests)
-2) Ensure the demo user has seed data (cards, tags, verbs, time_questions).
-3) Start the app:
+   See `.env.example` — each variable is annotated with where to find it (Supabase dashboard,
+   Upstash dashboard). Upstash variables are optional; without them the in-memory fallback is used.
+
+2. Start the dev server:
    ```bash
-   npm install
    npm run dev
    ```
-4) Open `/demo` locally, or visit the hosted demo: https://cards-indol-eight.vercel.app/demo.
 
-## Notes and limitations
-- MVP quality: focus is on showcasing features, not on production hardening.
-- AI-generated code: patterns may be inconsistent; security/performance hardening and tests are minimal.
-- Guest endpoints are read-only; auth flows remain unchanged for regular users.
+3. Open [http://localhost:3000/demo](http://localhost:3000/demo) for guest mode, or sign up at
+   `/auth/signup` for a full authenticated account.
+
+## Commands
+
+```bash
+npm run dev           # Next.js dev server (Turbopack)
+npm run check         # lint:strict + prettier check + tsc --noEmit  ← pre-commit gate
+npm run fix           # auto-fix lint and formatting
+npm run build         # production build — same as what Vercel deploys
+npm run test          # Vitest unit tests
+npm run test:coverage # coverage report
+```
+
+## CI
+
+GitHub Actions runs three jobs on every push and PR against `main`:
+
+| Job | What it does |
+|-----|-------------|
+| Check | `npm run check` — ESLint (zero warnings), Prettier, TypeScript |
+| Test | `npm run test` — Vitest unit tests |
+| Build | `npm run build` — production build without server-side secrets (see `ADR-003` in `CLAUDE.md`) |
+
+**Unit test coverage (Vitest):** `src/utils/`, `src/strategies/` (all 9 files), and
+`src/services/` (card, tag, noun, verb, time services via mocks). No end-to-end tests yet.
+
+## Further reading
+
+- [CLAUDE.md](./CLAUDE.md) — full architectural rules, layer conventions, and development workflow
+- [docs/README.md](./docs/README.md) — database schema, RLS policies, and Supabase migration notes
+- [project-management/DECISIONS.md](./project-management/DECISIONS.md) — key architectural decisions (ADRs)
