@@ -36,6 +36,30 @@ function git(args, opts) {
   return execFileSync('git', args, { encoding: 'utf8', ...opts }).trim();
 }
 
+// `git status --porcelain` specifically — never route this through git()
+// above. Its blanket `.trim()` is harmless for the commit hashes/log lines
+// every other caller uses it for, but porcelain's status columns are
+// position-significant (a clean-index modification is ` M path`, leading
+// space included) and `.trim()` strips that leading space off the FIRST
+// line of the whole string, silently reducing it to `M path` before
+// changedFilePathsFromPorcelain() (parsing.js) ever sees it — which then
+// slices 3 columns off a line that only has 2, eating the first real path
+// character (`M package.json` -> `ackage.json`). parsing.js's own header
+// comment already documents fixing an equivalent bug once (2026-09-17,
+// found by a unit check) — this is the same failure one call earlier,
+// happening before changedFilePathsFromPorcelain() gets a chance to be
+// correct. Root-caused live while building the ISSUE-10/#39 lockfile-sync
+// fix (2026-09-19): syncLockfileIfPackageJsonChanged() silently reported
+// `ran: false` because "package.json" alone, trimmed to "M package.json",
+// parsed out to "ackage.json" and matched nothing. Only trims the trailing
+// newline `execFileSync` always appends — never the body of the output.
+function gitPorcelainStatus(opts) {
+  return execFileSync('git', ['status', '--porcelain'], {
+    encoding: 'utf8',
+    ...opts,
+  }).replace(/\r?\n$/, '');
+}
+
 function gh(args, opts) {
   return execFileSync('gh', args, { encoding: 'utf8', ...opts }).trim();
 }
@@ -374,6 +398,7 @@ module.exports = {
   GENERIC_BLOCK_LABEL,
   TECH_DEBT_TRACKER_ISSUE,
   git,
+  gitPorcelainStatus,
   gh,
   issueState,
   hasExistingPr,

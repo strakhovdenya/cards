@@ -16,7 +16,7 @@ const os = require('os');
 const path = require('path');
 
 const { RUNS_ROOT } = require('./config');
-const { git } = require('./github');
+const { git, gitPorcelainStatus } = require('./github');
 const { changedFilePathsFromPorcelain } = require('./parsing');
 
 // --- per-issue clone (replaces git worktree — see .claude/ralph/README.md) ---
@@ -427,6 +427,55 @@ function runVerificationChecks(runDir) {
   }
 }
 
+// The agent is never allowed to run `npm install` itself (see prompts.js's
+// task rules and the permission profiles above — only `Bash(npm run *)` is
+// allowed) because the controller already installed deps once at clone time
+// and re-running it mid-turn would be redundant. But that assumption breaks
+// the moment an issue needs a NEW dependency: the agent's only way to
+// declare one is hand-editing `package.json` (Edit/Write), which leaves
+// `package-lock.json` stale. `npm run check`/`build` don't catch this —
+// neither tsc/eslint nor `next build` verifies package.json and
+// package-lock.json actually agree, only `npm ci` does, and Ralph never
+// runs `npm ci`. Root-caused live on ISSUE-10 (2026-09-18): the PR shipped
+// with `package.json` gaining `@playwright/test` but an untouched
+// `package-lock.json`; every local check was green (against the already-warm
+// `node_modules` from clone time), and CI's `npm ci` failed on all three
+// jobs with `Missing: @playwright/test ... from lock file`. Same
+// backstop pattern as applyDelRalphMarkersIfAny() below: something the agent
+// cannot safely be trusted to do itself, done deterministically by the
+// controller right after its turn, before the final build verification.
+function syncLockfileIfPackageJsonChanged(runDir) {
+  let porcelain;
+  try {
+    porcelain = gitPorcelainStatus({ cwd: runDir });
+  } catch (err) {
+    return {
+      ok: false,
+      ran: false,
+      error: `git status failed: ${err.message}`,
+    };
+  }
+  const touchedPackageJson = changedFilePathsFromPorcelain(porcelain).some(
+    (f) => f === 'package.json' || f.endsWith('/package.json')
+  );
+  if (!touchedPackageJson) return { ok: true, ran: false };
+
+  console.log(
+    '🔒 package.json изменён этим прогоном — пересобираю package-lock.json (npm install) ' +
+      'контроллером, чтобы npm ci в CI не упал на рассинхроне (см. инцидент ISSUE-10 в README.md)...'
+  );
+  try {
+    execFileSync('npm', ['install'], {
+      cwd: runDir,
+      stdio: 'inherit',
+      shell: true,
+    });
+    return { ok: true, ran: true };
+  } catch (err) {
+    return { ok: false, ran: true, error: err.message };
+  }
+}
+
 // Called after every agent turn that could plausibly have left a
 // DEL_RALPH-marked file behind (the initial DONE, and each fix-pass DONE in
 // the two review loops in runIssue()). No-op (`applied: false`) when nothing
@@ -471,4 +520,5 @@ module.exports = {
   applyDelRalphRenames,
   runVerificationChecks,
   applyDelRalphMarkersIfAny,
+  syncLockfileIfPackageJsonChanged,
 };
