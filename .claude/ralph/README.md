@@ -101,11 +101,28 @@ BLOCKED-DB-CHANGE: <что и почему>
 
 ## Файлы
 
-- `run.js` — точка входа: `node .claude/ralph/run.js [--max-iterations N]`.
-- `core.js` — вся логика: выбор issue (`classify`), клонирование, промпты, парсинг вердиктов,
-  state machine одной итерации (`runIssue`).
+Каждый модуль отвечает ровно на один вопрос — начинай чтение с `core.js`, у него в шапке карта
+всего цикла и порядок шагов `runIssue()`.
+
+- `run.js` — точка входа: `node .claude/ralph/run.js [--max-iterations N]`. Импортирует напрямую
+  из модулей-владельцев, так что слои видны прямо здесь.
+- `core.js` — state machine одной итерации (`runIssue`) и бюджеты попыток. Только оркестрация:
+  конкретика живёт в модулях ниже.
+- `config.js` — файлы самого Ralph в `.claude/ralph/`: конфиг, снимок состояния, лок прогона.
+- `github.js` — всё, что дёргает `git`/`gh`: выбор issue (`classify`), комментарии, лейблы,
+  коммит, push, PR. Граница, на которой держится вся схема — у кодящего агента доступа к git/gh
+  нет вообще.
+- `workspace.js` — работа с клоном `.ralph-runs/issue-N`: клонирование, доверие директории,
+  `npm install`, профили permissions под каждый пасс, переименования по маркеру `DEL_RALPH`.
+- `prompts.js` — все тексты, которые получает агент (реализация, фикс, self-review, code-review).
+- `parsing.js` — чистый разбор ответа агента (вердикты, self-report по AC) и вывода
+  `git status --porcelain`. Без side-effects.
+- `agent.js` — единственное место, где спавнится `claude -p` (модель/effort, stream-json).
 - `config.example.json` — шаблон. Скопируй в `config.json` (гитигнорится) и отредактируй список
   `issues`.
+
+Зависимости однонаправленные: `run.js` → `core.js` → {`github`, `workspace`, `prompts`,
+`parsing`, `agent`}, и отдельно `workspace` → {`github`, `parsing`, `config`}. Циклов нет.
 
 Рантайм-файлы (все гитигнорены):
 - `.claude/ralph/config.json` — реальный список задач.
