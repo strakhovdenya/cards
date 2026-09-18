@@ -53,11 +53,34 @@ npm run fix           # lint:fix + prettier --write
 npm run test          # vitest run — юнит/интеграционные тесты (Vitest)
 npm run test:watch    # vitest в watch-режиме
 npm run test:coverage # vitest run --coverage
+npm run test:e2e      # Playwright E2E против /demo — только вручную, только локально (см. ниже)
 ```
 
 `npm run check` — обязателен перед каждым коммитом. `npm run build` — обязателен, если изменения
 могут повлиять на сборку (новые импорты, server/client-компоненты, `next.config.ts`,
 `NEXT_PUBLIC_*` переменные).
+
+### E2E-тесты (Playwright)
+
+`npm run test:e2e` запускает Playwright локально против `/demo`. Автоматический запуск в CI —
+вне скоупа (требует секретов в GitHub Actions — отдельная будущая задача).
+
+**Перед первым запуском:**
+```bash
+npx playwright install   # установить браузеры Playwright (один раз)
+```
+
+**Необходимые переменные окружения** (должны быть в `.env.local`):
+- `NEXT_PUBLIC_SUPABASE_URL` — URL Supabase-проекта (клиентский)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — публичный anon-ключ Supabase
+- `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` — для серверного клиента (нужны в рантайме)
+- `DEMO_USER_ID` — UUID демо-пользователя в Supabase Auth
+
+Если переменные не заданы, `test:e2e` выдаёт явную ошибку конфигурации до запуска тестов.
+
+Тесты поднимают приложение через `npm run build && npm run start` (прод-бандл, не dev-сервер) и
+гоняются против реального Supabase-проекта с демо-данными. Данные только читаются — никакой
+мутации. Не запускай тесты в цикле/retry без паузы: guest API лимитирован 60 req/min (ADR-005).
 
 Юнит-тесты покрывают: `src/utils/` (cardUtils, verbUtils — полностью), `src/strategies/` (все 9
 файлов — полностью), `src/services/` (cardService, tagService, nounService, verbService через мок
