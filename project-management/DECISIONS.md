@@ -113,3 +113,33 @@ MUI-компонентов на тёмном фоне.
   поведением.
 
 Source: issue #5, 2026-09-17.
+
+## ADR-005 — Rate limiting: Upstash Redis с in-memory деградацией
+
+Status: `Accepted`
+
+Decision:
+Rate limiting на публичных `guest=1` API-эндпоинтах и на `/auth/**` (`src/proxy.ts`) реализован
+через `checkRateLimit()` в `src/lib/rate-limit.ts`: основной путь — sliding window через
+Upstash Redis (`@upstash/ratelimit` + `@upstash/redis`), общий счётчик на все Edge-инстансы.
+Если `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` не заданы, либо вызов к Redis падает
+с ошибкой или таймаутом (1.5s), лимитер откатывается на in-memory sliding window
+(`checkRateLimitInMemory`) — счётчик в этом случае локален для конкретного Edge-инстанса,
+эффективный лимит на пользователя может быть выше заявленного при трафике, размазанном по
+нескольким инстансам. Лимиты: 60 req/min для guest API, 20 req/5 min для auth. Заголовок
+`Retry-After` — в ответе 429. Реальные вызовы Supabase Auth (signIn/signUp) идут
+браузер → Supabase напрямую и покрываются встроенным rate limiting Supabase — дублировать
+на уровне Next.js нет смысла.
+
+Reason:
+Issue #15 рекомендует именно Upstash Redis, и `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`
+уже заведены в `.env` и на Vercel (Production + Preview) — заводить внешний сервис не требовалось,
+только код. Первая реализация (агентом Ralph) ошибочно выбрала чистый in-memory вариант, приняв
+решение без проверки реального `.env` (там переменных нет только в `.env.example`, который
+коммитится). Чистый in-memory был отвергнут как основной путь: на serverless/Edge нет гарантии
+одного инстанса на пользователя, поэтому реальный лимит мог оказаться в разы мягче заявленного.
+Redis без какого-либо fallback тоже был отвергнут: недоступность Upstash не должна ронять
+`/api` и `/auth` целиком — деградация до in-memory сохраняет хотя бы защиту от бёрстов в рамках
+инстанса, вместо отказа обслуживания или пропуска лимита совсем.
+
+Source: issue #15, 2026-09-18; пересмотрено в этом же PR после ревью, 2026-09-18.
