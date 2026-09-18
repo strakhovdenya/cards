@@ -1,8 +1,106 @@
-// In-memory sliding window rate limiter for Next.js Edge Middleware.
-// State persists across warm Edge Runtime invocations within a single instance;
-// cold starts reset the counters — acceptable for burst protection without external storage.
+// Sliding-window rate limiter. Uses Upstash Redis (shared across all Edge instances)
+// when UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are configured, and falls back
+// to an in-memory, per-instance limiter when Redis is not configured or a call to it
+// fails or times out — burst protection degrades instead of failing open or blocking
+// every request.
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
-// Per-key sorted arrays of request timestamps (ms since epoch)
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  /** Milliseconds until the oldest in-window request expires (i.e. earliest retry time) */
+  resetMs: number;
+}
+
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const REDIS_CALL_TIMEOUT_MS = 1_500;
+
+const redis =
+  REDIS_URL && REDIS_TOKEN
+    ? new Redis({ url: REDIS_URL, token: REDIS_TOKEN, retry: { retries: 0 } })
+    : null;
+
+// One Ratelimit instance per distinct (maxRequests, windowMs) pair, created lazily.
+const limiters = new Map<string, Ratelimit>();
+
+function getLimiter(maxRequests: number, windowMs: number): Ratelimit | null {
+  if (!redis) return null;
+  const cacheKey = `${maxRequests}:${windowMs}`;
+  let limiter = limiters.get(cacheKey);
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(
+        maxRequests,
+        `${Math.max(1, Math.round(windowMs / 1000))} s`
+      ),
+      analytics: false,
+      prefix: 'cards-rl',
+    });
+    limiters.set(cacheKey, limiter);
+  }
+  return limiter;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('rate limit Redis call timed out'));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    );
+  });
+}
+
+/**
+ * Checks and records a request against a sliding window rate limit, preferring
+ * Upstash Redis (shared across instances) and falling back to an in-memory,
+ * per-instance limiter when Redis is unconfigured, errors, or times out.
+ *
+ * @param key        Unique identifier for the rate-limit bucket (e.g. "guest-api:1.2.3.4")
+ * @param maxRequests Maximum allowed requests in the window
+ * @param windowMs   Window size in milliseconds
+ */
+export async function checkRateLimit(
+  key: string,
+  maxRequests: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  const limiter = getLimiter(maxRequests, windowMs);
+  if (limiter) {
+    try {
+      const result = await withTimeout(
+        limiter.limit(key),
+        REDIS_CALL_TIMEOUT_MS
+      );
+      return {
+        allowed: result.success,
+        remaining: result.remaining,
+        resetMs: Math.max(0, result.reset - Date.now()),
+      };
+    } catch (error) {
+      console.error(
+        'Rate limit: Redis check failed, falling back to in-memory limiter:',
+        error
+      );
+    }
+  }
+  return checkRateLimitInMemory(key, maxRequests, windowMs);
+}
+
+// Per-key sorted arrays of request timestamps (ms since epoch). Fallback store used
+// when Redis is unconfigured or unreachable — state is per Edge instance, so the
+// effective limit can be higher than configured when traffic spreads across instances.
 const store = new Map<string, number[]>();
 
 let lastCleanupAt = 0;
@@ -25,21 +123,7 @@ function maybeCleanup(): void {
   }
 }
 
-export interface RateLimitResult {
-  allowed: boolean;
-  remaining: number;
-  /** Milliseconds until the oldest in-window request expires (i.e. earliest retry time) */
-  resetMs: number;
-}
-
-/**
- * Checks and records a request against a sliding window rate limit.
- *
- * @param key        Unique identifier for the rate-limit bucket (e.g. "guest-api:1.2.3.4")
- * @param maxRequests Maximum allowed requests in the window
- * @param windowMs   Window size in milliseconds
- */
-export function checkRateLimit(
+export function checkRateLimitInMemory(
   key: string,
   maxRequests: number,
   windowMs: number

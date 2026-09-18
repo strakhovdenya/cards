@@ -31,7 +31,7 @@ export async function proxy(req: NextRequest) {
 
   // Rate-limit public guest API endpoints (used by /demo without authentication)
   if (pathname.startsWith('/api/') && searchParams.get('guest') === '1') {
-    const result = checkRateLimit(
+    const result = await checkRateLimit(
       `guest-api:${ip}`,
       GUEST_API_LIMIT,
       GUEST_API_WINDOW_MS
@@ -53,7 +53,11 @@ export async function proxy(req: NextRequest) {
 
   // Rate-limit auth page routes to prevent automated page-load abuse
   if (pathname.startsWith('/auth')) {
-    const result = checkRateLimit(`auth:${ip}`, AUTH_LIMIT, AUTH_WINDOW_MS);
+    const result = await checkRateLimit(
+      `auth:${ip}`,
+      AUTH_LIMIT,
+      AUTH_WINDOW_MS
+    );
     if (!result.allowed) {
       return new NextResponse('Too Many Requests. Please try again later.', {
         status: 429,
