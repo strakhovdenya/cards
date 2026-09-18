@@ -21,6 +21,7 @@
 
 const {
   git,
+  gitPorcelainStatus,
   branchNameFor,
   classify,
   resolveBaseRef,
@@ -44,6 +45,7 @@ const {
   writeCodeReviewPermissions,
   applyDelRalphMarkersIfAny,
   runVerificationChecks,
+  syncLockfileIfPackageJsonChanged,
 } = require('./workspace');
 const {
   buildPrompt,
@@ -170,7 +172,7 @@ async function runIssue(config, byId, chosen) {
     };
   }
 
-  let diff = git(['status', '--porcelain'], { cwd: runDir });
+  let diff = gitPorcelainStatus({ cwd: runDir });
   if (!diff) {
     return {
       status: 'validate_failed',
@@ -192,8 +194,7 @@ async function runIssue(config, byId, chosen) {
       removeRunDirIfExists(runDir);
       return { status: 'blocked', reason: delRalph.blockedReason };
     }
-    if (delRalph.applied)
-      diff = git(['status', '--porcelain'], { cwd: runDir });
+    if (delRalph.applied) diff = gitPorcelainStatus({ cwd: runDir });
   }
 
   // Post-DONE self-review — only for diffs that actually touch code, not
@@ -319,7 +320,7 @@ async function runIssue(config, byId, chosen) {
       // `verdict` itself is NOT reassigned, it stays the original DONE for
       // commit/PR-title purposes), take its self-report as current for AC
       // reconciliation, and loop back to review it again from scratch.
-      diff = git(['status', '--porcelain'], { cwd: runDir });
+      diff = gitPorcelainStatus({ cwd: runDir });
       if (!diff) {
         return {
           status: 'validate_failed',
@@ -340,8 +341,7 @@ async function runIssue(config, byId, chosen) {
           removeRunDirIfExists(runDir);
           return { status: 'blocked', reason: delRalph.blockedReason };
         }
-        if (delRalph.applied)
-          diff = git(['status', '--porcelain'], { cwd: runDir });
+        if (delRalph.applied) diff = gitPorcelainStatus({ cwd: runDir });
       }
       reviewFixSummaries.push(fixVerdict.summary);
       finalOutput = fixAgentResult.output;
@@ -482,7 +482,7 @@ async function runIssue(config, byId, chosen) {
         };
       }
 
-      diff = git(['status', '--porcelain'], { cwd: runDir });
+      diff = gitPorcelainStatus({ cwd: runDir });
       if (!diff) {
         return {
           status: 'validate_failed',
@@ -503,8 +503,7 @@ async function runIssue(config, byId, chosen) {
           removeRunDirIfExists(runDir);
           return { status: 'blocked', reason: delRalph.blockedReason };
         }
-        if (delRalph.applied)
-          diff = git(['status', '--porcelain'], { cwd: runDir });
+        if (delRalph.applied) diff = gitPorcelainStatus({ cwd: runDir });
       }
       // Same reasoning as the self-review fix loop above: `verdict` is not
       // reassigned, only its summary is recorded as a footnote.
@@ -528,6 +527,32 @@ async function runIssue(config, byId, chosen) {
   // left to catch it before the PR shipped. Skipped for doc-only diffs, same
   // as the two review passes above — there is no build to break.
   if (hasCodeChanges(diff)) {
+    // Backstop for a second, narrower gap the agent cannot close itself: it
+    // has no `npm install` permission (prompts.js), so the only way it can
+    // add a NEW dependency is hand-editing `package.json` — which leaves
+    // `package-lock.json` stale. Neither `npm run check` nor `npm run build`
+    // notices, because both run against the clone's already-installed
+    // `node_modules`; only `npm ci` (which Ralph never runs) checks the two
+    // files actually agree. Root-caused live on ISSUE-10 (2026-09-18): the
+    // PR shipped with `package.json` gaining `@playwright/test` and every
+    // local check green, then failed all three CI jobs on `npm ci`. Must run
+    // BEFORE runVerificationChecks() below so a lockfile-driven `npm install`
+    // failure is caught here, with its own clearer reason, instead of
+    // surfacing as a confusing downstream `npm run build` failure.
+    const lockfileSync = syncLockfileIfPackageJsonChanged(runDir);
+    if (!lockfileSync.ok) {
+      const reason = `Не удалось синхронизировать package-lock.json после изменения package.json: ${lockfileSync.error}`;
+      try {
+        postBlockedComment(chosen.id, reason, false);
+      } catch (err) {
+        console.log(
+          `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+        );
+      }
+      removeRunDirIfExists(runDir);
+      return { status: 'blocked', reason };
+    }
+
     const finalVerify = runVerificationChecks(runDir);
     if (!finalVerify.ok) {
       const reason = `Финальная проверка npm run check/build перед коммитом не прошла: ${finalVerify.error}`;
