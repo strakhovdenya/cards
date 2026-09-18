@@ -1,4 +1,15 @@
-const { loadConfig, writeState, acquireLock, releaseLock, classify, runIssue, BLOCK_LABEL } = require('./core');
+// Entry point. Imports come straight from the module that owns each piece
+// (not re-exported through core.js) so the loop's layering is visible here:
+// config.js = local bookkeeping, github.js = git/gh, core.js = the per-issue
+// state machine. See core.js's header for the full module map.
+const {
+  loadConfig,
+  writeState,
+  acquireLock,
+  releaseLock,
+} = require('./config');
+const { classify, BLOCK_LABEL } = require('./github');
+const { runIssue } = require('./core');
 
 function parseMaxIterationsArg() {
   const idx = process.argv.indexOf('--max-iterations');
@@ -20,7 +31,9 @@ async function main() {
 
   while (true) {
     if (maxIterations != null && iterations >= maxIterations) {
-      console.log(`🛑 Достигнут maxIterations (${maxIterations}). Останавливаюсь.`);
+      console.log(
+        `🛑 Достигнут maxIterations (${maxIterations}). Останавливаюсь.`
+      );
       break;
     }
 
@@ -30,62 +43,95 @@ async function main() {
     const unknown = statuses.filter((s) => s.status === 'unknown');
     const inFlight = statuses.filter((s) => s.status === 'in-flight');
     const blocked = statuses.filter((s) => s.status === 'blocked');
-    const blockedByDependency = statuses.filter((s) => s.status === 'blocked-by-dependency');
+    const blockedByDependency = statuses.filter(
+      (s) => s.status === 'blocked-by-dependency'
+    );
     const notStarted = statuses.filter((s) => s.status === 'not-started');
     const ready = notStarted.filter((s) => s.ready && !excluded.has(s.id));
     const waiting = notStarted.filter((s) => !s.ready);
 
     if (unknown.length > 0) {
-      console.log(`⚠️ Issue не найден на GitHub: ${unknown.map((e) => `#${e.id}`).join(', ')}`);
+      console.log(
+        `⚠️ Issue не найден на GitHub: ${unknown.map((e) => `#${e.id}`).join(', ')}`
+      );
     }
     if (blocked.length > 0) {
-      console.log(`🚫 Заблокированы лейблом ${BLOCK_LABEL}: ${blocked.map((e) => `#${e.id}`).join(', ')}`);
+      console.log(
+        `🚫 Заблокированы лейблом ${BLOCK_LABEL}: ${blocked.map((e) => `#${e.id}`).join(', ')}`
+      );
     }
     if (blockedByDependency.length > 0) {
-      console.log(`🚫 Заблокированы транзитивно через зависимость: ${blockedByDependency.map((e) => `#${e.id}`).join(', ')}`);
+      console.log(
+        `🚫 Заблокированы транзитивно через зависимость: ${blockedByDependency.map((e) => `#${e.id}`).join(', ')}`
+      );
     }
 
     if (ready.length === 0) {
       if (inFlight.length > 0) {
-        console.log(`⏳ Есть Issue с открытым PR, ждут review/merge: ${inFlight.map((e) => `#${e.id}`).join(', ')}.`);
+        console.log(
+          `⏳ Есть Issue с открытым PR, ждут review/merge: ${inFlight.map((e) => `#${e.id}`).join(', ')}.`
+        );
       }
       if (waiting.length > 0) {
-        console.log(`⏳ Есть Issue, ждущие своей зависимости: ${waiting.map((e) => `#${e.id}`).join(', ')}.`);
+        console.log(
+          `⏳ Есть Issue, ждущие своей зависимости: ${waiting.map((e) => `#${e.id}`).join(', ')}.`
+        );
       }
-      if (inFlight.length === 0 && waiting.length === 0 && blocked.length === 0 && blockedByDependency.length === 0) {
+      if (
+        inFlight.length === 0 &&
+        waiting.length === 0 &&
+        blocked.length === 0 &&
+        blockedByDependency.length === 0
+      ) {
         console.log('✅ Все Issue из конфига закрыты. Ralph loop завершён.');
       } else {
-        console.log('⏸️ Ничего не готово к запуску прямо сейчас. Останавливаюсь.');
+        console.log(
+          '⏸️ Ничего не готово к запуску прямо сейчас. Останавливаюсь.'
+        );
       }
       break;
     }
 
     const chosen = ready[0];
-    console.log(`🔄 Итерация ${iterations + 1}${maxIterations != null ? `/${maxIterations}` : ''}: Issue #${chosen.id}${chosen.title ? ` (${chosen.title})` : ''}.`);
+    console.log(
+      `🔄 Итерация ${iterations + 1}${maxIterations != null ? `/${maxIterations}` : ''}: Issue #${chosen.id}${chosen.title ? ` (${chosen.title})` : ''}.`
+    );
 
     const result = await runIssue(config, byId, chosen);
     iterations++;
     perIssueResults[chosen.id] = result;
-    writeState({ iterations, lastResult: { issue: chosen.id, ...result }, updatedAt: new Date().toISOString() });
+    writeState({
+      iterations,
+      lastResult: { issue: chosen.id, ...result },
+      updatedAt: new Date().toISOString(),
+    });
 
     switch (result.status) {
       case 'done':
         console.log(`✅ Issue #${chosen.id} готов, PR: ${result.pr}`);
         break;
       case 'blocked':
-        console.log(`🚫 Issue #${chosen.id} заблокирован${result.dbChange ? ' (нужны изменения схемы БД / SQL-миграция)' : ''}: ${result.reason}`);
+        console.log(
+          `🚫 Issue #${chosen.id} заблокирован${result.dbChange ? ' (нужны изменения схемы БД / SQL-миграция)' : ''}: ${result.reason}`
+        );
         excluded.add(chosen.id);
         break;
       case 'review_blocked':
-        console.log(`🔎🚫 Issue #${chosen.id} остановлен на пост-DONE self-review: ${result.reason}`);
+        console.log(
+          `🔎🚫 Issue #${chosen.id} остановлен на пост-DONE self-review: ${result.reason}`
+        );
         excluded.add(chosen.id);
         break;
       case 'code_review_blocked':
-        console.log(`🔎🚫 Issue #${chosen.id} остановлен на пост-self-review code-review: ${result.reason}`);
+        console.log(
+          `🔎🚫 Issue #${chosen.id} остановлен на пост-self-review code-review: ${result.reason}`
+        );
         excluded.add(chosen.id);
         break;
       default:
-        console.log(`⚠️ Issue #${chosen.id}: ${result.status} — ${result.error || 'см. лог выше'}${result.runDir ? ` (оставлено для разбора: ${result.runDir})` : ''}`);
+        console.log(
+          `⚠️ Issue #${chosen.id}: ${result.status} — ${result.error || 'см. лог выше'}${result.runDir ? ` (оставлено для разбора: ${result.runDir})` : ''}`
+        );
         excluded.add(chosen.id);
         break;
     }
