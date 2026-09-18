@@ -629,7 +629,9 @@ function buildTaskRules(maxTurns, skillNames = []) {
     '',
     'НЕ редактируй `.claude/settings.json` и `.claude/settings.local.json`, чтобы выдать себе дополнительные права (например, доступ к git/gh) — это осознанное ограничение, а не случайный пробел, и попытка обойти его — грубое нарушение, а не решение проблемы. Если тебе не хватает какого-то конкретного разрешения — это `BLOCKED` (см. правило про отказ в правах ниже), не повод редактировать файлы настроек.',
     '',
-    'Если какой-то инструмент или команда отклонена из-за прав доступа (permission denied / "not permitted" / "not in the allowed list") — это ограничение Claude Code, а не проблема пути/shell/директории. Повторная попытка той же команды другим синтаксисом (другой shell, `cd`/`Set-Location`, `--prefix`, heredoc и т.п.) НЕ поможет — это тот же самый отказ. Не трать на это больше одной попытки. Единственное исключение — если отказ пришёл именно на попытку отредактировать файл в `docs/`: это не баг permissions, это тот же самый случай "нужно менять схему БД/миграции" из правила выше, просто он проявился как отказ прав. В этом случае заверши строкой `BLOCKED-DB-CHANGE: <что именно и почему>`, а не `BLOCKED`. Для любого другого отказа прав сразу заверши строкой `BLOCKED: доступ отклонён для <что именно> — нужно расширить permissions.allow`.',
+    'Если какой-то инструмент или команда отклонена из-за прав доступа (permission denied / "not permitted" / "not in the allowed list") — это ограничение Claude Code, а не проблема пути/shell/директории. Повторная попытка той же команды другим синтаксисом (другой shell, `cd`/`Set-Location`, `--prefix`, heredoc и т.п.) НЕ поможет — это тот же самый отказ. Не трать на это больше одной попытки. Из этого правила два исключения. Первое — если отказ пришёл именно на попытку отредактировать файл в `docs/`: это не баг permissions, это тот же самый случай "нужно менять схему БД/миграции" из правила выше, просто он проявился как отказ прав. В этом случае заверши строкой `BLOCKED-DB-CHANGE: <что именно и почему>`, а не `BLOCKED`. Второе — если отказ пришёл на попытку удалить/переименовать/переместить файл (`rm`, `Remove-Item`, `mv`, `git mv`, `node -e "...unlinkSync..."` и т.п.) — см. следующее правило про маркер `DEL_RALPH`, это тоже не `BLOCKED`. Для любого другого отказа прав сразу заверши строкой `BLOCKED: доступ отклонён для <что именно> — нужно расширить permissions.allow`.',
+    '',
+    'Особый случай — нужно убрать или переименовать уже существующий файл (например, миграция файловой конвенции: `src/middleware.ts` → `src/proxy.ts`). У тебя нет и не будет прав на удаление/перемещение файлов — не пытайся обойти это через Bash в любом синтаксисе и не заканчивай ответ из-за этого строкой `BLOCKED`. Вместо этого: создай новый файл как обычно (`Write`), а в файле, который нужно убрать, первой строкой оставь маркер-комментарий `DEL_RALPH: <короткая причина>` (например `// DEL_RALPH: migrated to src/proxy.ts`), остальное содержимое файла не трогай. Контроллер сам физически переименует помеченный файл в `del_ralph_<имя>` сразу после твоего хода (это rename, не удаление — содержимое сохраняется и видно в git-истории) и сам перепроверит `npm run check`/`npm run build` уже в правильном состоянии. Из этого следует: если `npm run check`/`npm run build` красные ИМЕННО из-за того, что старый (помеченный) и новый файл одновременно существуют под конфликтующими именами — это ожидаемо для такой миграции, не пытайся это исправить в рамках своего хода и не считай блокером, просто заверши задачу как обычно с обычным самоотчётом. Если же сборка красная по другой, не связанной с этим файлом причине — действуй по обычному правилу (до 5 попыток, потом `BLOCKED`).',
     '',
     'Когда закончишь, ЗАВЕРШИ свой финальный ответ РОВНО одним из трёх вариантов, каждый на новой строке, БЕЗ markdown-разметки (никакого `**жирного**`, `` `кода` `` или других символов вокруг этих строк — контроллер ищет ровно эти литеральные строки):',
     '',
@@ -1276,6 +1278,110 @@ function postOutOfScopeNote(id, findings) {
   ]);
 }
 
+// --- controller-owned DEL_RALPH file renames (the agent never deletes/moves
+// files itself — see buildTaskRules()) ---
+
+// Marker convention for the one class of filesystem op the agent cannot
+// perform (no rm/mv/rename permission — see writeAgentPermissions() and the
+// live ISSUE-28 run, 2026-09-18: the agent needed to migrate
+// `src/middleware.ts` to Next.js 16's `proxy` convention, could create the
+// new file via Write but had no way to remove the old one, and correctly
+// reported BLOCKED without touching main). Rather than granting the agent
+// Bash(rm)/Bash(mv) directly — which would reopen exactly the class of risk
+// ADR-001/this file's git-gh restriction exists to close (an unattended LLM
+// given a free-form destructive filesystem command) — the agent instead
+// leaves a first-line marker comment on the file it wants gone
+// (`DEL_RALPH: <reason>`) and the CONTROLLER, deterministic code below,
+// physically renames it after the agent's turn ends.
+const DEL_RALPH_MARKER_RE = /DEL_RALPH:\s*(.+)/;
+
+// Only inspects files `porcelain` (a fresh `git status --porcelain`) says
+// actually changed in this run — never scans the whole tree — so a marker
+// left over from an unrelated, already-committed file can't be picked up by
+// accident.
+function findDelRalphMarkedFiles(runDir, porcelain) {
+  const marked = [];
+  for (const relPath of changedFilePathsFromPorcelain(porcelain)) {
+    let content;
+    try {
+      content = fs.readFileSync(path.join(runDir, relPath), 'utf8');
+    } catch {
+      continue; // deleted, binary, or otherwise unreadable — not a candidate
+    }
+    const m = DEL_RALPH_MARKER_RE.exec(content.slice(0, 200));
+    if (m) marked.push({ relPath, reason: m[1].trim() });
+  }
+  return marked;
+}
+
+// Renames in place to `del_ralph_<original name>`, same directory — never an
+// actual delete. Content is fully preserved and the change shows up as an
+// ordinary rename in `git status`/the eventual PR diff, so nothing is lost
+// and a human reviewing the PR sees exactly what moved and why (the
+// PR/commit still carries the agent's own `DEL_RALPH: <reason>` comment
+// inside the renamed file until someone deletes it for real).
+function applyDelRalphRenames(runDir, marked) {
+  return marked.map(({ relPath, reason }) => {
+    const newRelPath = path.join(
+      path.dirname(relPath),
+      `del_ralph_${path.basename(relPath)}`
+    );
+    fs.renameSync(path.join(runDir, relPath), path.join(runDir, newRelPath));
+    return { from: relPath, to: newRelPath, reason };
+  });
+}
+
+// Plain synchronous shell-out, same pattern as installDependencies() — run
+// by the controller itself, never through the agent's own Bash(npm run *)
+// permission, because the point is to verify the state AFTER a rename the
+// agent's own in-turn `npm run check`/`build` could not have seen (it
+// necessarily ran against the old, still-colliding file layout).
+function runVerificationChecks(runDir) {
+  try {
+    execFileSync('npm', ['run', 'check'], {
+      cwd: runDir,
+      stdio: 'inherit',
+      shell: true,
+    });
+    execFileSync('npm', ['run', 'build'], {
+      cwd: runDir,
+      stdio: 'inherit',
+      shell: true,
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+// Called after every agent turn that could plausibly have left a
+// DEL_RALPH-marked file behind (the initial DONE, and each fix-pass DONE in
+// the two review loops in runIssue()). No-op (`applied: false`) when nothing
+// is marked — the common case for almost every issue. When something IS
+// marked, renames it and re-verifies the build itself; a non-null
+// `blockedReason` means the caller must treat this exactly like an agent
+// BLOCKED (post the comment, clean up runDir, stop) — a rename that leaves
+// the build red is not safe to hand off as a PR.
+function applyDelRalphMarkersIfAny(runDir, porcelain) {
+  const marked = findDelRalphMarkedFiles(runDir, porcelain);
+  if (marked.length === 0) return { blockedReason: null, applied: false };
+
+  const renames = applyDelRalphRenames(runDir, marked);
+  const summary = renames
+    .map((r) => `${r.from} → ${r.to} (${r.reason})`)
+    .join('; ');
+  console.log(`🗂️ Контроллер переименовал по маркеру DEL_RALPH: ${summary}`);
+
+  const verify = runVerificationChecks(runDir);
+  if (!verify.ok) {
+    return {
+      blockedReason: `После переименования файлов по маркеру DEL_RALPH (${summary}) npm run check/build не зелёные: ${verify.error}`,
+      applied: true,
+    };
+  }
+  return { blockedReason: null, applied: true };
+}
+
 function commitChanges(runDir, chosen, verdict) {
   git(['add', '-A'], { cwd: runDir });
   const message = `${verdict.type}: ISSUE-${chosen.id} ${verdict.summary}`;
@@ -1400,6 +1506,23 @@ async function runIssue(config, byId, chosen) {
       error: 'agent said DONE but produced no diff',
       runDir,
     };
+  }
+
+  {
+    const delRalph = applyDelRalphMarkersIfAny(runDir, diff);
+    if (delRalph.blockedReason) {
+      try {
+        postBlockedComment(chosen.id, delRalph.blockedReason, false);
+      } catch (err) {
+        console.log(
+          `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+        );
+      }
+      removeRunDirIfExists(runDir);
+      return { status: 'blocked', reason: delRalph.blockedReason };
+    }
+    if (delRalph.applied)
+      diff = git(['status', '--porcelain'], { cwd: runDir });
   }
 
   // Post-DONE self-review — only for diffs that actually touch code, not
@@ -1531,6 +1654,22 @@ async function runIssue(config, byId, chosen) {
           error: 'fix agent said DONE but produced no diff',
           runDir,
         };
+      }
+      {
+        const delRalph = applyDelRalphMarkersIfAny(runDir, diff);
+        if (delRalph.blockedReason) {
+          try {
+            postBlockedComment(chosen.id, delRalph.blockedReason, false);
+          } catch (err) {
+            console.log(
+              `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+            );
+          }
+          removeRunDirIfExists(runDir);
+          return { status: 'blocked', reason: delRalph.blockedReason };
+        }
+        if (delRalph.applied)
+          diff = git(['status', '--porcelain'], { cwd: runDir });
       }
       reviewFixSummaries.push(fixVerdict.summary);
       finalOutput = fixAgentResult.output;
@@ -1678,6 +1817,22 @@ async function runIssue(config, byId, chosen) {
           error: 'code-review fix agent said DONE but produced no diff',
           runDir,
         };
+      }
+      {
+        const delRalph = applyDelRalphMarkersIfAny(runDir, diff);
+        if (delRalph.blockedReason) {
+          try {
+            postBlockedComment(chosen.id, delRalph.blockedReason, false);
+          } catch (err) {
+            console.log(
+              `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
+            );
+          }
+          removeRunDirIfExists(runDir);
+          return { status: 'blocked', reason: delRalph.blockedReason };
+        }
+        if (delRalph.applied)
+          diff = git(['status', '--porcelain'], { cwd: runDir });
       }
       // Same reasoning as the self-review fix loop above: `verdict` is not
       // reassigned, only its summary is recorded as a footnote.
