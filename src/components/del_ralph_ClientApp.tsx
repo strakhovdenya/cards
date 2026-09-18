@@ -1,3 +1,4 @@
+// DEL_RALPH: dead code since feat:auth replaced ClientApp with AuthenticatedApp in page.tsx (973e2c4); hydration handling moved to ThemeProvider.tsx useServerInsertedHTML
 'use client';
 
 import { useState, useEffect } from 'react';
