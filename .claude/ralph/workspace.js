@@ -321,6 +321,30 @@ function writeCodeReviewPermissions(runDir) {
 // physically renames it after the agent's turn ends.
 const DEL_RALPH_MARKER_RE = /DEL_RALPH:\s*(.+)/;
 
+// Blocks the event loop for `ms` — acceptable here because the whole
+// controller is a synchronous CLI loop (one `claude -p` at a time, nothing
+// else running concurrently), and the delay only ever fires on the rare
+// retry path below, not on every call.
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// Root-caused live on ISSUE-28 (2026-09-18): right after `npm run build`
+// fails inside the agent's own turn (Node worker pool spinning up/tearing
+// down for "Generating static pages using N workers"), a *separate* Node
+// process reading the same file can transiently get EPERM/EBUSY on
+// Windows — reproduced directly on this machine: a plain `node -e` in the
+// same shell failed with "Permission denied" immediately after a `next
+// build` run, then succeeded on the very next attempt with no code change.
+// The original unconditional `catch { continue; }` treated that exactly
+// like ENOENT (file legitimately deleted) and silently dropped the file
+// from `marked` — no rename, no error, nothing in the log. A short retry
+// clears it in practice; anything still failing after retries is now a
+// real problem worth surfacing (see the `console.log` below), not a
+// swallowed exception. Only 100-350ms of total worst-case delay, and only
+// on the failure path.
+const READ_RETRY_DELAYS_MS = [100, 250];
+
 // Only inspects files `porcelain` (a fresh `git status --porcelain`) says
 // actually changed in this run — never scans the whole tree — so a marker
 // left over from an unrelated, already-committed file can't be picked up by
@@ -328,20 +352,31 @@ const DEL_RALPH_MARKER_RE = /DEL_RALPH:\s*(.+)/;
 function findDelRalphMarkedFiles(runDir, porcelain) {
   const marked = [];
   for (const relPath of changedFilePathsFromPorcelain(porcelain)) {
+    const absPath = path.join(runDir, relPath);
     let content;
-    try {
-      content = fs.readFileSync(path.join(runDir, relPath), 'utf8');
-    } catch (err) {
-      // ENOENT is the expected case (file was deleted as part of the diff) —
-      // anything else (EPERM/EBUSY from a lingering build/dev process still
-      // holding the file on Windows, permission issues, etc.) silently
-      // dropping the file from `marked` was found to hide the whole
-      // DEL_RALPH mechanism not firing (ISSUE-28, 2026-09-18: middleware.ts
-      // was never renamed and the resulting PR shipped a broken build) with
-      // no trace in the log. Surface anything unexpected instead.
-      if (err.code !== 'ENOENT') {
+    let lastErr;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        content = fs.readFileSync(absPath, 'utf8');
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        // ENOENT is the expected case (file was deleted as part of the
+        // diff) — never worth retrying, it will never appear.
+        if (err.code === 'ENOENT') break;
+        if (attempt >= READ_RETRY_DELAYS_MS.length) break;
+        sleepSync(READ_RETRY_DELAYS_MS[attempt]);
+      }
+    }
+    if (lastErr) {
+      // Anything left after retries (permission issues, a genuinely stuck
+      // lock, etc.) — surface it instead of silently dropping the file from
+      // `marked`, which was what hid the whole DEL_RALPH mechanism not
+      // firing on ISSUE-28 with no trace in the log.
+      if (lastErr.code !== 'ENOENT') {
         console.log(
-          `⚠️ DEL_RALPH: не удалось прочитать ${relPath} для проверки маркера (${err.code || err.message}) — файл пропущен`
+          `⚠️ DEL_RALPH: не удалось прочитать ${relPath} для проверки маркера после повторных попыток (${lastErr.code || lastErr.message}) — файл пропущен`
         );
       }
       continue;
