@@ -15,9 +15,12 @@ const AUTH_LIMIT = 20;
 const AUTH_WINDOW_MS = 5 * 60_000;
 
 function getIp(request: NextRequest): string {
+  // Vercel sets x-real-ip to the actual connecting IP. x-forwarded-for can carry
+  // client-supplied entries before the real IP (which Vercel appends last), so its
+  // first entry is attacker-controlled and unsafe to key rate limits on.
   return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
     request.headers.get('x-real-ip') ??
+    request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim() ??
     'anonymous'
   );
 }
@@ -52,15 +55,13 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith('/auth')) {
     const result = checkRateLimit(`auth:${ip}`, AUTH_LIMIT, AUTH_WINDOW_MS);
     if (!result.allowed) {
-      return NextResponse.json(
-        { error: 'Too Many Requests' },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(Math.ceil(result.resetMs / 1000)),
-          },
-        }
-      );
+      return new NextResponse('Too Many Requests. Please try again later.', {
+        status: 429,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Retry-After': String(Math.ceil(result.resetMs / 1000)),
+        },
+      });
     }
   }
 

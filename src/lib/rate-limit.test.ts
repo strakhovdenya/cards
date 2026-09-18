@@ -64,6 +64,15 @@ describe('checkRateLimit', () => {
     expect(blocked.resetMs).toBeLessThanOrEqual(5_000);
   });
 
+  it('returns time until the oldest request expires on an allowed response', () => {
+    checkRateLimit('ip1', 5, 10_000); // t=0, oldest request
+    vi.advanceTimersByTime(4_000);
+    const result = checkRateLimit('ip1', 5, 10_000); // t=4000, still allowed
+    expect(result.allowed).toBe(true);
+    // Oldest request (t=0) expires at t=10_000, so 6_000ms remain from t=4_000
+    expect(result.resetMs).toBe(6_000);
+  });
+
   it('resets the window after partial expiry — sliding, not fixed', () => {
     // t=0: request 1, t=500: request 2, t=1001: request 1 expires
     // at t=1001 we should be allowed again (only request 2 remains)

@@ -63,6 +63,7 @@ export function checkRateLimit(
   return {
     allowed: true,
     remaining: maxRequests - inWindow.length,
-    resetMs: windowMs,
+    // Time until the oldest in-window request rolls out of the window
+    resetMs: Math.max(0, inWindow[0] + windowMs - now),
   };
 }
