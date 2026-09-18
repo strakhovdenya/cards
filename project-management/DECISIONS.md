@@ -113,3 +113,27 @@ MUI-компонентов на тёмном фоне.
   поведением.
 
 Source: issue #5, 2026-09-17.
+
+## ADR-005 — In-memory rate limiting вместо Upstash Redis
+
+Status: `Accepted`
+
+Decision:
+Rate limiting на публичных `guest=1` API-эндпоинтах и на `/auth/**` реализован через
+in-memory sliding window (`src/lib/rate-limit.ts`) в `src/proxy.ts`, без внешней инфраструктуры.
+Лимиты: 60 req/min для guest API, 20 req/5 min для auth. Заголовок `Retry-After` включается в
+ответ 429. Реальные вызовы Supabase Auth (signIn/signUp) идут браузер → Supabase напрямую
+и покрываются встроенным rate limiting Supabase — дублировать на уровне Next.js нет смысла.
+
+Reason:
+Issue #15 рекомендует `@upstash/ratelimit` с Upstash Redis, но эта зависимость требует нового
+внешнего сервиса, новых ключей в `.env`, и установки пакета. In-memory подход не требует ничего
+нового, совместим с Edge Runtime, и обеспечивает защиту от бёрст-атак в рамках одного
+warm-инстанса Edge функции. На Vercel Edge функции живут достаточно долго, чтобы этот подход
+был практически значимым.
+
+Отвергнутая альтернатива: `@upstash/ratelimit` — подходит как апгрейд, если в будущем
+понадобится точный глобальный лимит (тогда нужны `UPSTASH_REDIS_REST_URL` и
+`UPSTASH_REDIS_REST_TOKEN` в `.env.example`).
+
+Source: issue #15, 2026-09-18.

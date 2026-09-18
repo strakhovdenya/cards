@@ -81,6 +81,11 @@ npm run test:coverage # vitest run --coverage
   навигация; проверяй изменения в узком вьюпорте, а не только на десктопе.
 - **Стили — только MUI** (`sx`, `styled`, тема в `ThemeProvider.tsx`); глобальные правила — через
   `MuiCssBaseline.styleOverrides`, без отдельных CSS-файлов и без Tailwind.
+- **Rate limiting — в `src/proxy.ts`** (Next.js 16 proxy, аналог middleware). Публичные
+  `guest=1` API-эндпоинты и `/auth/**` ограничены in-memory скользящим окном (`src/lib/rate-limit.ts`).
+  Реальные вызовы Supabase Auth (signIn/signUp) идут браузер → Supabase напрямую и покрываются
+  встроенным rate limiting Supabase. Если понадобится распределённый лимитер — Upstash Redis
+  (`@upstash/ratelimit`), но тогда нужны новые env-переменные (обновить `.env.example`).
 
 ## Изменения схемы БД
 
