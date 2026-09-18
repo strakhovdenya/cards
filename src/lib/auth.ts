@@ -2,7 +2,12 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ADMIN_EMAIL, ROLE_ADMIN, ROLE_USER } from '@/constants/userRoles';
 import type { SupabaseResponse, SupabaseListResponse } from '@/types';
 
-const supabase = createClientComponentClient();
+let _supabase: ReturnType<typeof createClientComponentClient> | null = null;
+
+function getSupabase() {
+  _supabase ??= createClientComponentClient();
+  return _supabase;
+}
 
 export interface SignUpData {
   email: string;
@@ -44,7 +49,7 @@ interface ProfileId {
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await getSupabase().auth.signInWithPassword({
     email,
     password,
   });
@@ -69,7 +74,7 @@ export async function signUpWithEmail(signUpData: SignUpData) {
     }
 
     // Проверяем валидность инвайт-кода
-    const inviteResult = (await supabase
+    const inviteResult = (await getSupabase()
       .from('invites')
       .select('*')
       .eq('invite_code', inviteCode)
@@ -104,7 +109,7 @@ export async function signUpWithEmail(signUpData: SignUpData) {
   }
 
   // Регистрируем пользователя
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await getSupabase().auth.signUp({
     email,
     password,
     options: {
@@ -124,7 +129,7 @@ export async function signUpWithEmail(signUpData: SignUpData) {
     // Профиль создается автоматически через триггер в базе данных
     // Просто отмечаем инвайт-код как использованный, если он был предоставлен
     if (!isMainAdmin && inviteCode) {
-      await supabase
+      await getSupabase()
         .from('invites')
         .update({
           used: true,
@@ -139,7 +144,7 @@ export async function signUpWithEmail(signUpData: SignUpData) {
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await getSupabase().auth.signOut();
   if (error) {
     throw new Error(error.message);
   }
@@ -153,7 +158,7 @@ export async function requestPasswordReset(email: string) {
       : undefined;
 
   const resetOptions = redirectTo ? { redirectTo } : undefined;
-  const { error } = await supabase.auth.resetPasswordForEmail(
+  const { error } = await getSupabase().auth.resetPasswordForEmail(
     email,
     resetOptions
   );
@@ -166,7 +171,7 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function updatePassword(newPassword: string) {
-  const { data, error } = await supabase.auth.updateUser({
+  const { data, error } = await getSupabase().auth.updateUser({
     password: newPassword,
   });
 
@@ -179,7 +184,7 @@ export async function updatePassword(newPassword: string) {
 
 export async function getCurrentUser() {
   try {
-    const userResult = await supabase.auth.getUser();
+    const userResult = await getSupabase().auth.getUser();
     const user = userResult.data?.user;
     const error = userResult.error;
 
@@ -193,7 +198,7 @@ export async function getCurrentUser() {
 
     // Попытаемся получить профиль пользователя
     try {
-      const profileResult = (await supabase
+      const profileResult = (await getSupabase()
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -262,7 +267,7 @@ export async function createInvite(email: string, invitedBy: string) {
     Math.random().toString(36).substring(2, 15) +
     Math.random().toString(36).substring(2, 15);
 
-  const inviteResult = (await supabase
+  const inviteResult = (await getSupabase()
     .from('invites')
     .insert([
       {
@@ -288,7 +293,7 @@ export async function createInvite(email: string, invitedBy: string) {
 }
 
 export async function getInvites(userId: string) {
-  const invitesResult = (await supabase
+  const invitesResult = (await getSupabase()
     .from('invites')
     .select('*')
     .eq('invited_by', userId)
@@ -305,7 +310,7 @@ export async function getInvites(userId: string) {
 }
 
 export async function isAdmin(userId: string): Promise<boolean> {
-  const profileResult = (await supabase
+  const profileResult = (await getSupabase()
     .from('profiles')
     .select('role')
     .eq('id', userId)
@@ -323,7 +328,7 @@ export async function isAdmin(userId: string): Promise<boolean> {
 
 export async function checkIfAdminsExist(): Promise<boolean> {
   try {
-    const adminResult = (await supabase
+    const adminResult = (await getSupabase()
       .from('profiles')
       .select('id')
       .eq('role', ROLE_ADMIN)
@@ -346,7 +351,7 @@ export async function checkIfAdminsExist(): Promise<boolean> {
 
 export async function validateInviteCode(code: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('invites')
       .select('*')
       .eq('invite_code', code)
@@ -362,7 +367,7 @@ export async function validateInviteCode(code: string): Promise<boolean> {
       return false;
     }
 
-    const invite = data[0] as Invite;
+    const invite = data[0] as unknown as Invite;
 
     // Проверяем срок действия
     return new Date(invite.expires_at) > new Date();
