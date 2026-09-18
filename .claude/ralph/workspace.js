@@ -331,8 +331,20 @@ function findDelRalphMarkedFiles(runDir, porcelain) {
     let content;
     try {
       content = fs.readFileSync(path.join(runDir, relPath), 'utf8');
-    } catch {
-      continue; // deleted, binary, or otherwise unreadable — not a candidate
+    } catch (err) {
+      // ENOENT is the expected case (file was deleted as part of the diff) —
+      // anything else (EPERM/EBUSY from a lingering build/dev process still
+      // holding the file on Windows, permission issues, etc.) silently
+      // dropping the file from `marked` was found to hide the whole
+      // DEL_RALPH mechanism not firing (ISSUE-28, 2026-09-18: middleware.ts
+      // was never renamed and the resulting PR shipped a broken build) with
+      // no trace in the log. Surface anything unexpected instead.
+      if (err.code !== 'ENOENT') {
+        console.log(
+          `⚠️ DEL_RALPH: не удалось прочитать ${relPath} для проверки маркера (${err.code || err.message}) — файл пропущен`
+        );
+      }
+      continue;
     }
     const m = DEL_RALPH_MARKER_RE.exec(content.slice(0, 200));
     if (m) marked.push({ relPath, reason: m[1].trim() });
