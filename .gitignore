@@ -50,3 +50,6 @@ next-env.d.ts
 # claude code local overrides + hook logs
 .claude/settings.local.json
 scripts/*.log
+
+.vercel
+.env*
