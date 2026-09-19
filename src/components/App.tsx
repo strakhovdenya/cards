@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
   BottomNavigation,
   BottomNavigationAction,
   Paper,
   CircularProgress,
   Alert,
 } from '@mui/material';
+import { CenteredColumn } from './layout/CenteredColumn';
 import { School, Edit } from '@mui/icons-material';
 import { CardViewer } from './CardViewer';
 import { CardEditor } from './CardEditor';
@@ -137,7 +137,7 @@ export function App({
     >
       {/* Основной контент */}
       <Box sx={{ flexGrow: 1, pb: showNavigation ? 8 : 0 }}>
-        <Container maxWidth="lg" sx={{ py: 2 }}>
+        <CenteredColumn sx={{ py: 2, px: 2 }}>
           {error && (
             <Alert
               severity="error"
@@ -180,7 +180,7 @@ export function App({
               onDeleteCard={(id) => void handleDeleteCard(id)}
             />
           )}
-        </Container>
+        </CenteredColumn>
       </Box>
 
       {/* Нижняя навигация для режимов карточек */}
@@ -195,29 +195,31 @@ export function App({
           }}
           elevation={3}
         >
-          <BottomNavigation
-            value={viewMode}
-            onChange={(event, newValue) => {
-              handleViewModeChange(newValue as ViewMode);
-            }}
-            sx={{
-              '& .MuiBottomNavigationAction-root': {
-                minWidth: 'auto',
-                px: 3,
-              },
-            }}
-          >
-            <BottomNavigationAction
-              label="Изучение"
-              value="viewer"
-              icon={<School />}
-            />
-            <BottomNavigationAction
-              label="Редактор"
-              value="editor"
-              icon={<Edit />}
-            />
-          </BottomNavigation>
+          <CenteredColumn>
+            <BottomNavigation
+              value={viewMode}
+              onChange={(event, newValue) => {
+                handleViewModeChange(newValue as ViewMode);
+              }}
+              sx={{
+                '& .MuiBottomNavigationAction-root': {
+                  minWidth: 'auto',
+                  px: 3,
+                },
+              }}
+            >
+              <BottomNavigationAction
+                label="Изучение"
+                value="viewer"
+                icon={<School />}
+              />
+              <BottomNavigationAction
+                label="Редактор"
+                value="editor"
+                icon={<Edit />}
+              />
+            </BottomNavigation>
+          </CenteredColumn>
         </Paper>
       )}
     </Box>

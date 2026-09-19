@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   Box,
-  Container,
   Typography,
   ToggleButtonGroup,
   ToggleButton,
@@ -12,6 +11,7 @@ import {
   Paper,
   Stack,
 } from '@mui/material';
+import { CenteredColumn } from './layout/CenteredColumn';
 import { Style, Book, School, AccessTime } from '@mui/icons-material';
 import { CardViewer } from './CardViewer';
 import { ArticlesTrainer } from './ArticlesTrainer';
@@ -57,7 +57,7 @@ export function DemoApp() {
   }, []);
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <CenteredColumn sx={{ py: 4, px: 2 }}>
       <Paper
         elevation={1}
         sx={{
@@ -141,6 +141,6 @@ export function DemoApp() {
           {mode === 'time' && <TimeTraining isGuest />}
         </Stack>
       )}
-    </Container>
+    </CenteredColumn>
   );
 }
