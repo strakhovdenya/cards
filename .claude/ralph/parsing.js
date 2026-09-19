@@ -214,6 +214,24 @@ function reconcileAcceptanceCriteria(acItems, selfReport) {
   return { allCovered: true, coveredIndices };
 }
 
+// A looser sibling of reconcileAcceptanceCriteria() for BLOCKED comments:
+// that function is all-or-nothing (any mismatch -> 0), which is the right
+// call for auto-checking GitHub checkboxes, but a useless signal for "how
+// close was this run" when the agent got blocked mid-task. Here a partial or
+// even malformed self-report still yields a meaningful count instead of
+// collapsing to zero. `total` always comes from the issue's real AC list
+// (never from the self-report itself), and only self-report entries whose
+// `index` actually falls within `1..total` are counted, so a stray/duplicate
+// index from a malformed self-report can't inflate the count past `total`.
+function summarizeSelfReportedCoverage(acItems, selfReport) {
+  const total = acItems.length;
+  if (total === 0) return null;
+  const covered = selfReport.filter(
+    (e) => e.status === 'covered' && e.index >= 1 && e.index <= total
+  ).length;
+  return { covered, total };
+}
+
 // Same last-occurrence-wins approach as parseVerdict() above, for the
 // separate post-DONE self-review pass's own sentinel lines.
 function parseReviewVerdict(rawOutput) {
@@ -276,6 +294,7 @@ module.exports = {
   extractAcceptanceCriteriaItems,
   parseAcceptanceCriteriaSelfReport,
   reconcileAcceptanceCriteria,
+  summarizeSelfReportedCoverage,
   parseReviewVerdict,
   parseCodeReviewVerdict,
 };

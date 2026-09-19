@@ -189,8 +189,24 @@ function resolveBaseRef(config, byId, entry) {
 
 // --- controller-owned git/gh mutations (the agent never does these) ---
 
-function postBlockedComment(id, reason, dbChange) {
-  gh(['issue', 'comment', String(id), '--body', `BLOCKED: ${reason}`]);
+// `coverage` (optional, `{ covered, total }` from parsing.js's
+// summarizeSelfReportedCoverage()) is appended as its own line when the
+// caller has a self-report to draw it from — omitted, not printed as 0/0,
+// when the run never reached a single DONE (see runIssue()'s very first
+// BLOCKED branch, which has no self-report to summarize at all). Framed the
+// same way postTestEvidenceComment() frames its own AC self-report: a
+// self-reported number, not something the controller independently verified.
+function postBlockedComment(id, reason, dbChange, coverage) {
+  const coverageLine = coverage
+    ? `\n\nСамоотчёт агента на момент блокировки (не проверено независимо): ${coverage.covered} из ${coverage.total} пунктов Acceptance Criteria отмечены как COVERED.`
+    : '';
+  gh([
+    'issue',
+    'comment',
+    String(id),
+    '--body',
+    `BLOCKED: ${reason}${coverageLine}`,
+  ]);
   gh(['issue', 'edit', String(id), '--add-label', GENERIC_BLOCK_LABEL]);
   if (dbChange) {
     gh(['issue', 'edit', String(id), '--add-label', BLOCK_LABEL]);

@@ -61,6 +61,7 @@ const {
   extractAcceptanceCriteriaItems,
   parseAcceptanceCriteriaSelfReport,
   reconcileAcceptanceCriteria,
+  summarizeSelfReportedCoverage,
 } = require('./parsing');
 const { runAgent } = require('./agent');
 
@@ -143,7 +144,24 @@ async function runIssue(config, byId, chosen) {
   // state, the commit/PR headline wants the original intent.
   let finalOutput = agentResult.output;
 
+  // Coverage for a BLOCKED comment always comes from the issue's real AC list
+  // plus whichever agent output currently holds the freshest self-report —
+  // NOT always `finalOutput`, which lags by one DONE inside the two fix loops
+  // below (it's only reassigned after their own delRalph check). Passing the
+  // right `output` argument at each call site is what keeps the number
+  // accurate; see the two calls below that pass `fixAgentResult.output`/
+  // `codeReviewFixAgentResult.output` instead of `finalOutput` for exactly
+  // that reason.
+  const coverageFrom = (output) =>
+    summarizeSelfReportedCoverage(
+      extractAcceptanceCriteriaItems(chosen.body),
+      parseAcceptanceCriteriaSelfReport(output)
+    );
+
   if (verdict.kind === 'blocked' || verdict.kind === 'blocked-db-change') {
+    // No coverage passed here: the implementer never reached DONE, so there
+    // is no self-report to summarize — a 0/N would misreport "made zero
+    // progress" when the truth is just "no self-report exists yet".
     try {
       postBlockedComment(
         chosen.id,
@@ -155,7 +173,6 @@ async function runIssue(config, byId, chosen) {
         `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
       );
     }
-    removeRunDirIfExists(runDir);
     return {
       status: 'blocked',
       reason: verdict.reason,
@@ -185,13 +202,17 @@ async function runIssue(config, byId, chosen) {
     const delRalph = applyDelRalphMarkersIfAny(runDir, diff);
     if (delRalph.blockedReason) {
       try {
-        postBlockedComment(chosen.id, delRalph.blockedReason, false);
+        postBlockedComment(
+          chosen.id,
+          delRalph.blockedReason,
+          false,
+          coverageFrom(agentResult.output)
+        );
       } catch (err) {
         console.log(
           `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
         );
       }
-      removeRunDirIfExists(runDir);
       return { status: 'blocked', reason: delRalph.blockedReason };
     }
     if (delRalph.applied) diff = gitPorcelainStatus({ cwd: runDir });
@@ -252,13 +273,17 @@ async function runIssue(config, byId, chosen) {
           ? 'Self-review (Ralph loop code-review pass) did not return a clear PASS/FAIL verdict — treating as blocked out of caution.'
           : `Self-review (Ralph loop code-review pass) still found a real issue after ${reviewAttempt} fix attempt(s): ${reviewVerdict.reason}`;
         try {
-          postBlockedComment(chosen.id, reason, false);
+          postBlockedComment(
+            chosen.id,
+            reason,
+            false,
+            coverageFrom(finalOutput)
+          );
         } catch (err) {
           console.log(
             `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
           );
         }
-        removeRunDirIfExists(runDir);
         return { status: 'review_blocked', reason };
       }
 
@@ -291,14 +316,14 @@ async function runIssue(config, byId, chosen) {
           postBlockedComment(
             chosen.id,
             fixVerdict.reason,
-            fixVerdict.kind === 'blocked-db-change'
+            fixVerdict.kind === 'blocked-db-change',
+            coverageFrom(finalOutput)
           );
         } catch (err) {
           console.log(
             `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
           );
         }
-        removeRunDirIfExists(runDir);
         return {
           status: 'blocked',
           reason: fixVerdict.reason,
@@ -331,14 +356,21 @@ async function runIssue(config, byId, chosen) {
       {
         const delRalph = applyDelRalphMarkersIfAny(runDir, diff);
         if (delRalph.blockedReason) {
+          // Uses fixAgentResult.output, not finalOutput: finalOutput is only
+          // reassigned a few lines below (after this check passes), so at
+          // this point it still holds the PREVIOUS iteration's self-report.
           try {
-            postBlockedComment(chosen.id, delRalph.blockedReason, false);
+            postBlockedComment(
+              chosen.id,
+              delRalph.blockedReason,
+              false,
+              coverageFrom(fixAgentResult.output)
+            );
           } catch (err) {
             console.log(
               `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
             );
           }
-          removeRunDirIfExists(runDir);
           return { status: 'blocked', reason: delRalph.blockedReason };
         }
         if (delRalph.applied) diff = gitPorcelainStatus({ cwd: runDir });
@@ -413,13 +445,17 @@ async function runIssue(config, byId, chosen) {
           ? 'Post-self-review code-review pass (Ralph loop, code-review skill) did not return a clear PASS/FAIL verdict — treating as blocked out of caution.'
           : `Code-review pass (Ralph loop, code-review skill) still found a real issue after ${codeReviewAttempt} fix attempt(s): ${codeReviewVerdict.reason}`;
         try {
-          postBlockedComment(chosen.id, reason, false);
+          postBlockedComment(
+            chosen.id,
+            reason,
+            false,
+            coverageFrom(finalOutput)
+          );
         } catch (err) {
           console.log(
             `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
           );
         }
-        removeRunDirIfExists(runDir);
         return { status: 'code_review_blocked', reason };
       }
 
@@ -458,14 +494,14 @@ async function runIssue(config, byId, chosen) {
           postBlockedComment(
             chosen.id,
             codeReviewFixVerdict.reason,
-            codeReviewFixVerdict.kind === 'blocked-db-change'
+            codeReviewFixVerdict.kind === 'blocked-db-change',
+            coverageFrom(finalOutput)
           );
         } catch (err) {
           console.log(
             `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
           );
         }
-        removeRunDirIfExists(runDir);
         return {
           status: 'blocked',
           reason: codeReviewFixVerdict.reason,
@@ -493,14 +529,21 @@ async function runIssue(config, byId, chosen) {
       {
         const delRalph = applyDelRalphMarkersIfAny(runDir, diff);
         if (delRalph.blockedReason) {
+          // Same reasoning as the self-review fix loop's own delRalph check:
+          // finalOutput is not reassigned yet at this point, so the fresh
+          // self-report lives in codeReviewFixAgentResult.output instead.
           try {
-            postBlockedComment(chosen.id, delRalph.blockedReason, false);
+            postBlockedComment(
+              chosen.id,
+              delRalph.blockedReason,
+              false,
+              coverageFrom(codeReviewFixAgentResult.output)
+            );
           } catch (err) {
             console.log(
               `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
             );
           }
-          removeRunDirIfExists(runDir);
           return { status: 'blocked', reason: delRalph.blockedReason };
         }
         if (delRalph.applied) diff = gitPorcelainStatus({ cwd: runDir });
@@ -543,13 +586,12 @@ async function runIssue(config, byId, chosen) {
     if (!lockfileSync.ok) {
       const reason = `Не удалось синхронизировать package-lock.json после изменения package.json: ${lockfileSync.error}`;
       try {
-        postBlockedComment(chosen.id, reason, false);
+        postBlockedComment(chosen.id, reason, false, coverageFrom(finalOutput));
       } catch (err) {
         console.log(
           `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
         );
       }
-      removeRunDirIfExists(runDir);
       return { status: 'blocked', reason };
     }
 
@@ -557,13 +599,12 @@ async function runIssue(config, byId, chosen) {
     if (!finalVerify.ok) {
       const reason = `Финальная проверка npm run check/build перед коммитом не прошла: ${finalVerify.error}`;
       try {
-        postBlockedComment(chosen.id, reason, false);
+        postBlockedComment(chosen.id, reason, false, coverageFrom(finalOutput));
       } catch (err) {
         console.log(
           `⚠️ Не удалось записать BLOCKED в issue #${chosen.id}: ${err.message}`
         );
       }
-      removeRunDirIfExists(runDir);
       return { status: 'blocked', reason };
     }
   }
