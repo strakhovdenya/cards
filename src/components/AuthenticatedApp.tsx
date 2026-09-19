@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { SwitchTransition } from 'react-transition-group';
 import {
   AppBar,
   Toolbar,
@@ -24,6 +25,9 @@ import {
   TextField,
   Button,
   DialogActions,
+  Fade,
+  Collapse,
+  Chip,
 } from '@mui/material';
 import { CenteredColumn } from './layout/CenteredColumn';
 import {
@@ -61,6 +65,14 @@ type ViewMode = 'viewer' | 'editor' | 'invites' | 'verbs';
 type MainViewMode = 'study' | 'edit';
 type StudyMode = 'cards' | 'verbs' | 'time';
 type VerbMode = 'view' | 'training' | 'study';
+
+const headerChipSx = {
+  mr: 1,
+  color: 'inherit',
+  borderColor: 'rgba(255,255,255,0.4)',
+  height: 24,
+  '& .MuiChip-label': { px: 0.75 },
+} as const;
 
 export function AuthenticatedApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
@@ -192,6 +204,27 @@ export function AuthenticatedApp() {
     );
   }
 
+  const titleText =
+    viewMode === 'invites'
+      ? 'Приглашения'
+      : mainViewMode === 'study'
+        ? studyMode === 'verbs'
+          ? verbMode === 'training'
+            ? 'Тренировка глаголов'
+            : 'Изучение глаголов'
+          : studyMode === 'time'
+            ? 'Изучение времени'
+            : wordsMode === 'articles'
+              ? 'Артикли'
+              : 'German Word Cards'
+        : mainViewMode === 'edit'
+          ? viewMode === 'verbs'
+            ? 'Редактирование глаголов'
+            : viewMode === 'editor'
+              ? 'Редактирование карточек'
+              : 'German Word Cards'
+          : 'German Word Cards';
+
   return (
     <Box
       sx={{
@@ -202,65 +235,79 @@ export function AuthenticatedApp() {
       }}
     >
       {/* Заголовок с меню пользователя */}
-      <AppBar position="static" elevation={0}>
+      <AppBar
+        position="static"
+        elevation={0}
+        sx={(theme) => ({
+          background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+        })}
+      >
         <Toolbar disableGutters sx={{ px: 2 }}>
           <CenteredColumn
             sx={{ display: 'flex', alignItems: 'center', width: '100%' }}
           >
-            {viewMode === 'invites' && (
+            <Collapse
+              in={viewMode === 'invites'}
+              orientation="horizontal"
+              timeout={250}
+              unmountOnExit
+            >
               <IconButton
                 color="inherit"
+                disabled={viewMode !== 'invites'}
                 onClick={() => {
                   setViewMode('viewer');
                 }}
-                sx={{ mr: 2 }}
+                sx={{
+                  mr: 1,
+                  pointerEvents: viewMode === 'invites' ? 'auto' : 'none',
+                }}
               >
                 <ArrowBack />
               </IconButton>
-            )}
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              {viewMode === 'invites'
-                ? 'Приглашения'
-                : mainViewMode === 'study'
-                  ? studyMode === 'verbs'
-                    ? verbMode === 'training'
-                      ? 'Тренировка глаголов'
-                      : 'Изучение глаголов'
-                    : studyMode === 'time'
-                      ? 'Изучение времени'
-                      : wordsMode === 'articles'
-                        ? 'Артикли'
-                        : 'German Word Cards'
-                  : mainViewMode === 'edit'
-                    ? viewMode === 'verbs'
-                      ? 'Редактирование глаголов'
-                      : viewMode === 'editor'
-                        ? 'Редактирование карточек'
-                        : 'German Word Cards'
-                    : 'German Word Cards'}
-            </Typography>
+            </Collapse>
+            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+              <SwitchTransition mode="out-in">
+                <Fade key={titleText} timeout={200}>
+                  <Typography variant="h6" component="div" noWrap>
+                    {titleText}
+                  </Typography>
+                </Fade>
+              </SwitchTransition>
+            </Box>
             {mainViewMode === 'study' && (
-              <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-                {studyMode === 'cards'
-                  ? 'Карточки'
-                  : studyMode === 'time'
-                    ? 'Время'
-                    : verbMode === 'training'
-                      ? 'Тренировка'
-                      : 'Просмотр'}
-              </Typography>
+              <Chip
+                label={
+                  studyMode === 'cards'
+                    ? 'Карточки'
+                    : studyMode === 'time'
+                      ? 'Время'
+                      : verbMode === 'training'
+                        ? 'Тренировка'
+                        : 'Просмотр'
+                }
+                size="small"
+                variant="outlined"
+                sx={headerChipSx}
+              />
             )}
             {mainViewMode === 'edit' && (
-              <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-                {viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
-              </Typography>
+              <Chip
+                label={viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
+                size="small"
+                variant="outlined"
+                sx={headerChipSx}
+              />
             )}
             {mainViewMode === 'study' &&
               studyMode === 'cards' &&
               cardsCount > 0 && (
-                <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-                  {cardsCount} карточек
-                </Typography>
+                <Chip
+                  label={`${cardsCount} карточек`}
+                  size="small"
+                  variant="outlined"
+                  sx={headerChipSx}
+                />
               )}
 
             {/* Информация о пользователе */}
