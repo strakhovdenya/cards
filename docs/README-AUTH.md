@@ -108,7 +108,8 @@ https://your-app.com/auth/signup?invite=INVITE_CODE
 
 ### Компоненты
 - **`AuthenticatedApp`** - проверяет аутентификацию при загрузке
-- **`ClientApp`** - предотвращает ошибки гидратации
+- Гидратацию обрабатывает `ThemeProvider` (`useServerInsertedHTML` для Emotion SSR) -
+  отдельный компонент `ClientApp` для этого не нужен и удалён как мёртвый код (issue #6)
 
 ## Безопасность
 
