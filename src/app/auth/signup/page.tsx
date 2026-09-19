@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { Box, Container, Typography, Alert } from '@mui/material';
+import { Box, Typography, Alert } from '@mui/material';
 import { SignUpForm } from '@/components/auth/SignUpForm';
 import { useSearchParams } from 'next/navigation';
+import { CenteredColumn } from '@/components/layout/CenteredColumn';
 
 function SignUpPageContent() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -25,7 +26,7 @@ function SignUpPageContent() {
         py: 3,
       }}
     >
-      <Container maxWidth="sm">
+      <CenteredColumn sx={{ px: 2 }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
             German Word Cards
@@ -42,7 +43,7 @@ function SignUpPageContent() {
         )}
 
         <SignUpForm initialInviteCode={inviteCode} />
-      </Container>
+      </CenteredColumn>
     </Box>
   );
 }
@@ -60,7 +61,7 @@ export default function SignUpPage() {
             bgcolor: 'background.default',
           }}
         >
-          <Container maxWidth="sm">
+          <CenteredColumn sx={{ px: 2 }}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" component="h1" gutterBottom>
                 German Word Cards
@@ -69,7 +70,7 @@ export default function SignUpPage() {
                 Загрузка...
               </Typography>
             </Box>
-          </Container>
+          </CenteredColumn>
         </Box>
       }
     >

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { Box, Container, Typography, Alert } from '@mui/material';
+import { Box, Typography, Alert } from '@mui/material';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { checkIfAdminsExist } from '@/lib/auth';
 import { useSearchParams } from 'next/navigation';
+import { CenteredColumn } from '@/components/layout/CenteredColumn';
 
 function AuthPageContent() {
   const [showSignupLink, setShowSignupLink] = useState(false);
@@ -41,7 +42,7 @@ function AuthPageContent() {
         py: 3,
       }}
     >
-      <Container maxWidth="sm">
+      <CenteredColumn sx={{ px: 2 }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
             German Word Cards
@@ -64,7 +65,7 @@ function AuthPageContent() {
         )}
 
         <AuthForm showSignupLink={showSignupLink && !loading} />
-      </Container>
+      </CenteredColumn>
     </Box>
   );
 }
@@ -82,7 +83,7 @@ export default function AuthPage() {
             bgcolor: 'background.default',
           }}
         >
-          <Container maxWidth="sm">
+          <CenteredColumn sx={{ px: 2 }}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h4" component="h1" gutterBottom>
                 German Word Cards
@@ -91,7 +92,7 @@ export default function AuthPage() {
                 Загрузка...
               </Typography>
             </Box>
-          </Container>
+          </CenteredColumn>
         </Box>
       }
     >

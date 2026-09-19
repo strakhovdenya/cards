@@ -6,11 +6,11 @@ import {
   Alert,
   Box,
   Button,
-  Container,
   Paper,
   TextField,
   Typography,
 } from '@mui/material';
+import { CenteredColumn } from '@/components/layout/CenteredColumn';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { updatePassword } from '@/lib/auth';
 
@@ -93,7 +93,7 @@ export default function ResetPasswordPage() {
         py: 3,
       }}
     >
-      <Container maxWidth="sm">
+      <CenteredColumn sx={{ px: 2 }}>
         <Paper sx={{ p: 4 }}>
           <Typography variant="h5" component="h1" gutterBottom>
             Сброс пароля
@@ -157,7 +157,7 @@ export default function ResetPasswordPage() {
             </Button>
           </form>
         </Paper>
-      </Container>
+      </CenteredColumn>
     </Box>
   );
 }

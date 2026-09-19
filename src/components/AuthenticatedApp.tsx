@@ -7,7 +7,6 @@ import {
   Toolbar,
   Typography,
   Box,
-  Container,
   CircularProgress,
   Alert,
   IconButton,
@@ -26,6 +25,7 @@ import {
   Button,
   DialogActions,
 } from '@mui/material';
+import { CenteredColumn } from './layout/CenteredColumn';
 import {
   ArrowBack,
   School,
@@ -203,72 +203,76 @@ export function AuthenticatedApp() {
     >
       {/* Заголовок с меню пользователя */}
       <AppBar position="static" elevation={0}>
-        <Toolbar>
-          {viewMode === 'invites' && (
-            <IconButton
-              color="inherit"
-              onClick={() => {
-                setViewMode('viewer');
-              }}
-              sx={{ mr: 2 }}
-            >
-              <ArrowBack />
-            </IconButton>
-          )}
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {viewMode === 'invites'
-              ? 'Приглашения'
-              : mainViewMode === 'study'
-                ? studyMode === 'verbs'
-                  ? verbMode === 'training'
-                    ? 'Тренировка глаголов'
-                    : 'Изучение глаголов'
-                  : studyMode === 'time'
-                    ? 'Изучение времени'
-                    : wordsMode === 'articles'
-                      ? 'Артикли'
-                      : 'German Word Cards'
-                : mainViewMode === 'edit'
-                  ? viewMode === 'verbs'
-                    ? 'Редактирование глаголов'
-                    : viewMode === 'editor'
-                      ? 'Редактирование карточек'
-                      : 'German Word Cards'
-                  : 'German Word Cards'}
-          </Typography>
-          {mainViewMode === 'study' && (
-            <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-              {studyMode === 'cards'
-                ? 'Карточки'
-                : studyMode === 'time'
-                  ? 'Время'
-                  : verbMode === 'training'
-                    ? 'Тренировка'
-                    : 'Просмотр'}
+        <Toolbar disableGutters sx={{ px: 2 }}>
+          <CenteredColumn
+            sx={{ display: 'flex', alignItems: 'center', width: '100%' }}
+          >
+            {viewMode === 'invites' && (
+              <IconButton
+                color="inherit"
+                onClick={() => {
+                  setViewMode('viewer');
+                }}
+                sx={{ mr: 2 }}
+              >
+                <ArrowBack />
+              </IconButton>
+            )}
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              {viewMode === 'invites'
+                ? 'Приглашения'
+                : mainViewMode === 'study'
+                  ? studyMode === 'verbs'
+                    ? verbMode === 'training'
+                      ? 'Тренировка глаголов'
+                      : 'Изучение глаголов'
+                    : studyMode === 'time'
+                      ? 'Изучение времени'
+                      : wordsMode === 'articles'
+                        ? 'Артикли'
+                        : 'German Word Cards'
+                  : mainViewMode === 'edit'
+                    ? viewMode === 'verbs'
+                      ? 'Редактирование глаголов'
+                      : viewMode === 'editor'
+                        ? 'Редактирование карточек'
+                        : 'German Word Cards'
+                    : 'German Word Cards'}
             </Typography>
-          )}
-          {mainViewMode === 'edit' && (
-            <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-              {viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
-            </Typography>
-          )}
-          {mainViewMode === 'study' &&
-            studyMode === 'cards' &&
-            cardsCount > 0 && (
+            {mainViewMode === 'study' && (
               <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
-                {cardsCount} карточек
+                {studyMode === 'cards'
+                  ? 'Карточки'
+                  : studyMode === 'time'
+                    ? 'Время'
+                    : verbMode === 'training'
+                      ? 'Тренировка'
+                      : 'Просмотр'}
               </Typography>
             )}
+            {mainViewMode === 'edit' && (
+              <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
+                {viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
+              </Typography>
+            )}
+            {mainViewMode === 'study' &&
+              studyMode === 'cards' &&
+              cardsCount > 0 && (
+                <Typography variant="body2" color="inherit" sx={{ mr: 2 }}>
+                  {cardsCount} карточек
+                </Typography>
+              )}
 
-          {/* Информация о пользователе */}
-          <UserMenu
-            profile={profile}
-            userIsAdmin={userIsAdmin}
-            onSignOut={handleSignOut}
-            onInvitesClick={() => {
-              setViewMode('invites');
-            }}
-          />
+            {/* Информация о пользователе */}
+            <UserMenu
+              profile={profile}
+              userIsAdmin={userIsAdmin}
+              onSignOut={handleSignOut}
+              onInvitesClick={() => {
+                setViewMode('invites');
+              }}
+            />
+          </CenteredColumn>
         </Toolbar>
       </AppBar>
 
@@ -663,7 +667,7 @@ export function AuthenticatedApp() {
         }}
       >
         {error && (
-          <Container maxWidth="lg" sx={{ pt: 2 }}>
+          <CenteredColumn sx={{ pt: 2, px: 2 }}>
             <Alert
               severity="error"
               sx={{ mb: 2 }}
@@ -673,15 +677,15 @@ export function AuthenticatedApp() {
             >
               {error}
             </Alert>
-          </Container>
+          </CenteredColumn>
         )}
 
         {viewMode === 'invites' ? (
-          <Container maxWidth="lg" sx={{ py: 2 }}>
+          <CenteredColumn sx={{ py: 2, px: 2 }}>
             <InviteManager userId={user.id} />
-          </Container>
+          </CenteredColumn>
         ) : mainViewMode === 'study' ? (
-          <Container maxWidth="lg" sx={{ py: 2 }}>
+          <CenteredColumn sx={{ py: 2, px: 2 }}>
             {/* Контент в зависимости от выбранного режима */}
             {studyMode === 'verbs' ? (
               verbMode === 'training' ? (
@@ -713,9 +717,9 @@ export function AuthenticatedApp() {
                 }}
               />
             )}
-          </Container>
+          </CenteredColumn>
         ) : mainViewMode === 'edit' ? (
-          <Container maxWidth="lg" sx={{ py: 2 }}>
+          <CenteredColumn sx={{ py: 2, px: 2 }}>
             {viewMode === 'verbs' ? (
               <VerbEditor />
             ) : viewMode === 'editor' ? (
@@ -743,7 +747,7 @@ export function AuthenticatedApp() {
                 }}
               />
             )}
-          </Container>
+          </CenteredColumn>
         ) : (
           <App
             showNavigation={true}
@@ -772,62 +776,68 @@ export function AuthenticatedApp() {
           }}
           elevation={3}
         >
-          <BottomNavigation
-            value={
-              mainViewMode === 'edit' && viewMode === 'viewer'
-                ? 'study'
-                : mainViewMode
-            }
-            onChange={(event, newValue) => {
-              if (newValue === 'study') {
-                handleStudyClick();
-              } else if (newValue === 'edit') {
-                handleEditClick();
-              } else {
-                setMainViewMode(newValue as MainViewMode);
+          <CenteredColumn>
+            <BottomNavigation
+              value={
+                mainViewMode === 'edit' && viewMode === 'viewer'
+                  ? 'study'
+                  : mainViewMode
               }
-            }}
-            showLabels
-          >
-            <BottomNavigationAction
-              label={
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <SchoolIcon />
-                    <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
+              onChange={(event, newValue) => {
+                if (newValue === 'study') {
+                  handleStudyClick();
+                } else if (newValue === 'edit') {
+                  handleEditClick();
+                } else {
+                  setMainViewMode(newValue as MainViewMode);
+                }
+              }}
+              showLabels
+            >
+              <BottomNavigationAction
+                label={
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                    >
+                      <SchoolIcon />
+                      <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
+                    </Box>
+                    <Typography variant="caption">Изучение</Typography>
                   </Box>
-                  <Typography variant="caption">Изучение</Typography>
-                </Box>
-              }
-              value="study"
-              icon={<></>}
-            />
-            <BottomNavigationAction
-              label={
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Edit />
-                    <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
+                }
+                value="study"
+                icon={<></>}
+              />
+              <BottomNavigationAction
+                label={
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                    >
+                      <Edit />
+                      <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
+                    </Box>
+                    <Typography variant="caption">Редактирование</Typography>
                   </Box>
-                  <Typography variant="caption">Редактирование</Typography>
-                </Box>
-              }
-              value="edit"
-              icon={<></>}
-            />
-          </BottomNavigation>
+                }
+                value="edit"
+                icon={<></>}
+              />
+            </BottomNavigation>
+          </CenteredColumn>
         </Paper>
       )}
     </Box>
