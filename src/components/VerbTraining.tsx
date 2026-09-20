@@ -53,12 +53,10 @@ const ConjugationDisplay = styled(Box)(({ theme }) => ({
 }));
 
 interface VerbTrainingProps {
-  onProgressChange?: (attempt: number, person: string) => void;
+  // Компонент больше не принимает onBack, так как навигация происходит через меню
 }
 
-export const VerbTraining: React.FC<VerbTrainingProps> = ({
-  onProgressChange,
-}) => {
+export const VerbTraining: React.FC<VerbTrainingProps> = () => {
   const [currentVerb, setCurrentVerb] = useState<Verb | null>(null);
   const [currentPerson, setCurrentPerson] = useState<string | null>(null);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
@@ -97,12 +95,6 @@ export const VerbTraining: React.FC<VerbTrainingProps> = ({
     // Сброс статистики при старте тренировки
     setStats({ total: 0, correct: 0, incorrect: 0 });
   }, []);
-
-  useEffect(() => {
-    if (currentPerson) {
-      onProgressChange?.(stats.total + 1, currentPerson);
-    }
-  }, [stats.total, currentPerson, onProgressChange]);
 
   const handleShowAnswer = () => {
     setIsAnswerVisible(true);

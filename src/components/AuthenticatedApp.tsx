@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { SwitchTransition } from 'react-transition-group';
 import {
   AppBar,
@@ -83,10 +83,6 @@ export function AuthenticatedApp() {
   const [isBulkNounImportOpen, setIsBulkNounImportOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
   const [isCardImportSubmenuOpen, setIsCardImportSubmenuOpen] = useState(false);
-  const [verbTrainingProgress, setVerbTrainingProgress] = useState<{
-    attempt: number;
-    person: string;
-  } | null>(null);
 
   // Используем новые хуки
   const {
@@ -165,20 +161,10 @@ export function AuthenticatedApp() {
     setStudyMode('verbs');
     setIsVerbModeDialogOpen(false);
 
-    if (mode === 'view' || mode === 'training') {
+    if (mode === 'view') {
       void loadVerbs();
     }
-    if (mode === 'training') {
-      setVerbTrainingProgress(null);
-    }
   };
-
-  const handleVerbTrainingProgress = useCallback(
-    (attempt: number, person: string) => {
-      setVerbTrainingProgress({ attempt, person });
-    },
-    []
-  );
 
   if (loading) {
     return (
@@ -210,49 +196,24 @@ export function AuthenticatedApp() {
     );
   }
 
-  const titleText =
+  const titleText = 'German Word Cards';
+
+  const subtitleText =
     viewMode === 'invites'
       ? 'Приглашения'
       : mainViewMode === 'study'
         ? studyMode === 'verbs'
-          ? verbMode === 'training'
-            ? 'Тренировка глаголов'
-            : 'Изучение глаголов'
+          ? 'Глаголы'
           : studyMode === 'time'
-            ? 'Изучение времени'
-            : wordsMode === 'articles'
-              ? 'Артикли'
-              : 'German Word Cards'
-        : mainViewMode === 'edit'
-          ? viewMode === 'verbs'
-            ? 'Редактирование глаголов'
-            : viewMode === 'editor'
-              ? 'Редактирование карточек'
-              : 'German Word Cards'
-          : 'German Word Cards';
-
-  const subtitleText =
-    viewMode === 'invites'
-      ? null
-      : mainViewMode === 'study'
-        ? studyMode === 'verbs'
-          ? verbMode === 'training'
-            ? verbTrainingProgress
-              ? `${verbTrainingProgress.attempt} из ${verbs.length} · ${verbTrainingProgress.person}`
-              : null
-            : verbMode === 'study'
-              ? 'Изучение инфинитивов · глаголы'
-              : 'Просмотр · глаголы'
-          : studyMode === 'time'
-            ? 'Тренировка временных форм'
+            ? 'Времена'
             : wordsMode === 'articles'
               ? 'Артикли'
               : 'Существительные'
         : mainViewMode === 'edit'
           ? viewMode === 'verbs'
-            ? 'Редактирование · глаголы'
+            ? 'Глаголы'
             : viewMode === 'editor'
-              ? 'Редактирование · карточки'
+              ? 'Существительные'
               : null
           : null;
 
@@ -318,7 +279,7 @@ export function AuthenticatedApp() {
             </Box>
             <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
               <SwitchTransition mode="out-in">
-                <Fade key={titleText} timeout={200}>
+                <Fade key={subtitleText} timeout={200}>
                   <Box>
                     <Typography
                       variant="h6"
@@ -769,7 +730,7 @@ export function AuthenticatedApp() {
             {/* Контент в зависимости от выбранного режима */}
             {studyMode === 'verbs' ? (
               verbMode === 'training' ? (
-                <VerbTraining onProgressChange={handleVerbTrainingProgress} />
+                <VerbTraining />
               ) : verbMode === 'study' ? (
                 <VerbStudy />
               ) : (
