@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { SwitchTransition } from 'react-transition-group';
 import {
   AppBar,
@@ -27,11 +27,11 @@ import {
   DialogActions,
   Fade,
   Collapse,
-  Chip,
 } from '@mui/material';
 import { CenteredColumn } from './layout/CenteredColumn';
 import {
   ArrowBack,
+  AutoStories,
   School,
   Style,
   Edit,
@@ -66,14 +66,6 @@ type MainViewMode = 'study' | 'edit';
 type StudyMode = 'cards' | 'verbs' | 'time';
 type VerbMode = 'view' | 'training' | 'study';
 
-const headerChipSx = {
-  mr: 1,
-  color: 'inherit',
-  borderColor: 'rgba(255,255,255,0.4)',
-  height: 24,
-  '& .MuiChip-label': { px: 0.75 },
-} as const;
-
 export function AuthenticatedApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
   const [mainViewMode, setMainViewMode] = useState<MainViewMode>('study');
@@ -91,6 +83,10 @@ export function AuthenticatedApp() {
   const [isBulkNounImportOpen, setIsBulkNounImportOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
   const [isCardImportSubmenuOpen, setIsCardImportSubmenuOpen] = useState(false);
+  const [verbTrainingProgress, setVerbTrainingProgress] = useState<{
+    attempt: number;
+    person: string;
+  } | null>(null);
 
   // Используем новые хуки
   const {
@@ -105,7 +101,6 @@ export function AuthenticatedApp() {
   const {
     cards,
     availableTags,
-    cardsCount,
     loadCards,
     loadTags,
     handleAddCard,
@@ -169,10 +164,20 @@ export function AuthenticatedApp() {
     setStudyMode('verbs');
     setIsVerbModeDialogOpen(false);
 
-    if (mode === 'view') {
+    if (mode === 'view' || mode === 'training') {
       void loadVerbs();
     }
+    if (mode === 'training') {
+      setVerbTrainingProgress(null);
+    }
   };
+
+  const handleVerbTrainingProgress = useCallback(
+    (attempt: number, person: string) => {
+      setVerbTrainingProgress({ attempt, person });
+    },
+    []
+  );
 
   if (loading) {
     return (
@@ -225,6 +230,31 @@ export function AuthenticatedApp() {
               : 'German Word Cards'
           : 'German Word Cards';
 
+  const subtitleText =
+    viewMode === 'invites'
+      ? null
+      : mainViewMode === 'study'
+        ? studyMode === 'verbs'
+          ? verbMode === 'training'
+            ? verbTrainingProgress
+              ? `${verbTrainingProgress.attempt} из ${verbs.length} · ${verbTrainingProgress.person}`
+              : null
+            : verbMode === 'study'
+              ? 'Изучение инфинитивов · глаголы'
+              : 'Просмотр · глаголы'
+          : studyMode === 'time'
+            ? 'Тренировка временных форм'
+            : wordsMode === 'articles'
+              ? 'Артикли · DE → RU'
+              : 'Карточки · DE → RU'
+        : mainViewMode === 'edit'
+          ? viewMode === 'verbs'
+            ? 'Редактирование · глаголы'
+            : viewMode === 'editor'
+              ? 'Редактирование · карточки'
+              : null
+          : null;
+
   return (
     <Box
       sx={{
@@ -242,9 +272,14 @@ export function AuthenticatedApp() {
           background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
         })}
       >
-        <Toolbar disableGutters sx={{ px: 2 }}>
+        <Toolbar disableGutters sx={{ px: 2, py: 1 }}>
           <CenteredColumn
-            sx={{ display: 'flex', alignItems: 'center', width: '100%' }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              gap: 1.5,
+            }}
           >
             <Collapse
               in={viewMode === 'invites'}
@@ -266,49 +301,46 @@ export function AuthenticatedApp() {
                 <ArrowBack />
               </IconButton>
             </Collapse>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                borderRadius: 2,
+                bgcolor: 'rgba(255,255,255,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AutoStories fontSize="small" />
+            </Box>
             <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
               <SwitchTransition mode="out-in">
                 <Fade key={titleText} timeout={200}>
-                  <Typography variant="h6" component="div" noWrap>
-                    {titleText}
-                  </Typography>
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      component="div"
+                      noWrap
+                      sx={{ fontWeight: 700, lineHeight: 1.25 }}
+                    >
+                      {titleText}
+                    </Typography>
+                    {subtitleText && (
+                      <Typography
+                        variant="caption"
+                        component="div"
+                        noWrap
+                        sx={{ opacity: 0.85, lineHeight: 1.25 }}
+                      >
+                        {subtitleText}
+                      </Typography>
+                    )}
+                  </Box>
                 </Fade>
               </SwitchTransition>
             </Box>
-            {mainViewMode === 'study' && (
-              <Chip
-                label={
-                  studyMode === 'cards'
-                    ? 'Карточки'
-                    : studyMode === 'time'
-                      ? 'Время'
-                      : verbMode === 'training'
-                        ? 'Тренировка'
-                        : 'Просмотр'
-                }
-                size="small"
-                variant="outlined"
-                sx={headerChipSx}
-              />
-            )}
-            {mainViewMode === 'edit' && (
-              <Chip
-                label={viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
-                size="small"
-                variant="outlined"
-                sx={headerChipSx}
-              />
-            )}
-            {mainViewMode === 'study' &&
-              studyMode === 'cards' &&
-              cardsCount > 0 && (
-                <Chip
-                  label={`${cardsCount} карточек`}
-                  size="small"
-                  variant="outlined"
-                  sx={headerChipSx}
-                />
-              )}
 
             {/* Информация о пользователе */}
             <UserMenu
@@ -736,7 +768,7 @@ export function AuthenticatedApp() {
             {/* Контент в зависимости от выбранного режима */}
             {studyMode === 'verbs' ? (
               verbMode === 'training' ? (
-                <VerbTraining />
+                <VerbTraining onProgressChange={handleVerbTrainingProgress} />
               ) : verbMode === 'study' ? (
                 <VerbStudy />
               ) : (
