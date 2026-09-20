@@ -27,11 +27,11 @@ import {
   DialogActions,
   Fade,
   Collapse,
-  Chip,
 } from '@mui/material';
 import { CenteredColumn } from './layout/CenteredColumn';
 import {
   ArrowBack,
+  AutoStories,
   School,
   Style,
   Edit,
@@ -66,14 +66,6 @@ type MainViewMode = 'study' | 'edit';
 type StudyMode = 'cards' | 'verbs' | 'time';
 type VerbMode = 'view' | 'training' | 'study';
 
-const headerChipSx = {
-  mr: 1,
-  color: 'inherit',
-  borderColor: 'rgba(255,255,255,0.4)',
-  height: 24,
-  '& .MuiChip-label': { px: 0.75 },
-} as const;
-
 export function AuthenticatedApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
   const [mainViewMode, setMainViewMode] = useState<MainViewMode>('study');
@@ -105,7 +97,6 @@ export function AuthenticatedApp() {
   const {
     cards,
     availableTags,
-    cardsCount,
     loadCards,
     loadTags,
     handleAddCard,
@@ -137,6 +128,7 @@ export function AuthenticatedApp() {
   };
 
   const handleStudyModeSelect = (mode: 'cards' | 'verbs' | 'time') => {
+    setMainViewMode('study');
     setStudyMode(mode);
     setIsStudyDialogOpen(false);
 
@@ -204,26 +196,26 @@ export function AuthenticatedApp() {
     );
   }
 
-  const titleText =
+  const titleText = 'German Word Cards';
+
+  const subtitleText =
     viewMode === 'invites'
       ? 'Приглашения'
       : mainViewMode === 'study'
         ? studyMode === 'verbs'
-          ? verbMode === 'training'
-            ? 'Тренировка глаголов'
-            : 'Изучение глаголов'
+          ? 'Глаголы'
           : studyMode === 'time'
-            ? 'Изучение времени'
+            ? 'Времена'
             : wordsMode === 'articles'
               ? 'Артикли'
-              : 'German Word Cards'
+              : 'Существительные'
         : mainViewMode === 'edit'
           ? viewMode === 'verbs'
-            ? 'Редактирование глаголов'
+            ? 'Глаголы'
             : viewMode === 'editor'
-              ? 'Редактирование карточек'
-              : 'German Word Cards'
-          : 'German Word Cards';
+              ? 'Существительные'
+              : null
+          : null;
 
   return (
     <Box
@@ -242,9 +234,14 @@ export function AuthenticatedApp() {
           background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
         })}
       >
-        <Toolbar disableGutters sx={{ px: 2 }}>
+        <Toolbar disableGutters sx={{ px: 2, py: 1 }}>
           <CenteredColumn
-            sx={{ display: 'flex', alignItems: 'center', width: '100%' }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              gap: 1.5,
+            }}
           >
             <Collapse
               in={viewMode === 'invites'}
@@ -266,49 +263,46 @@ export function AuthenticatedApp() {
                 <ArrowBack />
               </IconButton>
             </Collapse>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                borderRadius: 2,
+                bgcolor: 'rgba(255,255,255,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AutoStories fontSize="small" />
+            </Box>
             <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
               <SwitchTransition mode="out-in">
-                <Fade key={titleText} timeout={200}>
-                  <Typography variant="h6" component="div" noWrap>
-                    {titleText}
-                  </Typography>
+                <Fade key={subtitleText} timeout={200}>
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      component="div"
+                      noWrap
+                      sx={{ fontWeight: 700, lineHeight: 1.25 }}
+                    >
+                      {titleText}
+                    </Typography>
+                    {subtitleText && (
+                      <Typography
+                        variant="caption"
+                        component="div"
+                        noWrap
+                        sx={{ opacity: 0.85, lineHeight: 1.25 }}
+                      >
+                        {subtitleText}
+                      </Typography>
+                    )}
+                  </Box>
                 </Fade>
               </SwitchTransition>
             </Box>
-            {mainViewMode === 'study' && (
-              <Chip
-                label={
-                  studyMode === 'cards'
-                    ? 'Карточки'
-                    : studyMode === 'time'
-                      ? 'Время'
-                      : verbMode === 'training'
-                        ? 'Тренировка'
-                        : 'Просмотр'
-                }
-                size="small"
-                variant="outlined"
-                sx={headerChipSx}
-              />
-            )}
-            {mainViewMode === 'edit' && (
-              <Chip
-                label={viewMode === 'verbs' ? 'Глаголы' : 'Карточки'}
-                size="small"
-                variant="outlined"
-                sx={headerChipSx}
-              />
-            )}
-            {mainViewMode === 'study' &&
-              studyMode === 'cards' &&
-              cardsCount > 0 && (
-                <Chip
-                  label={`${cardsCount} карточек`}
-                  size="small"
-                  variant="outlined"
-                  sx={headerChipSx}
-                />
-              )}
 
             {/* Информация о пользователе */}
             <UserMenu
