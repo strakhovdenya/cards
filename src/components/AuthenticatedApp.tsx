@@ -132,6 +132,7 @@ export function AuthenticatedApp() {
   };
 
   const handleStudyModeSelect = (mode: 'cards' | 'verbs' | 'time') => {
+    setMainViewMode('study');
     setStudyMode(mode);
     setIsStudyDialogOpen(false);
 
@@ -245,8 +246,8 @@ export function AuthenticatedApp() {
           : studyMode === 'time'
             ? 'Тренировка временных форм'
             : wordsMode === 'articles'
-              ? 'Артикли · DE → RU'
-              : 'Карточки · DE → RU'
+              ? 'Артикли'
+              : 'Существительные'
         : mainViewMode === 'edit'
           ? viewMode === 'verbs'
             ? 'Редактирование · глаголы'
