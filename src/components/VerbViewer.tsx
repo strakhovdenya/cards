@@ -18,7 +18,14 @@ import {
   Add,
 } from '@mui/icons-material';
 import { VerbCard } from './VerbCard';
-import type { Verb } from '@/types';
+import type { Verb, VerbExamples } from '@/types';
+
+function hasExampleContent(examples: VerbExamples | undefined): boolean {
+  return (
+    Boolean(examples?.affirmativeSentence) ||
+    Boolean(examples?.questionSentence)
+  );
+}
 
 interface VerbViewerProps {
   verbs: Verb[];
@@ -162,29 +169,85 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
 
       {/* Карточка глагола */}
       {currentVerb && (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: { xs: 1, sm: 2 } }}>
           <VerbCard
-            verb={{
-              ...currentVerb,
-              examples: showExamplesImmediately
-                ? currentVerb.examples
-                : undefined,
-            }}
+            verb={currentVerb}
             isFlipped={isCardFlipped}
             onFlip={handleFlip}
           />
         </Box>
       )}
 
+      {/* Примеры предложений (утверждение/вопрос/краткий ответ) */}
+      {showExamplesImmediately && hasExampleContent(currentVerb?.examples) && (
+        <Box
+          sx={{
+            mb: { xs: 1, sm: 2 },
+            p: 2,
+            textAlign: 'left',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            backgroundColor: 'background.paper',
+          }}
+        >
+          {currentVerb?.examples?.affirmativeSentence && (
+            <>
+              <Typography variant="subtitle2" color="text.secondary">
+                Утвердительное
+              </Typography>
+              <Typography variant="body1">
+                {currentVerb.examples.affirmativeSentence}
+              </Typography>
+              {currentVerb.examples.affirmativeTranslation && (
+                <Typography variant="body2" color="text.secondary">
+                  {currentVerb.examples.affirmativeTranslation}
+                </Typography>
+              )}
+            </>
+          )}
+
+          {currentVerb?.examples?.questionSentence && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Вопрос
+              </Typography>
+              <Typography variant="body1">
+                {currentVerb.examples.questionSentence}
+              </Typography>
+              {currentVerb.examples.questionTranslation && (
+                <Typography variant="body2" color="text.secondary">
+                  {currentVerb.examples.questionTranslation}
+                </Typography>
+              )}
+              {currentVerb.examples.shortAnswer && (
+                <Typography variant="body1" sx={{ mt: 0.5 }}>
+                  {currentVerb.examples.shortAnswer}
+                </Typography>
+              )}
+              {currentVerb.examples.shortAnswerTranslation && (
+                <Typography variant="body2" color="text.secondary">
+                  {currentVerb.examples.shortAnswerTranslation}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Box>
+      )}
+
       {/* Подсказка */}
-      <Box sx={{ mb: 2, textAlign: 'center' }}>
+      <Box sx={{ mb: { xs: 1.5, sm: 2 }, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Нажмите на карточку для просмотра спряжений
         </Typography>
       </Box>
 
       {/* Кнопки управления - как в CardViewer */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        justifyContent="center"
+        sx={{ mb: { xs: 1, sm: 1.5 } }}
+      >
         <Button
           variant="outlined"
           onClick={handlePrevious}
@@ -216,7 +279,14 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
         </Button>
       </Stack>
 
-      <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
+      {/* Тумблер примеров и перемешивание - согласовано с рядом выше */}
+      <Stack
+        direction="row"
+        spacing={1.5}
+        justifyContent="center"
+        flexWrap="wrap"
+        sx={{ mb: { xs: 1, sm: 1.5 } }}
+      >
         <Button
           variant={showExamplesImmediately ? 'contained' : 'outlined'}
           onClick={() => {
@@ -228,10 +298,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
             ? 'Скрывать примеры'
             : 'Показывать примеры сразу'}
         </Button>
-      </Stack>
 
-      {/* Кнопка перемешивания - по центру */}
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
         <Button
           variant="outlined"
           onClick={handleShuffle}
@@ -242,7 +309,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
         >
           Перемешать
         </Button>
-      </Box>
+      </Stack>
 
       {/* Подсказки по клавиатуре (только на десктопе) */}
       {!isMobile && shuffledVerbs.length > 1 && (

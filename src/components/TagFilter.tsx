@@ -109,7 +109,7 @@ export function TagFilter({
   }
 
   return (
-    <Box sx={{ mb: 2, width: '100%', maxWidth: 600 }}>
+    <Box sx={{ mb: { xs: 1, sm: 2 }, width: '100%', maxWidth: 600 }}>
       <Accordion
         defaultExpanded={defaultExpanded}
         sx={{
