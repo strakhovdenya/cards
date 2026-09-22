@@ -13,6 +13,8 @@ import {
   Tooltip,
   Stack,
   Collapse,
+  Fade,
+  LinearProgress,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -27,7 +29,7 @@ import {
   Keyboard,
   KeyboardHide,
 } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import type { Verb } from '@/types';
 import { getVerbs } from '@/services/verbService';
 import { useSpeech } from '@/services/speechService';
@@ -55,16 +57,31 @@ const AnswerSection = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
 }));
 
-const TranslationDisplay = styled(Box)(({ theme }) => ({
+const TranslationDisplay = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'feedback',
+})<{ feedback?: 'correct' | 'incorrect' | null }>(({ theme, feedback }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   gap: theme.spacing(2),
   padding: theme.spacing(3),
-  backgroundColor: '#e3f2fd',
+  backgroundColor:
+    feedback === 'correct'
+      ? alpha(theme.palette.success.main, 0.12)
+      : feedback === 'incorrect'
+        ? alpha(theme.palette.error.main, 0.12)
+        : alpha(theme.palette.primary.main, 0.08),
   borderRadius: theme.spacing(2),
   margin: theme.spacing(2, 0),
-  border: `2px solid ${theme.palette.primary.light}`,
+  border: `2px solid ${
+    feedback === 'correct'
+      ? theme.palette.success.main
+      : feedback === 'incorrect'
+        ? theme.palette.error.main
+        : theme.palette.primary.light
+  }`,
+  transition:
+    'background-color 0.2s ease-in-out, border-color 0.2s ease-in-out',
 }));
 
 const SpeechButton = styled(IconButton)(({ theme }) => ({
@@ -98,11 +115,16 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
   const [currentVerbIndex, setCurrentVerbIndex] = useState(0);
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
   const [frontSide, setFrontSide] = useState<FrontSide>('german');
+  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(
+    null
+  );
   const [stats, setStats] = useState({
     total: 0,
     correct: 0,
     incorrect: 0,
   });
+
+  const FEEDBACK_DELAY_MS = 350;
 
   const { speak, isSupported } = useSpeech();
   const theme = useTheme();
@@ -145,6 +167,7 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
     setCurrentVerbIndex(0);
     setCurrentVerb(shuffled[0]);
     setIsAnswerVisible(false);
+    setFeedback(null);
   }, [allVerbs]);
 
   const handleNextVerb = useCallback(() => {
@@ -152,6 +175,7 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
     setCurrentVerbIndex(nextIndex);
     setCurrentVerb(shuffledVerbs[nextIndex]);
     setIsAnswerVisible(false);
+    setFeedback(null);
   }, [currentVerbIndex, shuffledVerbs]);
 
   const handlePreviousVerb = useCallback(() => {
@@ -160,6 +184,7 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
     setCurrentVerbIndex(prevIndex);
     setCurrentVerb(shuffledVerbs[prevIndex]);
     setIsAnswerVisible(false);
+    setFeedback(null);
   }, [currentVerbIndex, shuffledVerbs]);
 
   const handleShowAnswer = useCallback(() => {
@@ -172,7 +197,8 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
       correct: prev.correct + 1,
       total: prev.total + 1,
     }));
-    handleNextVerb();
+    setFeedback('correct');
+    setTimeout(handleNextVerb, FEEDBACK_DELAY_MS);
   }, [handleNextVerb]);
 
   const handleIncorrectAnswer = useCallback(() => {
@@ -181,7 +207,8 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
       incorrect: prev.incorrect + 1,
       total: prev.total + 1,
     }));
-    handleNextVerb();
+    setFeedback('incorrect');
+    setTimeout(handleNextVerb, FEEDBACK_DELAY_MS);
   }, [handleNextVerb]);
 
   const handleSpeak = useCallback(
@@ -380,33 +407,46 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
         <Typography variant="h6" color="primary">
           Изучение глаголов
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Box
+          sx={{ display: 'flex', gap: { xs: 0.75, sm: 1 }, flexWrap: 'wrap' }}
+        >
           <Chip
             label={`${currentVerbIndex + 1} из ${shuffledVerbs.length}`}
             color="info"
             variant="outlined"
-            sx={{ mb: { xs: 1, sm: 0 } }}
+            size={isMobile ? 'small' : 'medium'}
           />
           <Chip
             label={`Всего: ${stats.total}`}
             color="primary"
             variant="outlined"
-            sx={{ mb: { xs: 1, sm: 0 } }}
+            size={isMobile ? 'small' : 'medium'}
           />
           <Chip
             label={`Правильно: ${stats.correct}`}
             color="success"
             variant="outlined"
-            sx={{ mb: { xs: 1, sm: 0 } }}
+            size={isMobile ? 'small' : 'medium'}
           />
           <Chip
             label={`Неправильно: ${stats.incorrect}`}
             color="error"
             variant="outlined"
-            sx={{ mb: { xs: 1, sm: 0 } }}
+            size={isMobile ? 'small' : 'medium'}
           />
         </Box>
       </Box>
+
+      {/* Прогресс по колоде */}
+      <LinearProgress
+        variant="determinate"
+        value={
+          shuffledVerbs.length > 0
+            ? ((currentVerbIndex + 1) / shuffledVerbs.length) * 100
+            : 0
+        }
+        sx={{ mb: 2, borderRadius: 4, height: 6 }}
+      />
 
       {/* Переключатель лицевой стороны */}
       <Box
@@ -444,9 +484,16 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
               : {},
           }}
         >
-          <Typography variant="h4" component="h2" gutterBottom fontWeight={600}>
-            {frontText}
-          </Typography>
+          <Fade in key={currentVerb.id} timeout={250}>
+            <Typography
+              variant="h4"
+              component="h2"
+              gutterBottom
+              fontWeight={600}
+            >
+              {frontText}
+            </Typography>
+          </Fade>
           {isSupported() && frontSide === 'german' && (
             <Tooltip title="Произнести глагол">
               <SpeechButton
@@ -488,80 +535,84 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
               </Typography>
             </Box>
           ) : (
-            <TranslationDisplay>
-              <Typography variant="h6" color="primary" gutterBottom>
-                Перевод:
-              </Typography>
-              <Typography variant="h4" component="div" fontWeight="bold">
-                {backText}
-              </Typography>
+            <Fade in timeout={200}>
+              <TranslationDisplay feedback={feedback}>
+                <Typography variant="h6" color="primary" gutterBottom>
+                  Перевод:
+                </Typography>
+                <Typography variant="h4" component="div" fontWeight="bold">
+                  {backText}
+                </Typography>
 
-              {/* Примеры предложения и вопроса с ответом (если есть) */}
-              {currentVerb.examples && (
-                <Box sx={{ mt: 2, textAlign: 'left', width: '100%' }}>
-                  {currentVerb.examples.affirmativeSentence && (
-                    <>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Утвердительное
-                      </Typography>
-                      <Typography variant="body1">
-                        {currentVerb.examples.affirmativeSentence}
-                      </Typography>
-                      {currentVerb.examples.affirmativeTranslation && (
-                        <Typography variant="body2" color="text.secondary">
-                          {currentVerb.examples.affirmativeTranslation}
+                {/* Примеры предложения и вопроса с ответом (если есть) */}
+                {currentVerb.examples && (
+                  <Box sx={{ mt: 2, textAlign: 'left', width: '100%' }}>
+                    {currentVerb.examples.affirmativeSentence && (
+                      <>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Утвердительное
                         </Typography>
-                      )}
-                    </>
-                  )}
+                        <Typography variant="body1">
+                          {currentVerb.examples.affirmativeSentence}
+                        </Typography>
+                        {currentVerb.examples.affirmativeTranslation && (
+                          <Typography variant="body2" color="text.secondary">
+                            {currentVerb.examples.affirmativeTranslation}
+                          </Typography>
+                        )}
+                      </>
+                    )}
 
-                  {currentVerb.examples.questionSentence && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Вопрос
-                      </Typography>
-                      <Typography variant="body1">
-                        {currentVerb.examples.questionSentence}
-                      </Typography>
-                      {currentVerb.examples.questionTranslation && (
-                        <Typography variant="body2" color="text.secondary">
-                          {currentVerb.examples.questionTranslation}
+                    {currentVerb.examples.questionSentence && (
+                      <Box sx={{ mt: 1 }}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Вопрос
                         </Typography>
-                      )}
-                      {currentVerb.examples.shortAnswer && (
-                        <Typography variant="body1" sx={{ mt: 0.5 }}>
-                          {currentVerb.examples.shortAnswer}
+                        <Typography variant="body1">
+                          {currentVerb.examples.questionSentence}
                         </Typography>
-                      )}
-                      {currentVerb.examples.shortAnswerTranslation && (
-                        <Typography variant="body2" color="text.secondary">
-                          {currentVerb.examples.shortAnswerTranslation}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
+                        {currentVerb.examples.questionTranslation && (
+                          <Typography variant="body2" color="text.secondary">
+                            {currentVerb.examples.questionTranslation}
+                          </Typography>
+                        )}
+                        {currentVerb.examples.shortAnswer && (
+                          <Typography variant="body1" sx={{ mt: 0.5 }}>
+                            {currentVerb.examples.shortAnswer}
+                          </Typography>
+                        )}
+                        {currentVerb.examples.shortAnswerTranslation && (
+                          <Typography variant="body2" color="text.secondary">
+                            {currentVerb.examples.shortAnswerTranslation}
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
+                <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleIncorrectAnswer}
+                    startIcon={<Cancel />}
+                    disabled={feedback !== null}
+                  >
+                    Неправильно
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleCorrectAnswer}
+                    startIcon={<CheckCircle />}
+                    disabled={feedback !== null}
+                  >
+                    Правильно
+                  </Button>
                 </Box>
-              )}
-
-              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={handleIncorrectAnswer}
-                  startIcon={<Cancel />}
-                >
-                  Неправильно
-                </Button>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleCorrectAnswer}
-                  startIcon={<CheckCircle />}
-                >
-                  Правильно
-                </Button>
-              </Box>
-            </TranslationDisplay>
+              </TranslationDisplay>
+            </Fade>
           )}
         </AnswerSection>
       </StudyCard>
