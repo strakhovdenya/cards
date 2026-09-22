@@ -7,6 +7,10 @@ import {
   Typography,
   Stack,
   Collapse,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -16,9 +20,18 @@ import {
   Shuffle,
   Flip,
   Add,
+  MenuBook,
+  Close,
 } from '@mui/icons-material';
 import { VerbCard } from './VerbCard';
-import type { Verb } from '@/types';
+import type { Verb, VerbExamples } from '@/types';
+
+function hasExampleContent(examples: VerbExamples | undefined): boolean {
+  return (
+    Boolean(examples?.affirmativeSentence) ||
+    Boolean(examples?.questionSentence)
+  );
+}
 
 interface VerbViewerProps {
   verbs: Verb[];
@@ -32,7 +45,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
   const [currentVerbIndex, setCurrentVerbIndex] = useState(0);
   const [shuffledVerbs, setShuffledVerbs] = useState<Verb[]>([]);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
-  const [showExamplesImmediately, setShowExamplesImmediately] = useState(false);
+  const [examplesOpen, setExamplesOpen] = useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -59,6 +72,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
   const handleNext = useCallback(() => {
     setCurrentVerbIndex((prev) => (prev + 1) % shuffledVerbs.length);
     setIsCardFlipped(false); // Сбрасываем переворот при смене карточки
+    setExamplesOpen(false);
   }, [shuffledVerbs.length]);
 
   const handlePrevious = useCallback(() => {
@@ -66,6 +80,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
       (prev) => (prev - 1 + shuffledVerbs.length) % shuffledVerbs.length
     );
     setIsCardFlipped(false); // Сбрасываем переворот при смене карточки
+    setExamplesOpen(false);
   }, [shuffledVerbs.length]);
 
   const handleShuffle = useCallback(() => {
@@ -73,6 +88,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
     setShuffledVerbs(shuffled);
     setCurrentVerbIndex(0);
     setIsCardFlipped(false); // Сбрасываем переворот при перемешивании
+    setExamplesOpen(false);
   }, [shuffledVerbs]);
 
   const handleFlip = useCallback(() => {
@@ -162,14 +178,9 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
 
       {/* Карточка глагола */}
       {currentVerb && (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: { xs: 1, sm: 2 } }}>
           <VerbCard
-            verb={{
-              ...currentVerb,
-              examples: showExamplesImmediately
-                ? currentVerb.examples
-                : undefined,
-            }}
+            verb={currentVerb}
             isFlipped={isCardFlipped}
             onFlip={handleFlip}
           />
@@ -177,14 +188,19 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
       )}
 
       {/* Подсказка */}
-      <Box sx={{ mb: 2, textAlign: 'center' }}>
+      <Box sx={{ mb: { xs: 1.5, sm: 2 }, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Нажмите на карточку для просмотра спряжений
         </Typography>
       </Box>
 
       {/* Кнопки управления - как в CardViewer */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        justifyContent="center"
+        sx={{ mb: { xs: 1, sm: 1.5 } }}
+      >
         <Button
           variant="outlined"
           onClick={handlePrevious}
@@ -216,22 +232,28 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
         </Button>
       </Stack>
 
-      <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
+      {/* Примеры и перемешивание - согласовано с рядом выше, gap работает и при переносе строки */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          justifyContent: 'center',
+          mb: { xs: 1, sm: 1.5 },
+        }}
+      >
         <Button
-          variant={showExamplesImmediately ? 'contained' : 'outlined'}
+          variant="outlined"
+          startIcon={<MenuBook />}
           onClick={() => {
-            setShowExamplesImmediately((prev) => !prev);
+            setExamplesOpen(true);
           }}
+          disabled={!hasExampleContent(currentVerb?.examples)}
           size="medium"
         >
-          {showExamplesImmediately
-            ? 'Скрывать примеры'
-            : 'Показывать примеры сразу'}
+          Примеры
         </Button>
-      </Stack>
 
-      {/* Кнопка перемешивания - по центру */}
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
         <Button
           variant="outlined"
           onClick={handleShuffle}
@@ -243,6 +265,77 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
           Перемешать
         </Button>
       </Box>
+
+      {/* Модалка с примерами предложений (утверждение/вопрос/краткий ответ) */}
+      <Dialog
+        open={examplesOpen}
+        onClose={() => {
+          setExamplesOpen(false);
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          Примеры предложений
+          <IconButton
+            onClick={() => {
+              setExamplesOpen(false);
+            }}
+            size="small"
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ textAlign: 'left' }}>
+          {currentVerb?.examples?.affirmativeSentence && (
+            <Box sx={{ mb: currentVerb.examples.questionSentence ? 2 : 0 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Утвердительное
+              </Typography>
+              <Typography variant="body1">
+                {currentVerb.examples.affirmativeSentence}
+              </Typography>
+              {currentVerb.examples.affirmativeTranslation && (
+                <Typography variant="body2" color="text.secondary">
+                  {currentVerb.examples.affirmativeTranslation}
+                </Typography>
+              )}
+            </Box>
+          )}
+
+          {currentVerb?.examples?.questionSentence && (
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                Вопрос
+              </Typography>
+              <Typography variant="body1">
+                {currentVerb.examples.questionSentence}
+              </Typography>
+              {currentVerb.examples.questionTranslation && (
+                <Typography variant="body2" color="text.secondary">
+                  {currentVerb.examples.questionTranslation}
+                </Typography>
+              )}
+              {currentVerb.examples.shortAnswer && (
+                <Typography variant="body1" sx={{ mt: 0.5 }}>
+                  {currentVerb.examples.shortAnswer}
+                </Typography>
+              )}
+              {currentVerb.examples.shortAnswerTranslation && (
+                <Typography variant="body2" color="text.secondary">
+                  {currentVerb.examples.shortAnswerTranslation}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Подсказки по клавиатуре (только на десктопе) */}
       {!isMobile && shuffledVerbs.length > 1 && (

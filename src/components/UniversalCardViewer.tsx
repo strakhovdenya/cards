@@ -135,7 +135,7 @@ export function UniversalCardViewer<T extends CardData>({
     if (!tags || tags.length === 0) return null;
 
     return (
-      <Box sx={{ mb: 1.5 }}>
+      <Box sx={{ mb: { xs: 1, sm: 1.5 } }}>
         <Stack
           direction="row"
           spacing={0.75}
@@ -333,13 +333,13 @@ export function UniversalCardViewer<T extends CardData>({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: { xs: 2, sm: 3 },
+        padding: { xs: 1.5, sm: 3 },
         maxWidth: 600,
         margin: '0 auto',
       }}
     >
       {/* Компактная верхняя панель */}
-      <Box sx={{ mb: 2, textAlign: 'center', width: '100%' }}>
+      <Box sx={{ mb: { xs: 1, sm: 2 }, textAlign: 'center', width: '100%' }}>
         {/* Первая строка: прогресс и переключатель режима */}
         <Box
           sx={{
@@ -348,7 +348,7 @@ export function UniversalCardViewer<T extends CardData>({
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: 1,
-            mb: 1.5,
+            mb: { xs: 1, sm: 1.5 },
           }}
         >
           {/* Индикатор прогресса */}
@@ -423,7 +423,7 @@ export function UniversalCardViewer<T extends CardData>({
       />
 
       {/* Карточка */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: { xs: 1, sm: 2 } }}>
         <UniversalCard
           card={currentCard}
           strategy={strategy}
@@ -437,7 +437,7 @@ export function UniversalCardViewer<T extends CardData>({
       {cardTags}
 
       {/* Статус изучения */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: { xs: 1, sm: 2 } }}>
         <Button
           variant={currentCard.learned ? 'contained' : 'outlined'}
           color={currentCard.learned ? 'success' : 'primary'}
@@ -453,7 +453,7 @@ export function UniversalCardViewer<T extends CardData>({
       </Box>
 
       {/* Основная подсказка */}
-      <Box sx={{ mb: 2, textAlign: 'center' }}>
+      <Box sx={{ mb: { xs: 1.5, sm: 2 }, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {isFlipped
             ? 'Нажмите для возврата'
@@ -558,7 +558,7 @@ export function UniversalCardViewer<T extends CardData>({
       </Box>
 
       {/* Кнопки управления */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+      <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 1, sm: 1.5 } }}>
         <Button
           variant="outlined"
           onClick={handlePrevious}
