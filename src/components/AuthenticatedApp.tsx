@@ -17,11 +17,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   TextField,
   Button,
   DialogActions,
@@ -39,8 +34,8 @@ import {
   KeyboardArrowDown,
   Upload,
   Book,
-  ChevronRight,
 } from '@mui/icons-material';
+import { ModeSelectSheet } from './navigation/ModeSelectSheet';
 import { App } from './App';
 import { ArticlesTrainer } from './ArticlesTrainer';
 import { InviteManager } from './auth/InviteManager';
@@ -327,54 +322,35 @@ export function AuthenticatedApp() {
       />
 
       {/* Диалог подменю "Слова" */}
-      <Dialog
+      <ModeSelectSheet
         open={isWordsSubmenuOpen}
         onClose={() => {
           setIsWordsSubmenuOpen(false);
         }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Слова</DialogTitle>
-        <DialogContent>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  setIsWordsSubmenuOpen(false);
-                  setWordsMode('cards');
-                  setViewMode('viewer');
-                }}
-              >
-                <ListItemIcon>
-                  <Style />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Карточки"
-                  secondary="Изучение немецких слов с помощью карточек"
-                />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  setIsWordsSubmenuOpen(false);
-                  setWordsMode('articles');
-                  setViewMode('viewer');
-                }}
-              >
-                <ListItemIcon>
-                  <Book />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Артикли"
-                  secondary="Изучение артиклей (в разработке)"
-                />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </DialogContent>
-      </Dialog>
+        title="Слова"
+        items={[
+          {
+            icon: <Style />,
+            primary: 'Карточки',
+            secondary: 'Изучение немецких слов с помощью карточек',
+            onClick: () => {
+              setIsWordsSubmenuOpen(false);
+              setWordsMode('cards');
+              setViewMode('viewer');
+            },
+          },
+          {
+            icon: <Book />,
+            primary: 'Артикли',
+            secondary: 'Изучение артиклей (в разработке)',
+            onClick: () => {
+              setIsWordsSubmenuOpen(false);
+              setWordsMode('articles');
+              setViewMode('viewer');
+            },
+          },
+        ]}
+      />
 
       {/* Диалог выбора режима редактирования */}
       <EditModeSelector
@@ -392,65 +368,39 @@ export function AuthenticatedApp() {
       />
 
       {/* Диалог выбора режима глаголов */}
-      <Dialog
+      <ModeSelectSheet
         open={isVerbModeDialogOpen}
         onClose={() => {
           setIsVerbModeDialogOpen(false);
         }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Выберите режим глаголов</DialogTitle>
-        <DialogContent>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  handleVerbModeSelect('view');
-                }}
-              >
-                <ListItemIcon>
-                  <Style />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Просмотр"
-                  secondary="Просмотр всех глаголов и их спряжений"
-                />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  handleVerbModeSelect('training');
-                }}
-              >
-                <ListItemIcon>
-                  <School />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Тренировка"
-                  secondary="Интерактивная тренировка спряжений"
-                />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  handleVerbModeSelect('study');
-                }}
-              >
-                <ListItemIcon>
-                  <Book />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Изучение"
-                  secondary="Изучение инфинитивов глаголов и их переводов"
-                />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </DialogContent>
-      </Dialog>
+        title="Выберите режим глаголов"
+        items={[
+          {
+            icon: <Style />,
+            primary: 'Просмотр',
+            secondary: 'Просмотр всех глаголов и их спряжений',
+            onClick: () => {
+              handleVerbModeSelect('view');
+            },
+          },
+          {
+            icon: <School />,
+            primary: 'Тренировка',
+            secondary: 'Интерактивная тренировка спряжений',
+            onClick: () => {
+              handleVerbModeSelect('training');
+            },
+          },
+          {
+            icon: <Book />,
+            primary: 'Изучение',
+            secondary: 'Изучение инфинитивов глаголов и их переводов',
+            onClick: () => {
+              handleVerbModeSelect('study');
+            },
+          },
+        ]}
+      />
 
       {/* Диалог редактирования глаголов */}
       <Dialog
@@ -543,101 +493,63 @@ export function AuthenticatedApp() {
       </Dialog>
 
       {/* Диалог меню импорта */}
-      <Dialog
+      <ModeSelectSheet
         open={isImportMenuOpen}
         onClose={() => {
           setIsImportMenuOpen(false);
         }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Импорт</DialogTitle>
-        <DialogContent>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  setIsImportMenuOpen(false);
-                  setIsCardImportSubmenuOpen(true);
-                }}
-              >
-                <ListItemIcon>
-                  <Upload />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Импорт карточек"
-                  secondary="Массовый импорт карточек"
-                />
-                <ChevronRight />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  setIsImportMenuOpen(false);
-                  setIsBulkVerbImportOpen(true);
-                }}
-              >
-                <ListItemIcon>
-                  <Upload />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Импорт глаголов"
-                  secondary="Массовый импорт глаголов с спряжениями"
-                />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </DialogContent>
-      </Dialog>
+        title="Импорт"
+        items={[
+          {
+            icon: <Upload />,
+            primary: 'Импорт карточек',
+            secondary: 'Массовый импорт карточек',
+            onClick: () => {
+              setIsImportMenuOpen(false);
+              setIsCardImportSubmenuOpen(true);
+            },
+          },
+          {
+            icon: <Upload />,
+            primary: 'Импорт глаголов',
+            secondary: 'Массовый импорт глаголов с спряжениями',
+            onClick: () => {
+              setIsImportMenuOpen(false);
+              setIsBulkVerbImportOpen(true);
+            },
+          },
+        ]}
+      />
 
       {/* Диалог подменю импорта карточек */}
-      <Dialog
+      <ModeSelectSheet
         open={isCardImportSubmenuOpen}
         onClose={() => {
           setIsCardImportSubmenuOpen(false);
         }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Импорт карточек</DialogTitle>
-        <DialogContent>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  setIsCardImportSubmenuOpen(false);
-                  setIsBulkImportOpen(true);
-                }}
-              >
-                <ListItemIcon>
-                  <Upload />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Обычные карточки"
-                  secondary="Массовый импорт обычных карточек из текста"
-                />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  setIsCardImportSubmenuOpen(false);
-                  setIsBulkNounImportOpen(true);
-                }}
-              >
-                <ListItemIcon>
-                  <Upload />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Существительные"
-                  secondary="Массовый импорт существительных с артиклями и множественным числом"
-                />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </DialogContent>
-      </Dialog>
+        title="Импорт карточек"
+        items={[
+          {
+            icon: <Upload />,
+            primary: 'Обычные карточки',
+            secondary: 'Массовый импорт обычных карточек из текста',
+            onClick: () => {
+              setIsCardImportSubmenuOpen(false);
+              setIsBulkImportOpen(true);
+            },
+          },
+          {
+            icon: <Upload />,
+            primary: 'Существительные',
+            secondary:
+              'Массовый импорт существительных с артиклями и множественным числом',
+            onClick: () => {
+              setIsCardImportSubmenuOpen(false);
+              setIsBulkNounImportOpen(true);
+            },
+          },
+        ]}
+      />
 
       {/* Диалог управления тегами */}
       <TagManager
@@ -814,8 +726,10 @@ export function AuthenticatedApp() {
             zIndex: 1000,
             borderTop: 1,
             borderColor: 'divider',
+            boxShadow: '0 -2px 4px rgba(0,0,0,0.1)',
+            pb: 'env(safe-area-inset-bottom)',
           }}
-          elevation={3}
+          elevation={0}
         >
           <CenteredColumn>
             <BottomNavigation
@@ -836,46 +750,24 @@ export function AuthenticatedApp() {
               showLabels
             >
               <BottomNavigationAction
-                label={
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Box
-                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-                    >
-                      <SchoolIcon />
-                      <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
-                    </Box>
-                    <Typography variant="caption">Изучение</Typography>
+                label="Изучение"
+                value="study"
+                icon={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <SchoolIcon />
+                    <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
                   </Box>
                 }
-                value="study"
-                icon={<></>}
               />
               <BottomNavigationAction
-                label={
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Box
-                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-                    >
-                      <Edit />
-                      <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
-                    </Box>
-                    <Typography variant="caption">Редактирование</Typography>
+                label="Редактирование"
+                value="edit"
+                icon={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Edit />
+                    <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
                   </Box>
                 }
-                value="edit"
-                icon={<></>}
               />
             </BottomNavigation>
           </CenteredColumn>

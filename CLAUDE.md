@@ -26,7 +26,9 @@ Supabase (БД + auth).
 src/
   app/          роуты App Router; app/api — route handlers, app/auth — вход/регистрация,
                 app/demo — публичный гостевой режим
-  components/   UI-компоненты (+ auth/, navigation/)
+  components/   UI-компоненты (+ auth/, navigation/); navigation/ModeSelectSheet.tsx — общий
+                bottom-sheet компонент для меню выбора режима, переиспользуй его вместо нового
+                Dialog > List > ListItemButton
   hooks/        useAuth, useCards, useVerbs, useLocalStorage
   services/     весь доступ к данным: cardService, nounService, tagService, timeService,
                 verbService, speechService

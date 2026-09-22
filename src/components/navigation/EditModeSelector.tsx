@@ -1,21 +1,7 @@
 'use client';
 
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-} from '@mui/material';
-import {
-  LocalOffer,
-  Translate,
-  Upload,
-  KeyboardArrowRight,
-} from '@mui/icons-material';
+import { LocalOffer, Translate, Upload } from '@mui/icons-material';
+import { ModeSelectSheet } from './ModeSelectSheet';
 
 interface EditModeSelectorProps {
   open: boolean;
@@ -32,70 +18,41 @@ export function EditModeSelector({
   onTagManagerOpen,
   onImportMenuOpen,
 }: EditModeSelectorProps) {
-  const handleModeSelect = (mode: 'cards' | 'verbs') => {
-    onModeSelect(mode);
-  };
-
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Выберите режим редактирования</DialogTitle>
-      <DialogContent>
-        <List>
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={() => {
-                handleModeSelect('cards');
-              }}
-            >
-              <ListItemIcon>
-                <LocalOffer />
-              </ListItemIcon>
-              <ListItemText
-                primary="Карточки"
-                secondary="Редактирование немецких слов"
-              />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={() => {
-                handleModeSelect('verbs');
-              }}
-            >
-              <ListItemIcon>
-                <Translate />
-              </ListItemIcon>
-              <ListItemText
-                primary="Глаголы"
-                secondary="Редактирование спряжений немецких глаголов"
-              />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={onTagManagerOpen}>
-              <ListItemIcon>
-                <LocalOffer />
-              </ListItemIcon>
-              <ListItemText
-                primary="Управление тегами"
-                secondary="Создание и редактирование тегов"
-              />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={onImportMenuOpen}>
-              <ListItemIcon>
-                <Upload />
-              </ListItemIcon>
-              <ListItemText
-                primary="Импорт карточек"
-                secondary="Массовый импорт карточек"
-              />
-              <KeyboardArrowRight />
-            </ListItemButton>
-          </ListItem>
-        </List>
-      </DialogContent>
-    </Dialog>
+    <ModeSelectSheet
+      open={open}
+      onClose={onClose}
+      title="Выберите режим редактирования"
+      items={[
+        {
+          icon: <LocalOffer />,
+          primary: 'Карточки',
+          secondary: 'Редактирование немецких слов',
+          onClick: () => {
+            onModeSelect('cards');
+          },
+        },
+        {
+          icon: <Translate />,
+          primary: 'Глаголы',
+          secondary: 'Редактирование спряжений немецких глаголов',
+          onClick: () => {
+            onModeSelect('verbs');
+          },
+        },
+        {
+          icon: <LocalOffer />,
+          primary: 'Управление тегами',
+          secondary: 'Создание и редактирование тегов',
+          onClick: onTagManagerOpen,
+        },
+        {
+          icon: <Upload />,
+          primary: 'Импорт карточек',
+          secondary: 'Массовый импорт карточек',
+          onClick: onImportMenuOpen,
+        },
+      ]}
+    />
   );
 }
