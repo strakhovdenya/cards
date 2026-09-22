@@ -181,6 +181,12 @@ function writeAgentPermissions(runDir) {
       allow: [
         'Edit',
         'Write',
+        // Lets the implementer delegate exploration (e.g. the `research`/
+        // `codebase-scan` subagents in .claude/agents/) instead of burning
+        // its own turn budget on wide reads — a subagent still runs inside
+        // this same runDir under this same settings.local.json, so it's
+        // bound by the same deny rules below (.claude/**, docs/**).
+        'Agent',
         'Bash(git status:*)',
         'Bash(git diff:*)',
         'Bash(git log:*)',

@@ -214,6 +214,11 @@ step — reserved for simple, unambiguous tasks with a clear Acceptance Criteria
 - **A final `npm run check`/`npm run build` gate the controller runs itself**, trusting neither the
   implementer's self-report nor the review passes' verdict that "the build is red but that's
   expected" — a red build here is `BLOCKED`, no PR gets created.
+- **Subagents (`.claude/agents/`) run on a cheaper model for work that doesn't need the main
+  one** — searching the codebase (`codebase-scan`), investigating unfamiliar code before a change
+  (`research`), running the `check`/`build`/`test` gate (`verify`), and drafting a commit/PR
+  description from the diff (`pr-writer`). The main implementer stays focused on the files it's
+  actually editing and only reads back a short summary from each.
 - Full design rationale, every live-run incident that shaped a safeguard, and the exact
   verification chain live in [`.claude/ralph/README.md`](./.claude/ralph/README.md).
 

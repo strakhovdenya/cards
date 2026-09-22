@@ -66,11 +66,13 @@ npm run test:e2e      # Playwright E2E против /demo — только вр�
 вне скоупа (требует секретов в GitHub Actions — отдельная будущая задача).
 
 **Перед первым запуском:**
+
 ```bash
 npx playwright install   # установить браузеры Playwright (один раз)
 ```
 
 **Необходимые переменные окружения** (должны быть в `.env.local`):
+
 - `NEXT_PUBLIC_SUPABASE_URL` — URL Supabase-проекта (клиентский)
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — публичный anon-ключ Supabase
 - `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` — для серверного клиента (нужны в рантайме)
@@ -165,3 +167,19 @@ editor — против того же проекта, на котором раб
 `.claude/ralph/` — оркестратор, который берёт готовый GitHub Issue, реализует его отдельным
 `claude -p` без доступа к git/gh, прогоняет два независимых ревью-пасса и создаёт PR. Мёрдж
 всегда делает человек. Подробности, ограничения и запуск — `.claude/ralph/README.md`.
+
+## Context management
+
+For tasks that require understanding unfamiliar parts of the codebase,
+delegate broad exploration to the research subagent first.
+
+Use subagents for:
+
+- discovering relevant files
+- tracing dependencies and call sites
+- understanding unfamiliar implementations
+- broad repository searches
+
+Keep the main context focused on files that will actually be modified.
+
+Do not delegate active implementation work or files currently being edited.
