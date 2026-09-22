@@ -10,9 +10,12 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  Fade,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Refresh, Visibility, CheckCircle, Cancel } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import type { Verb } from '@/types';
 import {
   getRandomVerb,
@@ -32,8 +35,8 @@ const TrainingCard = styled(Card)(() => ({
 const QuestionSection = styled(Box)(({ theme }) => ({
   padding: theme.spacing(4),
   textAlign: 'center',
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.primary.main,
 }));
 
 const AnswerSection = styled(Box)(({ theme }) => ({
@@ -41,15 +44,31 @@ const AnswerSection = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
 }));
 
-const ConjugationDisplay = styled(Box)(({ theme }) => ({
+const ConjugationDisplay = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'feedback',
+})<{ feedback?: 'correct' | 'incorrect' | null }>(({ theme, feedback }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   gap: theme.spacing(2),
   padding: theme.spacing(3),
-  backgroundColor: theme.palette.grey[50],
+  backgroundColor:
+    feedback === 'correct'
+      ? alpha(theme.palette.success.main, 0.12)
+      : feedback === 'incorrect'
+        ? alpha(theme.palette.error.main, 0.12)
+        : theme.palette.grey[50],
   borderRadius: theme.spacing(2),
   margin: theme.spacing(2, 0),
+  border: '2px solid',
+  borderColor:
+    feedback === 'correct'
+      ? theme.palette.success.main
+      : feedback === 'incorrect'
+        ? theme.palette.error.main
+        : 'transparent',
+  transition:
+    'background-color 0.2s ease-in-out, border-color 0.2s ease-in-out',
 }));
 
 interface VerbTrainingProps {
@@ -62,11 +81,19 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(
+    null
+  );
   const [stats, setStats] = useState({
     total: 0,
     correct: 0,
     incorrect: 0,
   });
+
+  const FEEDBACK_DELAY_MS = 350;
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const loadNewVerb = async () => {
     setIsLoading(true);
@@ -101,6 +128,7 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
   };
 
   const handleNextVerb = () => {
+    setFeedback(null);
     void loadNewVerb();
   };
 
@@ -110,7 +138,8 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
       correct: prev.correct + 1,
       total: prev.total + 1,
     }));
-    handleNextVerb();
+    setFeedback('correct');
+    setTimeout(handleNextVerb, FEEDBACK_DELAY_MS);
   };
 
   const handleIncorrectAnswer = () => {
@@ -119,7 +148,8 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
       incorrect: prev.incorrect + 1,
       total: prev.total + 1,
     }));
-    handleNextVerb();
+    setFeedback('incorrect');
+    setTimeout(handleNextVerb, FEEDBACK_DELAY_MS);
   };
 
   const currentConjugation =
@@ -184,40 +214,55 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
         <Typography variant="h6" color="primary">
           Тренировка глаголов
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Box
+          sx={{ display: 'flex', gap: { xs: 0.75, sm: 1 }, flexWrap: 'wrap' }}
+        >
           <Chip
             label={`Всего: ${stats.total}`}
             color="primary"
             variant="outlined"
-            sx={{ mb: { xs: 1, sm: 0 } }}
+            size={isMobile ? 'small' : 'medium'}
           />
           <Chip
             label={`Правильно: ${stats.correct}`}
             color="success"
             variant="outlined"
-            sx={{ mb: { xs: 1, sm: 0 } }}
+            size={isMobile ? 'small' : 'medium'}
           />
           <Chip
             label={`Неправильно: ${stats.incorrect}`}
             color="error"
             variant="outlined"
-            sx={{ mb: { xs: 1, sm: 0 } }}
+            size={isMobile ? 'small' : 'medium'}
           />
         </Box>
       </Box>
 
       <TrainingCard>
-        <QuestionSection>
-          <Typography variant="h4" component="h2" gutterBottom>
-            {currentVerb.infinitive}
-          </Typography>
-          <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
-            {currentVerb.translation}
-          </Typography>
-          <Typography variant="h5" component="h3">
-            Лицо: <strong>{currentPerson}</strong>
-          </Typography>
-        </QuestionSection>
+        <Fade in key={currentVerb.id} timeout={250}>
+          <QuestionSection>
+            <Typography
+              variant="h4"
+              component="h2"
+              gutterBottom
+              fontWeight={600}
+            >
+              {currentVerb.infinitive}
+            </Typography>
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+              {currentVerb.translation}
+            </Typography>
+            <Chip
+              label={
+                <>
+                  Лицо: <strong>{currentPerson}</strong>
+                </>
+              }
+              color="primary"
+              variant="outlined"
+            />
+          </QuestionSection>
+        </Fade>
 
         <AnswerSection>
           {!isAnswerVisible ? (
@@ -238,36 +283,40 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
               </Button>
             </Box>
           ) : (
-            <ConjugationDisplay>
-              <Typography variant="h6" color="primary" gutterBottom>
-                Правильная форма:
-              </Typography>
-              <Typography variant="h4" component="div" fontWeight="bold">
-                {currentConjugation?.form}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                {currentConjugation?.translation}
-              </Typography>
+            <Fade in timeout={200}>
+              <ConjugationDisplay feedback={feedback}>
+                <Typography variant="h6" color="primary" gutterBottom>
+                  Правильная форма:
+                </Typography>
+                <Typography variant="h4" component="div" fontWeight="bold">
+                  {currentConjugation?.form}
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  {currentConjugation?.translation}
+                </Typography>
 
-              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={handleIncorrectAnswer}
-                  startIcon={<Cancel />}
-                >
-                  Неправильно
-                </Button>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleCorrectAnswer}
-                  startIcon={<CheckCircle />}
-                >
-                  Правильно
-                </Button>
-              </Box>
-            </ConjugationDisplay>
+                <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleIncorrectAnswer}
+                    startIcon={<Cancel />}
+                    disabled={feedback !== null}
+                  >
+                    Неправильно
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleCorrectAnswer}
+                    startIcon={<CheckCircle />}
+                    disabled={feedback !== null}
+                  >
+                    Правильно
+                  </Button>
+                </Box>
+              </ConjugationDisplay>
+            </Fade>
           )}
         </AnswerSection>
 
