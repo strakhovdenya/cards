@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { SwitchTransition } from 'react-transition-group';
 import {
   AppBar,
@@ -56,10 +56,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCards } from '@/hooks/useCards';
 import { useVerbs } from '@/hooks/useVerbs';
 
-type ViewMode = 'viewer' | 'editor' | 'invites' | 'verbs';
-type MainViewMode = 'study' | 'edit';
-type StudyMode = 'cards' | 'verbs' | 'time';
-type VerbMode = 'view' | 'training' | 'study';
+import {
+  getSubtitleText,
+  type ViewMode,
+  type MainViewMode,
+  type StudyMode,
+  type VerbMode,
+  type WordsMode,
+} from '@/utils/navigationUtils';
 
 export function AuthenticatedApp() {
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
@@ -69,7 +73,7 @@ export function AuthenticatedApp() {
   const [isStudyDialogOpen, setIsStudyDialogOpen] = useState(false);
   const [isVerbModeDialogOpen, setIsVerbModeDialogOpen] = useState(false);
   const [isWordsSubmenuOpen, setIsWordsSubmenuOpen] = useState(false);
-  const [wordsMode, setWordsMode] = useState<'cards' | 'articles'>('cards');
+  const [wordsMode, setWordsMode] = useState<WordsMode>('cards');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isVerbEditDialogOpen, setIsVerbEditDialogOpen] = useState(false);
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
@@ -193,24 +197,70 @@ export function AuthenticatedApp() {
 
   const titleText = 'German Word Cards';
 
-  const subtitleText =
-    viewMode === 'invites'
-      ? 'Приглашения'
-      : mainViewMode === 'study'
-        ? studyMode === 'verbs'
-          ? 'Глаголы'
-          : studyMode === 'time'
-            ? 'Времена'
-            : wordsMode === 'articles'
-              ? 'Артикли'
-              : 'Существительные'
-        : mainViewMode === 'edit'
-          ? viewMode === 'verbs'
-            ? 'Глаголы'
-            : viewMode === 'editor'
-              ? 'Существительные'
-              : null
-          : null;
+  const subtitleText = getSubtitleText({
+    viewMode,
+    mainViewMode,
+    studyMode,
+    verbMode,
+    wordsMode,
+  });
+
+  const renderCardsViewer = () => (
+    <App
+      showNavigation={false}
+      onCardsCountChange={() => {
+        // cardsCount уже управляется в useCards
+      }}
+      initialViewMode="viewer"
+      onViewModeChange={(mode) => {
+        setViewMode(mode);
+      }}
+    />
+  );
+
+  const verbStudyContent: Record<VerbMode, () => ReactNode> = {
+    training: () => <VerbTraining />,
+    study: () => <VerbStudy />,
+    view: () => (
+      <VerbViewer
+        verbs={verbs}
+        onVerbUpdate={handleVerbUpdate}
+        onVerbDelete={handleVerbDelete}
+        onAddVerb={handleAddVerb}
+        onEditVerb={handleEditVerb}
+      />
+    ),
+  };
+
+  const studyContent: Record<StudyMode, () => ReactNode> = {
+    verbs: () => verbStudyContent[verbMode](),
+    time: () => <TimeTraining />,
+    cards: () =>
+      wordsMode === 'articles' ? <ArticlesTrainer /> : renderCardsViewer(),
+  };
+
+  const editContent: Partial<Record<ViewMode, () => ReactNode>> = {
+    verbs: () => <VerbEditor />,
+    editor: () => (
+      <CardEditor
+        cards={cards}
+        onAddCard={(cardData) => {
+          void handleAddCard(cardData);
+        }}
+        onUpdateCard={(id, cardData) => {
+          void handleUpdateCard(id, cardData);
+        }}
+        onDeleteCard={(id) => {
+          void handleDeleteCard(id);
+        }}
+      />
+    ),
+  };
+
+  const mainContent: Record<MainViewMode, () => ReactNode> = {
+    study: () => studyContent[studyMode](),
+    edit: () => (editContent[viewMode] ?? renderCardsViewer)(),
+  };
 
   return (
     <Box
@@ -633,86 +683,13 @@ export function AuthenticatedApp() {
           </CenteredColumn>
         )}
 
-        {viewMode === 'invites' ? (
-          <CenteredColumn sx={{ py: 2, px: 2 }}>
+        <CenteredColumn sx={{ py: 2, px: 2 }}>
+          {viewMode === 'invites' ? (
             <InviteManager userId={user.id} />
-          </CenteredColumn>
-        ) : mainViewMode === 'study' ? (
-          <CenteredColumn sx={{ py: 2, px: 2 }}>
-            {/* Контент в зависимости от выбранного режима */}
-            {studyMode === 'verbs' ? (
-              verbMode === 'training' ? (
-                <VerbTraining />
-              ) : verbMode === 'study' ? (
-                <VerbStudy />
-              ) : (
-                <VerbViewer
-                  verbs={verbs}
-                  onVerbUpdate={handleVerbUpdate}
-                  onVerbDelete={handleVerbDelete}
-                  onAddVerb={handleAddVerb}
-                  onEditVerb={handleEditVerb}
-                />
-              )
-            ) : studyMode === 'time' ? (
-              <TimeTraining />
-            ) : wordsMode === 'articles' ? (
-              <ArticlesTrainer />
-            ) : (
-              <App
-                showNavigation={false}
-                onCardsCountChange={() => {
-                  // cardsCount уже управляется в useCards
-                }}
-                initialViewMode="viewer"
-                onViewModeChange={(mode) => {
-                  setViewMode(mode);
-                }}
-              />
-            )}
-          </CenteredColumn>
-        ) : mainViewMode === 'edit' ? (
-          <CenteredColumn sx={{ py: 2, px: 2 }}>
-            {viewMode === 'verbs' ? (
-              <VerbEditor />
-            ) : viewMode === 'editor' ? (
-              <CardEditor
-                cards={cards}
-                onAddCard={(cardData) => {
-                  void handleAddCard(cardData);
-                }}
-                onUpdateCard={(id, cardData) => {
-                  void handleUpdateCard(id, cardData);
-                }}
-                onDeleteCard={(id) => {
-                  void handleDeleteCard(id);
-                }}
-              />
-            ) : (
-              <App
-                showNavigation={false}
-                onCardsCountChange={() => {
-                  // cardsCount уже управляется в useCards
-                }}
-                initialViewMode="viewer"
-                onViewModeChange={(mode) => {
-                  setViewMode(mode);
-                }}
-              />
-            )}
-          </CenteredColumn>
-        ) : (
-          <App
-            showNavigation={true}
-            onCardsCountChange={() => {
-              // cardsCount уже управляется в useCards
-            }}
-            initialViewMode="editor"
-            onViewModeChange={(mode) => {
-              setViewMode(mode);
-            }}
-          />
-        )}
+          ) : (
+            mainContent[mainViewMode]()
+          )}
+        </CenteredColumn>
       </Box>
 
       {/* Нижняя панель навигации */}
