@@ -25,16 +25,10 @@ export async function GET() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
-    // Выбираем случайный глагол из результатов
-    let randomVerb: DatabaseVerb | null = null;
-    if (data && data.length > 0) {
-      const randomIndex = Math.floor(Math.random() * data.length);
-      randomVerb = data[randomIndex] as DatabaseVerb;
-    }
-
     if (error) {
+      console.error('Error fetching verbs in GET /api/verbs/random:', error);
       return NextResponse.json<ApiResponse<null>>(
-        { error: 'Database error: ' + error.message },
+        { error: 'Internal server error' },
         { status: 500 }
       );
     }
@@ -46,33 +40,22 @@ export async function GET() {
       );
     }
 
-    if (!randomVerb) {
-      return NextResponse.json<ApiResponse<null>>(
-        { error: 'Failed to select random verb' },
-        { status: 500 }
-      );
-    }
-
-    const verb = transformDatabaseVerb(randomVerb);
+    // Выбираем случайный глагол из результатов
+    const randomIndex = Math.floor(Math.random() * data.length);
+    const verb = transformDatabaseVerb(data[randomIndex] as DatabaseVerb);
     return NextResponse.json<ApiResponse<Verb>>({
       data: verb,
       message: 'Random verb fetched successfully',
     });
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json<ApiResponse<null>>(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json<ApiResponse<null>>(
-        { error: 'Error: ' + error.message },
-        { status: 500 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
+    console.error('Error in GET /api/verbs/random:', error);
     return NextResponse.json<ApiResponse<null>>(
       { error: 'Internal server error' },
       { status: 500 }

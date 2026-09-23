@@ -47,6 +47,14 @@ noun articles, verb conjugation and telling the time, and it has real users beyo
   `git`/`gh` mutation is owned by a deterministic controller script, and DB-schema changes are
   refused outright (`BLOCKED-DB-CHANGE`) because they need a human against the live database. See
   [Autonomous task execution: the Ralph loop](#autonomous-task-execution-the-ralph-loop).
+- **Style and pattern discipline enforced even for AI-generated code:** every JS/TS change —
+  whether hand-written or produced by an AI coding assistant — is expected to follow a fixed set
+  of codified skills covering naming, formatting and hot-path conventions (`js-conventions`),
+  choosing the right native or custom collection for the job (`js-data-structures`,
+  `data-structures`), consistent error classification and recovery instead of ad-hoc `try/catch`
+  (`error-handling`), and idiomatic GoF/design-pattern use without over-engineering (`js-gof`) —
+  so code quality doesn't erode as more of the codebase gets written by an agent instead of a
+  person.
 
 ### Project status
 
