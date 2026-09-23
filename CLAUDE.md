@@ -52,6 +52,7 @@ npm run dev           # next dev --turbopack
 npm run check         # lint:strict + format:check + tsc --noEmit — основной гейт
 npm run build         # то, что реально валит прод-деплой, если сломано
 npm run fix           # lint:fix + prettier --write
+npm run skills:update # обновить metaskills и пересоздать копии в .claude/skills (см. ниже)
 npm run test          # vitest run — юнит/интеграционные тесты (Vitest)
 npm run test:watch    # vitest в watch-режиме
 npm run test:coverage # vitest run --coverage
@@ -157,6 +158,18 @@ editor — против того же проекта, на котором раб
 
 Хук `scripts/pre-commit-gate-hook.js` показывает часть этих вопросов автоматически перед
 `git commit`/`git push`.
+
+## Skills пакета metaskills
+
+`.claude/skills/{data-structures,js-data-structures,js-conventions,error-handling,js-gof}` —
+копии директорий из `node_modules/metaskills/skills/<name>`, лежат в `.gitignore`. Их создаёт
+`postinstall` (`scripts/setup-metaskills.js`) при каждом `npm install`, поэтому на новой машине,
+в CI и в клоне Ralph ничего делать вручную не нужно. Голый `npm update metaskills`
+`postinstall` **не** запускает (в npm нет такого хука), поэтому обновлять skills нужно командой
+`npm run skills:update` (`npm update metaskills` + повторное копирование); иначе копии
+обновятся только на следующем `npm install`. Не `npx metaskills` (другая глубина вложенности, не подхватывается
+авто-обнаружением Claude Code) и не симлинки (на Windows `ln -s` в Git Bash делает копии, а
+Ralph собирает skills через `entry.isDirectory()`, который для ссылок даёт false).
 
 ## Документация
 

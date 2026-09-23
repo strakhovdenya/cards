@@ -39,7 +39,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .eq('user_id', user.id)
       .single()) as { data: DatabaseVerb | null; error: unknown };
 
-    if (error || !data) {
+    if (error) {
+      console.error('Error fetching verb in GET /api/verbs/[id]:', error);
+      return NextResponse.json<ApiResponse<null>>(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
       return NextResponse.json({ error: 'Глагол не найден' }, { status: 404 });
     }
 

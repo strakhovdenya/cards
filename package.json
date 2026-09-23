@@ -23,7 +23,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "pre-commit": "npm run check",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "node scripts/setup-metaskills.js",
+    "skills:update": "npm update metaskills && node scripts/setup-metaskills.js"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -58,6 +60,7 @@
     "eslint-plugin-prettier": "^5.5.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
+    "metaskills": "^1.0.5",
     "prettier": "^3.6.2",
     "typescript": "^5",
     "vitest": "^5.0.1"

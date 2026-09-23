@@ -55,3 +55,13 @@ scripts/*.log
 
 .vercel
 .env*
+*/skills/metaskills
+
+# metaskills — копии из node_modules/metaskills/skills/<name>, создаются postinstall-скриптом
+# scripts/setup-metaskills.js, чтобы Claude Code и Ralph видели их как обычные skills
+# (сканируют на глубину .claude/skills/<name>/SKILL.md)
+.claude/skills/data-structures
+.claude/skills/js-data-structures
+.claude/skills/js-conventions
+.claude/skills/error-handling
+.claude/skills/js-gof
