@@ -15,20 +15,25 @@ export function normalizeGermanWord(word: string): string {
 }
 
 /**
+ * Строит Set нормализованных слов для быстрой проверки дубликатов
+ * @param words - массив немецких слов
+ * @returns Set нормализованных слов
+ */
+export function toNormalizedWordSet(words: string[]): Set<string> {
+  return new Set(words.map(normalizeGermanWord));
+}
+
+/**
  * Проверяет, является ли слово дубликатом среди существующих глаголов
  * @param newWord - новое слово для проверки
- * @param existingWords - массив существующих слов
+ * @param existingNormalizedWords - Set нормализованных существующих слов
  * @returns true если слово является дубликатом
  */
 export function isDuplicateGermanWord(
   newWord: string,
-  existingWords: string[]
+  existingNormalizedWords: Set<string>
 ): boolean {
-  const normalizedNewWord = normalizeGermanWord(newWord);
-
-  return existingWords.some(
-    (existingWord) => normalizeGermanWord(existingWord) === normalizedNewWord
-  );
+  return existingNormalizedWords.has(normalizeGermanWord(newWord));
 }
 
 /**

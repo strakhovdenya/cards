@@ -83,7 +83,7 @@ export function AuthenticatedApp() {
   const {
     user,
     profile,
-    userIsAdmin,
+    isUserAdmin,
     loading,
     error,
     setError,
@@ -302,7 +302,7 @@ export function AuthenticatedApp() {
             {/* Информация о пользователе */}
             <UserMenu
               profile={profile}
-              userIsAdmin={userIsAdmin}
+              isUserAdmin={isUserAdmin}
               onSignOut={handleSignOut}
               onInvitesClick={() => {
                 setViewMode('invites');
@@ -616,7 +616,7 @@ export function AuthenticatedApp() {
       <Box
         sx={{
           flexGrow: 1,
-          pb: viewMode !== 'invites' ? 8 : userIsAdmin ? 14 : 8,
+          pb: viewMode !== 'invites' ? 8 : isUserAdmin ? 14 : 8,
         }}
       >
         {error && (

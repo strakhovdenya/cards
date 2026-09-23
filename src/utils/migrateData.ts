@@ -66,15 +66,15 @@ const generateTags = (germanWord: string, translation: string): string[] => {
 };
 
 // Флаг для предотвращения повторного запуска миграции
-let migrationInProgress = false;
+let isMigrationInProgress = false;
 
 export async function migrateSampleData(): Promise<void> {
-  if (migrationInProgress) {
+  if (isMigrationInProgress) {
     console.log('Миграция уже выполняется, пропускаю...');
     return;
   }
 
-  migrationInProgress = true;
+  isMigrationInProgress = true;
   try {
     console.log('Начинаю миграцию данных...');
 
@@ -159,7 +159,7 @@ export async function migrateSampleData(): Promise<void> {
     console.error('Ошибка при миграции данных:', error);
     throw error;
   } finally {
-    migrationInProgress = false;
+    isMigrationInProgress = false;
   }
 }
 

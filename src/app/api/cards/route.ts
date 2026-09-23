@@ -2,7 +2,11 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
+import {
+  isDuplicateGermanWord,
+  extractGermanWords,
+  toNormalizedWordSet,
+} from '@/utils/cardUtils';
 import type {
   CreateCardRequest,
   ApiResponse,
@@ -176,13 +180,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingGermanWords = extractGermanWords(
-      (existingCards ?? []).map((card) => ({
-        germanWord: card.german_word as string,
-      }))
+    const existingWordSet = toNormalizedWordSet(
+      extractGermanWords(
+        (existingCards ?? []).map((card) => ({
+          germanWord: card.german_word as string,
+        }))
+      )
     );
 
-    if (isDuplicateGermanWord(body.germanWord, existingGermanWords)) {
+    if (isDuplicateGermanWord(body.germanWord, existingWordSet)) {
       return NextResponse.json<ApiResponse<null>>(
         { error: 'Карточка с таким немецким словом уже существует' },
         { status: 409 }

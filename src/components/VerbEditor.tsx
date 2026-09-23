@@ -22,7 +22,11 @@ import {
   Paper,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Clear } from '@mui/icons-material';
-import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
+import {
+  isDuplicateGermanWord,
+  extractGermanWords,
+  toNormalizedWordSet,
+} from '@/utils/verbUtils';
 import type { Verb, VerbExamples } from '@/types';
 import {
   getVerbs,
@@ -186,6 +190,12 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
     setIsDuplicate(false);
   };
 
+  // Set строится один раз на список, а не на каждое нажатие клавиши
+  const existingWordSet = useMemo(
+    () => toNormalizedWordSet(extractGermanWords(verbs)),
+    [verbs]
+  );
+
   // Функция для проверки дубликатов
   const checkForDuplicates = (infinitive: string) => {
     if (!infinitive.trim() || editingVerb) {
@@ -193,12 +203,7 @@ export const VerbEditor: React.FC<VerbEditorProps> = () => {
       return;
     }
 
-    const existingGermanWords = extractGermanWords(verbs);
-    const isDuplicateWord = isDuplicateGermanWord(
-      infinitive,
-      existingGermanWords
-    );
-    setIsDuplicate(isDuplicateWord);
+    setIsDuplicate(isDuplicateGermanWord(infinitive, existingWordSet));
   };
 
   const handleFormChange = (field: keyof typeof formData, value: string) => {

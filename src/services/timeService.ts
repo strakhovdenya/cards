@@ -311,12 +311,12 @@ class TimeService {
       const active = data?.filter((q) => q.is_active).length ?? 0;
       const byDifficulty: Record<number, number> = {};
 
-      data?.forEach((question) => {
+      for (const question of data ?? []) {
         if (question.is_active) {
           byDifficulty[question.difficulty_level] =
             (byDifficulty[question.difficulty_level] ?? 0) + 1;
         }
-      });
+      }
 
       return { total, active, byDifficulty };
     } catch (error) {

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeGermanWord,
   isDuplicateGermanWord,
+  toNormalizedWordSet,
   extractGermanWords,
 } from '@/utils/cardUtils';
 
@@ -31,31 +32,58 @@ describe('normalizeGermanWord', () => {
   });
 });
 
+describe('toNormalizedWordSet', () => {
+  it('normalizes every word', () => {
+    expect(toNormalizedWordSet([' Der Hund, ', 'KATZE'])).toEqual(
+      new Set(['derhund', 'katze'])
+    );
+  });
+
+  it('collapses words that normalize equally', () => {
+    expect(toNormalizedWordSet(['Hund', 'hund ']).size).toBe(1);
+  });
+
+  it('returns empty set for empty input', () => {
+    expect(toNormalizedWordSet([]).size).toBe(0);
+  });
+});
+
 describe('isDuplicateGermanWord', () => {
   it('returns true for exact match', () => {
-    expect(isDuplicateGermanWord('Hund', ['Hund', 'Katze'])).toBe(true);
+    expect(
+      isDuplicateGermanWord('Hund', toNormalizedWordSet(['Hund', 'Katze']))
+    ).toBe(true);
   });
 
   it('returns true for case-insensitive match', () => {
-    expect(isDuplicateGermanWord('hund', ['Hund', 'Katze'])).toBe(true);
+    expect(
+      isDuplicateGermanWord('hund', toNormalizedWordSet(['Hund', 'Katze']))
+    ).toBe(true);
   });
 
   it('returns true ignoring spaces', () => {
-    expect(isDuplicateGermanWord('der Hund', ['derHund'])).toBe(true);
+    expect(
+      isDuplicateGermanWord('der Hund', toNormalizedWordSet(['derHund']))
+    ).toBe(true);
   });
 
   it('returns true ignoring commas', () => {
     expect(
-      isDuplicateGermanWord('der Mann, die Männer', ['dermanndiemänner'])
+      isDuplicateGermanWord(
+        'der Mann, die Männer',
+        toNormalizedWordSet(['dermanndiemänner'])
+      )
     ).toBe(true);
   });
 
   it('returns false for non-duplicate', () => {
-    expect(isDuplicateGermanWord('Wolf', ['Hund', 'Katze'])).toBe(false);
+    expect(
+      isDuplicateGermanWord('Wolf', toNormalizedWordSet(['Hund', 'Katze']))
+    ).toBe(false);
   });
 
   it('returns false for empty list', () => {
-    expect(isDuplicateGermanWord('Hund', [])).toBe(false);
+    expect(isDuplicateGermanWord('Hund', toNormalizedWordSet([]))).toBe(false);
   });
 });
 

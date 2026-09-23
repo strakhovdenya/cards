@@ -16,14 +16,14 @@ import type { Profile } from '@/types';
 
 interface UserMenuProps {
   profile: Profile;
-  userIsAdmin: boolean;
+  isUserAdmin: boolean;
   onSignOut: () => void;
   onInvitesClick: () => void;
 }
 
 export function UserMenu({
   profile,
-  userIsAdmin,
+  isUserAdmin,
   onSignOut,
   onInvitesClick,
 }: UserMenuProps) {
@@ -62,7 +62,7 @@ export function UserMenu({
         >
           {profile.first_name} {profile.last_name}
         </Typography>
-        {userIsAdmin && (
+        {isUserAdmin && (
           <Chip
             label="Админ"
             size="small"
@@ -115,7 +115,7 @@ export function UserMenu({
               <Typography variant="subtitle2">
                 {profile.first_name} {profile.last_name}
               </Typography>
-              {userIsAdmin && (
+              {isUserAdmin && (
                 <Chip
                   label="Админ"
                   size="small"
@@ -130,7 +130,7 @@ export function UserMenu({
           </Box>
         </MenuItem>
         <Divider />
-        {userIsAdmin && (
+        {isUserAdmin && (
           <MenuItem onClick={handleInvitesClick}>
             <PersonAdd sx={{ mr: 2 }} />
             Приглашения

@@ -10,7 +10,7 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [userIsAdmin, setUserIsAdmin] = useState(false);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
   const router = useRouter();
 
   const loadUserAndProfile = useCallback(async () => {
@@ -33,12 +33,12 @@ export function useAuth() {
       // Проверяем права админа
       if (currentProfile) {
         const adminStatus = await isAdmin(currentUser.id);
-        setUserIsAdmin(adminStatus || currentProfile.role === 'admin');
+        setIsUserAdmin(adminStatus || currentProfile.role === 'admin');
       }
-    } catch (err) {
-      console.error('Error loading user:', err);
+    } catch (error) {
+      console.error('Error loading user:', error);
       setError(
-        err instanceof Error ? err.message : 'Ошибка загрузки пользователя'
+        error instanceof Error ? error.message : 'Ошибка загрузки пользователя'
       );
     } finally {
       setLoading(false);
@@ -49,8 +49,8 @@ export function useAuth() {
     try {
       await signOut();
       router.push('/auth');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка выхода');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Ошибка выхода');
     }
   };
 
@@ -62,7 +62,7 @@ export function useAuth() {
   return {
     user,
     profile,
-    userIsAdmin,
+    isUserAdmin,
     loading,
     error,
     setError,
