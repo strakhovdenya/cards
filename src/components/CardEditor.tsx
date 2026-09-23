@@ -44,7 +44,11 @@ import type { EditorFormData } from '@/types/cardEditorStrategy';
 import { AdaptiveCardEditorStrategy } from '@/strategies/AdaptiveCardEditorStrategy';
 import { ClientTagService } from '@/services/tagService';
 import { TagFilter } from './TagFilter';
-import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
+import {
+  isDuplicateGermanWord,
+  extractGermanWords,
+  toNormalizedWordSet,
+} from '@/utils/cardUtils';
 
 interface CardEditorProps {
   cards: CardType[];
@@ -106,6 +110,12 @@ export function CardEditor({
     }
   };
 
+  // Set строится один раз на список, а не на каждое нажатие клавиши
+  const existingWordSet = useMemo(
+    () => toNormalizedWordSet(extractGermanWords(cards)),
+    [cards]
+  );
+
   // Функция для проверки дубликатов
   const checkForDuplicates = (germanWord: string) => {
     if (!germanWord.trim() || editingCard) {
@@ -113,12 +123,7 @@ export function CardEditor({
       return;
     }
 
-    const existingGermanWords = extractGermanWords(cards);
-    const isDuplicateWord = isDuplicateGermanWord(
-      germanWord,
-      existingGermanWords
-    );
-    setIsDuplicate(isDuplicateWord);
+    setIsDuplicate(isDuplicateGermanWord(germanWord, existingWordSet));
   };
 
   // Фильтрация карточек

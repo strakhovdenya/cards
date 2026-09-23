@@ -34,7 +34,11 @@ import {
 } from '@mui/icons-material';
 import type { VerbConjugation, Verb, VerbExamples } from '@/types';
 import { ClientVerbService } from '@/services/verbService';
-import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
+import {
+  isDuplicateGermanWord,
+  extractGermanWords,
+  toNormalizedWordSet,
+} from '@/utils/verbUtils';
 
 interface BulkVerbImportProps {
   open: boolean;
@@ -214,14 +218,16 @@ export function BulkVerbImport({
         });
 
         // Проверяем дубликаты для JSON
-        const existingGermanWords = extractGermanWords(existingVerbs);
+        const existingWordSet = toNormalizedWordSet(
+          extractGermanWords(existingVerbs)
+        );
         const duplicates: ParsedVerb[] = [];
         const newVerbs: ParsedVerb[] = [];
 
         verbs.forEach((verb) => {
           const isDuplicate = isDuplicateGermanWord(
             verb.infinitive,
-            existingGermanWords
+            existingWordSet
           );
           if (isDuplicate) {
             duplicates.push({ ...verb, isDuplicate: true });
@@ -358,14 +364,16 @@ export function BulkVerbImport({
     }
 
     // Проверяем дубликаты для текстового формата
-    const existingGermanWords = extractGermanWords(existingVerbs);
+    const existingWordSet = toNormalizedWordSet(
+      extractGermanWords(existingVerbs)
+    );
     const duplicates: ParsedVerb[] = [];
     const newVerbs: ParsedVerb[] = [];
 
     verbs.forEach((verb) => {
       const isDuplicate = isDuplicateGermanWord(
         verb.infinitive,
-        existingGermanWords
+        existingWordSet
       );
       if (isDuplicate) {
         duplicates.push({ ...verb, isDuplicate: true });

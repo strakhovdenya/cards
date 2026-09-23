@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeGermanWord,
   isDuplicateGermanWord,
+  toNormalizedWordSet,
   extractGermanWords,
 } from '@/utils/verbUtils';
 
@@ -33,27 +34,39 @@ describe('normalizeGermanWord (verbUtils)', () => {
 
 describe('isDuplicateGermanWord (verbUtils)', () => {
   it('returns true for exact match', () => {
-    expect(isDuplicateGermanWord('laufen', ['laufen', 'gehen'])).toBe(true);
+    expect(
+      isDuplicateGermanWord('laufen', toNormalizedWordSet(['laufen', 'gehen']))
+    ).toBe(true);
   });
 
   it('returns true for case-insensitive match', () => {
-    expect(isDuplicateGermanWord('LAUFEN', ['laufen'])).toBe(true);
+    expect(
+      isDuplicateGermanWord('LAUFEN', toNormalizedWordSet(['laufen']))
+    ).toBe(true);
   });
 
   it('returns true ignoring spaces', () => {
-    expect(isDuplicateGermanWord('an kommen', ['ankommen'])).toBe(true);
+    expect(
+      isDuplicateGermanWord('an kommen', toNormalizedWordSet(['ankommen']))
+    ).toBe(true);
   });
 
   it('returns true ignoring commas', () => {
-    expect(isDuplicateGermanWord('laufen,', ['laufen'])).toBe(true);
+    expect(
+      isDuplicateGermanWord('laufen,', toNormalizedWordSet(['laufen']))
+    ).toBe(true);
   });
 
   it('returns false for non-duplicate', () => {
-    expect(isDuplicateGermanWord('rennen', ['laufen', 'gehen'])).toBe(false);
+    expect(
+      isDuplicateGermanWord('rennen', toNormalizedWordSet(['laufen', 'gehen']))
+    ).toBe(false);
   });
 
   it('returns false for empty list', () => {
-    expect(isDuplicateGermanWord('laufen', [])).toBe(false);
+    expect(isDuplicateGermanWord('laufen', toNormalizedWordSet([]))).toBe(
+      false
+    );
   });
 });
 

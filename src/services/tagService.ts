@@ -56,10 +56,10 @@ export class ClientTagService {
     forceRefresh = false,
     options?: ServiceOptions
   ): Promise<Tag[]> {
-    const allowCache = !options?.guest;
+    const canCache = !options?.guest;
 
     // Если кеш актуален и не требуется принудительное обновление
-    if (allowCache && !forceRefresh && isCacheValid()) {
+    if (canCache && !forceRefresh && isCacheValid()) {
       console.log('Using cached tags:', tagsCache!.length);
       return tagsCache!;
     }
@@ -71,7 +71,7 @@ export class ClientTagService {
     });
     const tags = await handleApiResponse<Tag[]>(response);
 
-    if (allowCache) {
+    if (canCache) {
       // Обновляем кеш
       tagsCache = tags;
       cacheTimestamp = Date.now();

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteClient } from '@/lib/auth-server';
 import { cookies } from 'next/headers';
-import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
+import {
+  isDuplicateGermanWord,
+  extractGermanWords,
+  toNormalizedWordSet,
+} from '@/utils/verbUtils';
 import type { BulkCreateVerbsRequest, ApiResponse } from '@/types';
 
 interface DbVerb {
@@ -66,7 +70,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingGermanWords = extractGermanWords(existingVerbs || []);
+    const existingWordSet = toNormalizedWordSet(
+      extractGermanWords(existingVerbs || [])
+    );
 
     // Валидируем каждый глагол
     const validPersons = ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie / Sie'];
@@ -119,7 +125,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Проверяем на дубликаты среди существующих глаголов
-      if (isDuplicateGermanWord(verb.infinitive, existingGermanWords)) {
+      if (isDuplicateGermanWord(verb.infinitive, existingWordSet)) {
         duplicateVerbs.push(verb.infinitive);
       }
     }

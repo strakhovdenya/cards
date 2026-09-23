@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { isDuplicateGermanWord, extractGermanWords } from '@/utils/verbUtils';
+import {
+  isDuplicateGermanWord,
+  extractGermanWords,
+  toNormalizedWordSet,
+} from '@/utils/verbUtils';
 import type {
   CreateVerbRequest,
   DatabaseVerb,
@@ -138,9 +142,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingGermanWords = extractGermanWords(existingVerbs || []);
+    const existingWordSet = toNormalizedWordSet(
+      extractGermanWords(existingVerbs || [])
+    );
 
-    if (isDuplicateGermanWord(body.infinitive, existingGermanWords)) {
+    if (isDuplicateGermanWord(body.infinitive, existingWordSet)) {
       return NextResponse.json(
         { error: 'Такой глагол уже есть' },
         { status: 409 }

@@ -4,7 +4,11 @@ import type {
   ParsedCard,
 } from './BulkImportStrategy';
 import type { Card } from '@/types';
-import { isDuplicateGermanWord, extractGermanWords } from '@/utils/cardUtils';
+import {
+  isDuplicateGermanWord,
+  extractGermanWords,
+  toNormalizedWordSet,
+} from '@/utils/cardUtils';
 
 export interface ParsedNounCard extends ParsedCard {
   word_type: 'noun';
@@ -25,7 +29,7 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
     const cards: ParsedNounCard[] = [];
     const errors: string[] = [];
 
-    lines.forEach((line, index) => {
+    for (const [index, line] of lines.entries()) {
       // Нормализуем дефисы ДО trim — та же причина, что в BasicBulkImportStrategy
       const normalizedLine = line.replace(/[‐‑‒–—−﹘﹣－]/g, '-');
       const trimmedLine = normalizedLine.trim();
@@ -33,14 +37,14 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
       const lineNumber = index + 1;
 
       // Пропускаем пустые строки
-      if (!trimmedLine) return;
+      if (!trimmedLine) continue;
 
       // Ищем разделитель " - " в нормализованной строке до trim
       const separatorIndex = normalizedLine.indexOf(' - ');
 
       if (separatorIndex === -1) {
         errors.push(`Строка ${lineNumber}: не найден разделитель " - "`);
-        return;
+        continue;
       }
 
       const germanWord = normalizedLine.substring(0, separatorIndex).trim();
@@ -48,12 +52,12 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
 
       if (!germanWord) {
         errors.push(`Строка ${lineNumber}: пустое немецкое слово`);
-        return;
+        continue;
       }
 
       if (!translation) {
         errors.push(`Строка ${lineNumber}: пустой перевод`);
-        return;
+        continue;
       }
 
       // Парсим существительное - извлекаем артикль, базовую форму и множественное число
@@ -68,24 +72,26 @@ export class NounBulkImportStrategy implements BulkImportStrategy {
         article,
         plural,
       });
-    });
+    }
 
     // Проверяем дубликаты
-    const existingGermanWords = extractGermanWords(existingCards);
+    const existingWordSet = toNormalizedWordSet(
+      extractGermanWords(existingCards)
+    );
     const duplicates: ParsedNounCard[] = [];
     const newCards: ParsedNounCard[] = [];
 
-    cards.forEach((card) => {
+    for (const card of cards) {
       const isDuplicate = isDuplicateGermanWord(
         card.germanWord,
-        existingGermanWords
+        existingWordSet
       );
       if (isDuplicate) {
         duplicates.push({ ...card, isDuplicate: true });
       } else {
         newCards.push({ ...card, isDuplicate: false });
       }
-    });
+    }
 
     return { cards, errors, duplicates, newCards };
   }
