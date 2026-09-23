@@ -22,14 +22,16 @@ process.stdin.on('end', () => {
     let reason = null;
     if (/\bgit\s+commit\b/.test(command)) {
       reason =
-        'Before committing: (1) has `npm run check` been run and passed on this diff? '
-        + '(2) has the user been asked whether to run /code-review first? '
-        + 'Confirm both actually happened in this turn before approving.';
+        'Before committing: (1) has `npm run check` been run and passed on this diff? ' +
+        '(2) has the user been asked whether to run /code-review first? ' +
+        '(3) were the metaskills (js-conventions, js-gof, vitest for tests) loaded ' +
+        'before writing code, and was the diff checked against them? ' +
+        'Confirm all three actually happened in this turn before approving.';
     } else if (/\bgit\s+push\b/.test(command)) {
       reason =
-        'Before pushing: this branch becomes a PR, and merging it deploys to production. '
-        + 'Does the PR body include "Closes #<n>", and is the change safe for the live '
-        + 'Supabase schema (additive, not breaking)? Confirm before approving.';
+        'Before pushing: this branch becomes a PR, and merging it deploys to production. ' +
+        'Does the PR body include "Closes #<n>", and is the change safe for the live ' +
+        'Supabase schema (additive, not breaking)? Confirm before approving.';
     }
 
     if (!reason) return;
@@ -41,7 +43,7 @@ process.stdin.on('end', () => {
           permissionDecision: 'ask',
           permissionDecisionReason: reason,
         },
-      }),
+      })
     );
   } catch {
     // Malformed input — do not block on a hook bug, let the tool call proceed.

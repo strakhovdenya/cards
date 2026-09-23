@@ -153,6 +153,7 @@ editor — против того же проекта, на котором раб
 - [ ] `npm run check` зелёный
 - [ ] `npm run build` зелёный (если изменения могли повлиять на сборку)
 - [ ] Acceptance Criteria в issue отмечены и соответствуют тому, что реально сделано
+- [ ] Код сверен со скилами, загруженными до написания (см. «Skills пакета metaskills»)
 - [ ] Спросить пользователя, нужен ли `/code-review` по этому дифу
 - [ ] Спросить, нужно ли обновить `README.md`
 
@@ -160,6 +161,11 @@ editor — против того же проекта, на котором раб
 `git commit`/`git push`.
 
 ## Skills пакета metaskills
+
+**Обязательно:** перед написанием или правкой `.ts`/`.tsx` загрузи через Skill `js-conventions`
+и `js-gof`; для тестов — ещё `vitest`; если задача про обработку ошибок — `error-handling`.
+Загружай до реализации, а не после: скилы, на которые ссылается issue (`Docs to Read`),
+читаются обязательно.
 
 `.claude/skills/{data-structures,js-data-structures,js-conventions,error-handling,js-gof}` —
 копии директорий из `node_modules/metaskills/skills/<name>`, лежат в `.gitignore`. Их создаёт
