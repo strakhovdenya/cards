@@ -91,6 +91,18 @@ describe('ClientVerbService.createVerb', () => {
       })
     ).rejects.toThrow('Validation failed');
   });
+
+  it('propagates the server error message verbatim', async () => {
+    const message = 'Глагол с таким инфинитивом уже существует';
+    mockFetch.mockResolvedValue(makeFetchResponse({ error: message }, false));
+    await expect(
+      ClientVerbService.createVerb({
+        infinitive: 'laufen',
+        translation: 'бегать',
+        conjugations: [],
+      })
+    ).rejects.toThrow(new Error(message));
+  });
 });
 
 describe('getRandomPerson', () => {

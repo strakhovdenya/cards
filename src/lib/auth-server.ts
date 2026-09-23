@@ -33,6 +33,11 @@ export async function getAuthenticatedUser() {
     error,
   } = await supabase.auth.getSession();
 
+  if (error) {
+    // Отличаем сбой запроса к Supabase от штатного «сессии нет»
+    console.error('Error getting session:', error);
+  }
+
   if (error || !session?.user) {
     throw new Error('Unauthorized');
   }
