@@ -26,7 +26,7 @@ export function useCards() {
       setCards(fetchedCards);
     } catch (error) {
       console.error('Error loading cards:', error);
-      throw new Error('Ошибка загрузки карточек');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
@@ -53,7 +53,7 @@ export function useCards() {
       }
     } catch (error) {
       console.error('Error adding card:', error);
-      throw new Error('Ошибка добавления карточки');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
@@ -73,7 +73,7 @@ export function useCards() {
       }
     } catch (error) {
       console.error('Error updating card:', error);
-      throw new Error('Ошибка обновления карточки');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
@@ -83,7 +83,7 @@ export function useCards() {
       setCards((prev) => prev.filter((card) => card.id !== id));
     } catch (error) {
       console.error('Error deleting card:', error);
-      throw new Error('Ошибка удаления карточки');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
@@ -100,7 +100,7 @@ export function useCards() {
       }
     } catch (error) {
       console.error('Error importing cards:', error);
-      throw new Error('Ошибка импорта карточек');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 

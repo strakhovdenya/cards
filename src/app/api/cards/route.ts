@@ -208,6 +208,8 @@ export async function POST(request: NextRequest) {
       throw new Error(error.message);
     }
 
+    let tagsAttached = true;
+
     // Добавляем теги если указаны - ИСПРАВЛЕНО: добавляем user_id для безопасности
     if (body.tagIds && body.tagIds.length > 0) {
       // Сначала проверяем что все теги принадлежат пользователю
@@ -239,7 +241,8 @@ export async function POST(request: NextRequest) {
 
       if (tagError) {
         console.error('Error adding tags to card:', tagError);
-        // Не прерываем выполнение, карточка уже создана
+        // Не прерываем выполнение, карточка уже создана — сообщаем клиенту
+        tagsAttached = false;
       }
     }
 
@@ -284,10 +287,11 @@ export async function POST(request: NextRequest) {
         })) ?? [],
     };
 
-    return NextResponse.json<ApiResponse<Card>>(
+    return NextResponse.json<ApiResponse<Card> & { tagsAttached?: false }>(
       {
         data: formattedCard,
         message: 'Card created successfully',
+        ...(tagsAttached ? {} : { tagsAttached: false as const }),
       },
       { status: 201 }
     );

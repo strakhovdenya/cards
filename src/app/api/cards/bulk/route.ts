@@ -9,6 +9,14 @@ import type {
   SupabaseError,
 } from '@/types';
 
+interface BulkCardFailure {
+  index: number;
+  germanWord: string;
+  reason: string;
+  /** true — карточка создана, но что-то пошло не так после создания */
+  created: boolean;
+}
+
 // POST /api/cards/bulk - массовое создание карточек
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +29,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    console.log('body.cards', body.cards);
     // Валидируем каждую карточку
     for (const [index, card] of body.cards.entries()) {
       if (!card.germanWord || !card.translation) {
@@ -35,9 +42,10 @@ export async function POST(request: NextRequest) {
     }
 
     const createdCards: Card[] = [];
+    const failed: BulkCardFailure[] = [];
 
     // Создаем карточки по одной (можно оптимизировать позже)
-    for (const cardData of body.cards) {
+    for (const [index, cardData] of body.cards.entries()) {
       // Создаем карточку
       const { data: card, error } = (await supabase
         .from('cards')
@@ -58,6 +66,12 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error creating card:', error);
+        failed.push({
+          index,
+          germanWord: cardData.germanWord,
+          reason: 'Failed to create card',
+          created: false,
+        });
         continue; // Пропускаем ошибочные карточки
       }
 
@@ -72,6 +86,12 @@ export async function POST(request: NextRequest) {
 
         if (tagCheckError) {
           console.error('Error checking tags ownership:', tagCheckError);
+          failed.push({
+            index,
+            germanWord: cardData.germanWord,
+            reason: 'Failed to verify tags',
+            created: true,
+          });
           continue; // Пропускаем эту карточку
         }
 
@@ -81,6 +101,12 @@ export async function POST(request: NextRequest) {
             'Some tags do not belong to the user for card:',
             cardData
           );
+          failed.push({
+            index,
+            germanWord: cardData.germanWord,
+            reason: 'Some tags do not belong to the user',
+            created: true,
+          });
           continue; // Пропускаем эту карточку
         }
 
@@ -96,6 +122,12 @@ export async function POST(request: NextRequest) {
 
         if (tagError) {
           console.error('Error adding tags to card:', tagError);
+          failed.push({
+            index,
+            germanWord: cardData.germanWord,
+            reason: 'Card created, but tags were not attached',
+            created: true,
+          });
         }
       }
 
@@ -118,6 +150,12 @@ export async function POST(request: NextRequest) {
 
       if (fetchError) {
         console.error('Error fetching full card:', fetchError);
+        failed.push({
+          index,
+          germanWord: cardData.germanWord,
+          reason: 'Card created, but fetching it failed',
+          created: true,
+        });
         continue;
       }
 
@@ -144,9 +182,12 @@ export async function POST(request: NextRequest) {
       createdCards.push(formattedCard);
     }
 
-    return NextResponse.json<ApiResponse<Card[]>>(
+    return NextResponse.json<
+      ApiResponse<Card[]> & { failed: BulkCardFailure[] }
+    >(
       {
         data: createdCards,
+        failed,
         message: `Successfully created ${createdCards.length} out of ${body.cards.length} cards`,
       },
       { status: 201 }

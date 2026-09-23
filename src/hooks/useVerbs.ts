@@ -31,7 +31,7 @@ export function useVerbs() {
       setVerbs(fetchedVerbs);
     } catch (error) {
       console.error('Error loading verbs:', error);
-      throw new Error('Ошибка загрузки глаголов');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
@@ -110,7 +110,7 @@ export function useVerbs() {
       }
     } catch (error) {
       console.error('Error saving verb:', error);
-      throw new Error('Ошибка сохранения глагола');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
@@ -122,7 +122,7 @@ export function useVerbs() {
       setVerbs((prev) => prev.filter((v) => v.id !== id));
     } catch (error) {
       console.error('Error deleting verb:', error);
-      throw new Error('Ошибка удаления глагола');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
@@ -134,7 +134,7 @@ export function useVerbs() {
       setVerbs((prev) => [...importedVerbs, ...prev]);
     } catch (error) {
       console.error('Error importing verbs:', error);
-      throw new Error('Ошибка импорта глаголов');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 

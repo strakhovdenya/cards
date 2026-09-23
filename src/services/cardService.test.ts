@@ -79,6 +79,14 @@ describe('ClientCardService.createCard', () => {
       ClientCardService.createCard('Hund', 'собака')
     ).rejects.toThrow('Validation failed');
   });
+
+  it('propagates the server error message verbatim (409 duplicate)', async () => {
+    const message = 'Карточка с таким немецким словом уже существует';
+    mockFetch.mockResolvedValue(makeFetchResponse({ error: message }, false));
+    await expect(
+      ClientCardService.createCard('Hund', 'собака')
+    ).rejects.toThrow(new Error(message));
+  });
 });
 
 describe('ClientCardService.updateCard', () => {
