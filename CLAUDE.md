@@ -275,6 +275,13 @@ workflows фабрики по полному commit тега v0.1.3 (`33fa44be�
   исполняется из `ci.yml` самого PR, а стороны и владельцев читает с main; пока на main нет
   `factory-separation.json`, core пропускает классификацию с notice — такой зелёный статус не
   доказывает работу классификатора.
+- **CodeQL** — job `codeql` (`Analyze (javascript-typescript)`) в `ci.yml`: статический анализ
+  JavaScript/TypeScript без сборки (`build-mode: none`), запускается на PR и push в main после
+  остальных jobs, в том числе при их падении или пропуске (`always()`), результаты уходят в GitHub
+  Code scanning. Успех job означает, что анализ выполнен и результаты загружены, а не отсутствие
+  уязвимостей: найденные alerts — отдельная проверка Code scanning. CodeQL default setup в
+  настройках репозитория должен оставаться выключенным — он блокирует SARIF-загрузку этого advanced
+  setup.
 - **Eval** (`acceptance-verifier-eval.yml`) — только ручной запуск; golden set в
   `.github/verifier/golden` появится в #77.
 
@@ -284,14 +291,15 @@ workflows фабрики по полному commit тега v0.1.3 (`33fa44be�
 (`allowed-models.json`, `taxonomy.json` — полная копия словаря релиза, проектных значений в ней
 нет). Поэтому изменение конфига или обёртки действует только после merge, а обёртки на
 `workflow_run`/`issues` не проверяют PR, который их впервые добавляет. `required-checks.json`
-сейчас содержит четыре CI-проверки: `Check (lint + format + types)`, `Test (unit)`, `Build`,
-`Factory separation`. Имена этих job в `ci.yml` не переименовывать без правки списка.
+сейчас содержит пять CI-проверок: `Check (lint + format + types)`, `Test (unit)`, `Build`,
+`Factory separation`, `Analyze (javascript-typescript)`. Пятое имя действует для verifier только
+после merge #76 в main. Имена этих job в `ci.yml` не переименовывать без правки списка.
 
 **Граница этапов подключения.** #74 подключил пакет, профиль, setup и хуки; #75 — verifier,
-spec approval, Judge и Factory separation. CodeQL (`Analyze (javascript-typescript)` в
-`required-checks.json`) добавляет #76. Golden set, ADR и первый живой прогон Ralph на Cards — #77
-после #74–#76, с выбранной задачей, моделью и отдельно согласованными лимитами. До них CodeQL,
-golden eval и живой Ralph не считаются подтверждёнными.
+spec approval, Judge и Factory separation; #76 — CodeQL (job в `ci.yml` и имя
+`Analyze (javascript-typescript)` в `required-checks.json`). Golden set, ADR и первый живой прогон
+Ralph на Cards — #77 после #74–#76, с выбранной задачей, моделью и отдельно согласованными
+лимитами. До неё golden eval и живой Ralph не считаются подтверждёнными.
 
 ## Context management
 

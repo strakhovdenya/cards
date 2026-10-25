@@ -1,1 +1,1 @@
-["Check (lint + format + types)", "Test (unit)", "Build", "Factory separation"]
+["Check (lint + format + types)", "Test (unit)", "Build", "Factory separation", "Analyze (javascript-typescript)"]
