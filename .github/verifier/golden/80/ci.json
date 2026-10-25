@@ -1,0 +1,56 @@
+{
+  "head_sha": "4e97212ebf6217392de4632d35e5a5a3ab4d94ac",
+  "ci_workflow_conclusion": "success",
+  "checks": [
+    {
+      "conclusion": "success",
+      "name": "CodeQL",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "name": "Analyze (javascript-typescript)",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "name": "Vercel Preview Comments",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "name": "Factory separation",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "name": "Factory separation core / Factory separation",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "name": "Check (lint + format + types)",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "name": "Build",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "name": "Test (unit)",
+      "status": "completed"
+    }
+  ],
+  "statuses": [
+    {
+      "name": "Vercel",
+      "state": "success"
+    },
+    {
+      "name": "Acceptance Verifier",
+      "state": "success"
+    }
+  ]
+}

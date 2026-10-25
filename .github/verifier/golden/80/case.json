@@ -1,0 +1,9 @@
+{
+  "pr": 80,
+  "base_sha": "6755e0d7f8c90b22c0ae52cefb4f234e6708c088",
+  "head_sha": "4e97212ebf6217392de4632d35e5a5a3ab4d94ac",
+  "expected": "PASS",
+  "expected_criterion_id": null,
+  "expected_reason_code": null,
+  "reason": "PR #80 adds one codeql job named Analyze (javascript-typescript) with the required permissions, needs, if: always() and checkout/init/analyze steps, adds the fifth name to required-checks.json and documents the five checks in CLAUDE.md, so every model-judged item of issue #76 holds and all five required CI checks of the head are green."
+}

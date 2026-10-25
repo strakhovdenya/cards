@@ -1,0 +1,11 @@
+{
+  "pr": 80,
+  "base_sha": "6755e0d7f8c90b22c0ae52cefb4f234e6708c088",
+  "head_sha": "4e97212ebf6217392de4632d35e5a5a3ab4d94ac",
+  "expected": "FAIL",
+  "expected_criterion_id": "AC-4",
+  "expected_reason_code": "criterion_failed",
+  "pair_of": "80",
+  "mutation_kind": "doc_required_checks_drift",
+  "reason": "Corruption: CLAUDE.md is reverted to say required-checks.json holds four checks without Analyze (javascript-typescript), while the PR still adds the fifth name, so the doc no longer lists all five required checks (AC-4). Only CLAUDE.md, which is in Affects, changes; CI and the tampering scan are unaffected."
+}

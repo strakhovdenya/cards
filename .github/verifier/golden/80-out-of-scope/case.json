@@ -1,0 +1,11 @@
+{
+  "pr": 80,
+  "base_sha": "6755e0d7f8c90b22c0ae52cefb4f234e6708c088",
+  "head_sha": "4e97212ebf6217392de4632d35e5a5a3ab4d94ac",
+  "expected": "FAIL",
+  "expected_criterion_id": null,
+  "expected_reason_code": "out_of_scope_file",
+  "pair_of": "80",
+  "mutation_kind": "file_outside_affects",
+  "reason": "Corruption: a new docs/codeql.md is added next to the otherwise correct PR; docs/ is not in the Affects of issue #76, so the computed scope check must report it as an out of scope file."
+}

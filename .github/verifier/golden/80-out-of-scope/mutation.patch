@@ -1,0 +1,10 @@
+diff --git a/docs/codeql.md b/docs/codeql.md
+new file mode 100644
+index 0000000..132ec05
+--- /dev/null
++++ b/docs/codeql.md
+@@ -0,0 +1,4 @@
++# CodeQL в CI
++
++Job `codeql` (`Analyze (javascript-typescript)`) в `.github/workflows/ci.yml` выполняет
++статический анализ JavaScript/TypeScript без сборки и загружает результаты в GitHub Code scanning.
