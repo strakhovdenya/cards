@@ -1,0 +1,14 @@
+{
+  "specPatterns": [".github/verifier/issue-contract.overlay.json"],
+  "verifierPatterns": [
+    ".factory/profile.json",
+    ".github/verifier/risk-zones.json",
+    ".github/verifier/tampering-scan.json",
+    ".github/verifier/required-checks.json",
+    ".github/verifier/allowed-models.json",
+    ".github/verifier/owners.json",
+    ".github/verifier/factory-separation.json",
+    ".github/workflows/acceptance-verifier.yml"
+  ],
+  "label": "factory-cross-change"
+}

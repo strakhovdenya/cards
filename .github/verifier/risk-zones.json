@@ -1,0 +1,12 @@
+{
+  "zones": [
+    {
+      "name": "supabase_schema",
+      "description": "Supabase database schema: SQL in docs/**/*.sql, tables, columns, migrations and RLS policies that isolate one user's data from another's; applied by hand to the single project shared by production and preview, so a breaking change takes production down before merge"
+    },
+    {
+      "name": "vercel_deploy",
+      "description": "Vercel deployment of main to production and of PR previews: vercel.json, next.config.ts, build settings and environment variables (NEXT_PUBLIC_* inlined at build time, server-only keys kept out of Preview)"
+    }
+  ]
+}

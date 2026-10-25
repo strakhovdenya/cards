@@ -18,7 +18,20 @@
   ],
   "docOnlyPathPatterns": ["**/*.md", "**/docs/"],
   "protectedPaths": [".claude/", "scripts/", ".github/", ".husky/", ".git/", "docs/"],
-  "labels": { "humanNeeded": "ralph-needs-db-change" },
+  "labels": { "humanNeeded": "ralph-needs-db-change", "calibration": "calibrate" },
+  "verifier": {
+    "goldenDir": ".github/verifier/golden",
+    "checks": [
+      "spec-approval",
+      "affects-scope",
+      "computed-items",
+      "test-tampering-scan",
+      "references",
+      "ci-checks",
+      "allowed-model"
+    ]
+  },
+  "judge": { "enabled": true },
   "skillRules": [
     {
       "path": "src",

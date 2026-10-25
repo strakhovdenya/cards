@@ -1,0 +1,5 @@
+{
+  "test": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts"],
+  "workflow": [".github/workflows/*.yml"],
+  "config": ["**/eslint.config.*", "**/vitest.config.*", "**/tsconfig*.json", "**/package.json"]
+}
