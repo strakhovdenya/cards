@@ -43,7 +43,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# ralph loop (autonomous agent) runtime files — see .claude/ralph/README.md
+# Ralph из пакета dark-factory: личный конфиг запуска (node_modules/dark-factory/ralph/README.md)
+.ralph/
+
+# прежний локальный Ralph (удалён): личные файлы остаются на диске до осознанного переноса
 .claude/ralph/config.json
 .claude/ralph/state.json
 .claude/ralph/run.lock
@@ -57,11 +60,24 @@ scripts/*.log
 .env*
 */skills/metaskills
 
-# metaskills — копии из node_modules/metaskills/skills/<name>, создаются postinstall-скриптом
-# scripts/setup-metaskills.js, чтобы Claude Code и Ralph видели их как обычные skills
-# (сканируют на глубину .claude/skills/<name>/SKILL.md)
-.claude/skills/data-structures
-.claude/skills/js-data-structures
+# dark-factory setup — управляемые копии базового набора v0.1.3 и их manifest. Создаются
+# postinstall-ом установленного пакета (node_modules/dark-factory/bin/setup.js); setup требует
+# каждый путь поимённо, широкая маска не принимается. При смене версии фабрики список
+# сверяется заново (шаг 5 docs/connecting-a-project.md на теге релиза).
+.claude/.factory-installed.json
+.claude/skills/prd
+.claude/skills/plan
+.claude/skills/issues
+.claude/skills/task-lifecycle
+.claude/skills/epic-discovery
+.claude/skills/adr
 .claude/skills/js-conventions
-.claude/skills/error-handling
 .claude/skills/js-gof
+.claude/skills/js-data-structures
+.claude/skills/error-handling
+.claude/skills/modern-javascript
+.claude/skills/data-structures
+.claude/agents/research.md
+.claude/agents/codebase-scan.md
+.claude/agents/verify.md
+.claude/agents/pr-writer.md

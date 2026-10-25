@@ -41,8 +41,10 @@ src/
   constants/    userRoles
 docs/           SQL-схемы, миграции и заметки по настройке Supabase
 project-management/  DECISIONS.md, prd/, plan/
-scripts/        хуки Claude Code (lint, typecheck, pre-commit gate)
-.claude/        settings.json, ralph/ (автономный цикл), skills/
+src/__factory__/  интеграционный тест пакетного closure-gate хука на профиле Cards
+.factory/       профиль dark-factory (profile.json) и PRD-overlay (overlays/prd.json)
+.claude/        settings.json (пакетные хуки), skills/ (проектные tracked + управляемые копии пакета),
+                agents/ (управляемые копии пакета)
 ```
 
 ## Команды
@@ -52,7 +54,6 @@ npm run dev           # next dev --turbopack
 npm run check         # lint:strict + format:check + tsc --noEmit — основной гейт
 npm run build         # то, что реально валит прод-деплой, если сломано
 npm run fix           # lint:fix + prettier --write
-npm run skills:update # обновить metaskills и пересоздать копии в .claude/skills (см. ниже)
 npm run test          # vitest run — юнит/интеграционные тесты (Vitest)
 npm run test:watch    # vitest в watch-режиме
 npm run test:coverage # vitest run --coverage
@@ -89,7 +90,8 @@ npx playwright install   # установить браузеры Playwright (о�
 
 Юнит-тесты покрывают: `src/utils/` (cardUtils, verbUtils — полностью), `src/strategies/` (все 9
 файлов — полностью), `src/services/` (cardService, tagService, nounService, verbService через мок
-`fetch`; timeService через мок `getServiceSupabase()`). `speechService.ts` и `migrateData.ts` вне
+`fetch`; timeService через мок `getServiceSupabase()`). `src/__factory__/closure-gate.test.ts` — интеграционный тест установленных хуков
+`closure-gate.js`/`skill-marker.js` фабрики на профиле Cards (без реальных git-команд). `speechService.ts` и `migrateData.ts` вне
 скоупа: первый требует DOM-окружения (jsdom/happy-dom), второй — только приватная логика без
 публичных точек входа. `npm run test` — добавить к обязательным проверкам перед коммитом,
 если изменения затрагивают services/utils/strategies.
@@ -132,8 +134,10 @@ editor — против того же проекта, на котором раб
 ## Рабочий процесс
 
 Цепочка для крупной фичи: `/prd` → `/plan` → `/issues` → реализация → PR → мёрдж человеком.
-Для одиночной задачи PRD и план не нужны — сразу GitHub Issue по формату из
-`.claude/skills/issues/SKILL.md`.
+Для одиночной задачи PRD и план не нужны — сразу GitHub Issue по контракту
+`node_modules/dark-factory/verifier/issue-contract.md` (скилл `issues`; проверка —
+`node node_modules/dark-factory/verifier/issue-lint.js <file> --require-v2`). Процедура задачи от
+одобренного плана до PR — скилл `task-lifecycle`.
 
 - **Plan-first**: перед изменениями кода покажи план (файлы, подход, риски) и дождись
   подтверждения.
@@ -153,29 +157,65 @@ editor — против того же проекта, на котором раб
 - [ ] `npm run check` зелёный
 - [ ] `npm run build` зелёный (если изменения могли повлиять на сборку)
 - [ ] Acceptance Criteria в issue отмечены и соответствуют тому, что реально сделано
-- [ ] Код сверен со скилами, загруженными до написания (см. «Skills пакета metaskills»)
+- [ ] Код сверен со скилами, загруженными до написания (см. «Скиллы, агенты и хуки dark-factory»)
 - [ ] Спросить пользователя, нужен ли `/code-review` по этому дифу
 - [ ] Спросить, нужно ли обновить `README.md`
 
-Хук `scripts/pre-commit-gate-hook.js` показывает часть этих вопросов автоматически перед
-`git commit`/`git push`.
+Пакетный хук `closure-gate.js` блокирует `git commit`/`git push`, пока в сессии не загружен
+`task-lifecycle`, а затем спрашивает подтверждение закрытия.
 
-## Skills пакета metaskills
+## Скиллы, агенты и хуки dark-factory
 
-**Обязательно:** перед написанием или правкой `.ts`/`.tsx` загрузи через Skill `js-conventions`
-и `js-gof`; для тестов — ещё `vitest`; если задача про обработку ошибок — `error-handling`.
-Загружай до реализации, а не после: скилы, на которые ссылается issue (`Docs to Read`),
+Процессные скиллы, базовые JS-метаскиллы, агенты и хуки приходят из установленного пакета
+`dark-factory` (`devDependencies`, закреплён на `github:strakhovdenya/dark-factory#v0.1.3`,
+commit `33fa44be6803ad8c2190c3a60cd6ce41ff42b5df`). Проектные значения — в `.factory/profile.json`.
+
+**Provisioning.** Отдельного корневого `postinstall` нет: обычный `npm install`/`npm ci` запускает
+`postinstall` самой зависимости (`node_modules/dark-factory/bin/setup.js`), и тот раскладывает
+управляемые копии базового набора — `prd`, `plan`, `issues`, `task-lifecycle`, `epic-discovery`,
+`adr`, `js-conventions`, `js-gof`, `js-data-structures`, `error-handling`, `modern-javascript`,
+`data-structures` в `.claude/skills/` и `research`, `codebase-scan`, `verify`, `pr-writer` в
+`.claude/agents/` — плюс список `.claude/.factory-installed.json`. Все эти пути поимённо в
+`.gitignore`; ручное копирование не нужно. Setup не усыновляет чужие каталоги и не переписывает
+tracked-файлы: старая копия с тем же именем — конфликт, который разбирается руками, а не
+расширением `.gitignore`. Проектные tracked-скиллы (`material-ui-nextjs`, `material-ui-styling`,
+`tailwind-4-docs`, `ui-ux-pro-max`, `vercel-react-best-practices`, `vitest`) setup не трогает.
+Обновление фабрики — отдельной задачей по `docs/upgrading.md` нового тега, а не `npm update`.
+
+**Путь → скиллы.** Единая таблица пакета (`node_modules/dark-factory/profile/skill-rules.js`) плюс
+`skillRules` профиля; её применяют и хук `skill-gate.js`, и Ralph:
+
+- любой `.js`/`.mjs`/`.cjs`/`.ts`/`.tsx`/`.jsx` — `js-conventions`, `js-gof`,
+  `js-data-structures`, `error-handling`, `modern-javascript`;
+- `src/**/*.test.ts` — дополнительно `vitest` (профиль);
+- `project-management/DECISIONS.md` (`docs.adr`) — `adr`.
+
+Загружай скиллы через Skill до правки файла, а не после: `skill-gate.js` блокирует Write/Edit,
+пока нужные скиллы не отмечены в сессии. Скиллы, на которые ссылается issue (`Docs to Read`),
 читаются обязательно.
 
-`.claude/skills/{data-structures,js-data-structures,js-conventions,error-handling,js-gof}` —
-копии директорий из `node_modules/metaskills/skills/<name>`, лежат в `.gitignore`. Их создаёт
-`postinstall` (`scripts/setup-metaskills.js`) при каждом `npm install`, поэтому на новой машине,
-в CI и в клоне Ralph ничего делать вручную не нужно. Голый `npm update metaskills`
-`postinstall` **не** запускает (в npm нет такого хука), поэтому обновлять skills нужно командой
-`npm run skills:update` (`npm update metaskills` + повторное копирование); иначе копии
-обновятся только на следующем `npm install`. Не `npx metaskills` (другая глубина вложенности, не подхватывается
-авто-обнаружением Claude Code) и не симлинки (на Windows `ln -s` в Git Bash делает копии, а
-Ralph собирает skills через `entry.isDirectory()`, который для ссылок даёт false).
+**Хуки.** `.claude/settings.json` содержит шесть записей пяти пакетных хуков ровно в форме
+`node_modules/dark-factory/hooks/README.md`: гейты `closure-gate.js` (Bash и
+`mcp__github__issue_write`) и `skill-gate.js` (Write|Edit) заканчиваются на `|| exit 2`, помощники
+`skill-marker.js` (Skill), `lint.js` и `typecheck.js` (Write|Edit) — на `|| true`. Команды lint и
+typecheck берутся из `hooks` профиля.
+
+**Восстановление.** Гейты fail-closed: если `node_modules/dark-factory` отсутствует или сломан
+(свежий клон без установки, удалённый `node_modules`, битый релиз), Bash-гейт блокирует **любую**
+Bash-команду в Claude Code, включая `npm install`. Чинить из обычного терминала вне Claude Code:
+`npm ci` (или откат закрепления на предыдущий релиз), затем вернуться в сессию. Сломанный профиль
+блокирует только commit/push, запись issue и любые Write/Edit (skill-gate читает профиль), а обычные
+Bash-команды проходят — профиль чинится из сессии через Bash или из внешнего терминала.
+
+**Порядок переключения на пакет (выполнен в #74; повторять при переподключении).** В обычном
+терминале: просмотреть личные изменения старых копий и сохранить нужное → `git rm` только
+tracked-копий → профиль, `package.json` и поимённые исключения `.gitignore` →
+`npm install --ignore-scripts --save-dev "github:strakhovdenya/dark-factory#v0.1.3"` → сверить, что
+`packages["node_modules/dark-factory"].resolved` в lock оканчивается на `#<commit тега>` →
+`node node_modules/dark-factory/bin/setup.js --consumer-root .` → только после его успеха
+подключить settings-хуки. Ignored личные файлы (`.claude/ralph/config.json`, `state.json`,
+`.ralph-runs/`, `.claude/settings.local.json`, `scripts/*.log`) при этом не удаляются.
+Симлинк `.claude/skills/metaskills` setup не принадлежит и не удаляется.
 
 ## Документация
 
@@ -185,9 +225,33 @@ Ralph собирает skills через `entry.isDirectory()`, который �
 
 ## Автономный цикл (Ralph)
 
-`.claude/ralph/` — оркестратор, который берёт готовый GitHub Issue, реализует его отдельным
-`claude -p` без доступа к git/gh, прогоняет два независимых ревью-пасса и создаёт PR. Мёрдж
-всегда делает человек. Подробности, ограничения и запуск — `.claude/ralph/README.md`.
+Ralph — контроллер пакета, а не копия в репозитории: берёт готовый GitHub Issue, реализует его
+агентом в Docker (host fallback нет) без доступа к git/gh, прогоняет два независимых ревью
+(`self-review` с бюджетом 4, `code-review` с бюджетом 2; `enabledSteps` в профиле нет), финальный
+гейт и создаёт PR. Мёрдж всегда делает человек (ADR-001). Контракт —
+`node_modules/dark-factory/ralph/README.md`.
+
+- **Профиль** (`.factory/profile.json`, tracked): имя ветки — `branchTemplate`
+  `task/ISSUE-{issue}-{slug}`; гейт — прямые node-бинари без shell в порядке ESLint →
+  `prettier --check` → `tsc --noEmit` → `node node_modules/vitest/vitest.mjs run` → `next build`;
+  широких разрешений `npm run *`/`npx *` у агента нет. Защищённые пути (`docs/` в том числе),
+  `humanNeededVerdict` `BLOCKED-DB-CHANGE` и метка `ralph-needs-db-change`, ограничения окружения
+  (нет dev-сервера, реальной Supabase, браузера). Финальный гейт идёт без сети; `codeload.github.com`
+  в `sandbox.allowedHosts` нужен только install-шагу для GitHub-зависимости.
+- **Личный конфиг запуска** — ignored `.ralph/config.json` (очередь `issues`, лимиты
+  `maxIterations`/`maxTurns`/`reviewMaxTurns`, бюджеты, `agentModel`, `runsRoot`). `runsRoot` —
+  абсолютный путь **вне домашнего каталога** оператора. `branchPrefix` больше не поддерживается —
+  имя ветки задаёт профиль. Старые `.claude/ralph/config.json`/`state.json` несовместимы с новым
+  форматом и остаются только как личный архив; credentials (`ANTHROPIC_API_KEY` или
+  `CLAUDE_CODE_OAUTH_TOKEN`) — только в окружении процесса, никогда в файлах репозитория.
+- **Запуск:** `node node_modules/dark-factory/ralph/run.js --config .ralph/config.json`.
+
+**Граница этапов подключения.** #74 подключает пакет, профиль, setup и хуки. Acceptance Verifier
+и Calibration Judge (#75), CodeQL (#76) и, соответственно, полный `factory doctor` с exit 0
+появляются следующими задачами; до них отсутствие trusted-конфигов в `.github/verifier/` —
+ожидаемая граница этапа, а не поломка. Первый живой прогон Ralph на Cards — финальная проверка
+#77 после #75 и #76, с выбранной задачей, моделью и отдельно согласованными лимитами; он не
+является условием закрытия #74.
 
 ## Context management
 
