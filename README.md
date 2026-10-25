@@ -40,12 +40,13 @@ noun articles, verb conjugation and telling the time, and it has real users beyo
   system, rate-limiting design, DB-migration policy, Ralph's git/gh permission boundary) is written
   down once in [`project-management/DECISIONS.md`](./project-management/DECISIONS.md) instead of
   being re-litigated in every new conversation.
-- **Autonomous execution for well-scoped tasks:** a self-built "Ralph loop" controller
-  (adapted from my other portfolio project, [jobflow-cv-pipeline](https://github.com/strakhovdenya/jobflow-cv-pipeline))
-  can drive a clearly-specified GitHub Issue from this repo's own tracker to an open PR without a
-  human confirming each step — the coding agent only ever edits files and runs `npm run *`; every
-  `git`/`gh` mutation is owned by a deterministic controller script, and DB-schema changes are
-  refused outright (`BLOCKED-DB-CHANGE`) because they need a human against the live database. See
+- **Autonomous execution for well-scoped tasks:** the "Ralph loop" controller of my shared AI
+  software factory, [dark-factory](https://github.com/strakhovdenya/dark-factory) (pinned release
+  `v0.1.3`), can drive a clearly-specified GitHub Issue from this repo's own tracker to an open PR
+  without a human confirming each step — the coding agent only edits files and runs the commands
+  listed in the project profile; every `git`/`gh` mutation is owned by a deterministic controller,
+  and DB-schema changes are refused outright (`BLOCKED-DB-CHANGE`) because they need a human
+  against the live database. See
   [Autonomous task execution: the Ralph loop](#autonomous-task-execution-the-ralph-loop).
 - **Style and pattern discipline enforced even for AI-generated code:** every JS/TS change —
   whether hand-written or produced by an AI coding assistant — is expected to follow a fixed set
@@ -202,33 +203,46 @@ multiple-choice vs. sentence assembly) that a shared abstraction would mostly be
 
 ### Autonomous task execution: the Ralph loop
 
-`.claude/ralph/` is a locally-run controller, adapted from my other portfolio project
-([jobflow-cv-pipeline](https://github.com/strakhovdenya/jobflow-cv-pipeline)), that can take a
-well-scoped GitHub Issue from this repo's tracker to an open PR without a human confirming every
-step — reserved for simple, unambiguous tasks with a clear Acceptance Criteria list.
+Ralph comes from the installed [dark-factory](https://github.com/strakhovdenya/dark-factory)
+package (`devDependencies`, pinned to `v0.1.3`), not from a copy in this repository. It can take
+a well-scoped GitHub Issue from this repo's tracker to an open PR without a human confirming every
+step — reserved for simple, unambiguous tasks with a clear Acceptance Criteria list. Cards-specific
+settings (gate commands, protected paths, budgets, sandbox) live in
+[`.factory/profile.json`](./.factory/profile.json); a personal run config stays out of Git in
+`.ralph/config.json`:
 
-- **The coding agent never touches `git`/`gh`.** It edits files and runs `npm run *` in a fresh
-  clone, then replies with exactly one of `DONE`, `BLOCKED: <reason>` or
+```bash
+node node_modules/dark-factory/ralph/run.js --config .ralph/config.json
+```
+
+The controller runs the agent in Docker (no host fallback). Connecting the factory to Cards is
+staged: the package, profile and hooks are in place; the Acceptance Verifier, Calibration Judge,
+CodeQL and the first live Cards run are separate follow-up tasks (#75–#77).
+
+- **The coding agent never touches `git`/`gh`.** It edits files and runs only the commands of the
+  profile in a fresh clone, then replies with exactly one of `DONE`, `BLOCKED: <reason>` or
   `BLOCKED-DB-CHANGE: <reason>`. Every mutation — clone, commit, push, PR creation, issue
-  comments/labels — is owned by a deterministic controller script (`core.js`/`github.js`).
+  comments/labels — is owned by the deterministic controller.
 - **`BLOCKED-DB-CHANGE` instead of a generic block.** Supabase is one project shared by production
   and every Preview deploy, so a breaking migration takes down the live app before its PR is even
-  merged. Schema/SQL changes (`docs/**`) are closed to the agent by permission `deny` rules, and
-  any issue that needs one is refused outright rather than attempted.
+  merged. Schema/SQL changes (`docs/`) are protected paths for the agent, and any issue that needs
+  one is refused outright rather than attempted.
 - **A post-`DONE` self-review, then an independent code-review pass**, before anything is
   committed — an agent claiming success doesn't mean the diff actually satisfies the issue's own
   Acceptance Criteria or Key Invariants; both checks read the issue text again against the real
   diff, with no shared memory with the implementer.
-- **A final `npm run check`/`npm run build` gate the controller runs itself**, trusting neither the
+- **A final gate the controller runs itself** — ESLint, Prettier, `tsc --noEmit`, Vitest and
+  `next build`, as direct binaries without a shell and without network — trusting neither the
   implementer's self-report nor the review passes' verdict that "the build is red but that's
   expected" — a red build here is `BLOCKED`, no PR gets created.
-- **Subagents (`.claude/agents/`) run on a cheaper model for work that doesn't need the main
+- **Subagents (`.claude/agents/`, laid out by the package's setup) run on a cheaper model for work that doesn't need the main
   one** — searching the codebase (`codebase-scan`), investigating unfamiliar code before a change
   (`research`), running the `check`/`build`/`test` gate (`verify`), and drafting a commit/PR
   description from the diff (`pr-writer`). The main implementer stays focused on the files it's
   actually editing and only reads back a short summary from each.
-- Full design rationale, every live-run incident that shaped a safeguard, and the exact
-  verification chain live in [`.claude/ralph/README.md`](./.claude/ralph/README.md).
+- The full contract and levels of verification live in the release's
+  [`ralph/README.md`](https://github.com/strakhovdenya/dark-factory/blob/v0.1.3/ralph/README.md); connecting steps in
+  [`docs/connecting-a-project.md`](https://github.com/strakhovdenya/dark-factory/blob/v0.1.3/docs/connecting-a-project.md).
 
 ### Development workflow
 
@@ -287,4 +301,5 @@ GitHub Actions runs three jobs on every push and PR against `main`:
 - [CLAUDE.md](./CLAUDE.md) — full architectural rules, layer conventions, and development workflow
 - [docs/README.md](./docs/README.md) — database schema, RLS policies, and Supabase migration notes
 - [project-management/DECISIONS.md](./project-management/DECISIONS.md) — key architectural decisions (ADRs)
-- [.claude/ralph/README.md](./.claude/ralph/README.md) — the Ralph loop's full design rationale
+- [dark-factory v0.1.3 `ralph/README.md`](https://github.com/strakhovdenya/dark-factory/blob/v0.1.3/ralph/README.md) — the Ralph controller's contract
+  (installed as `node_modules/dark-factory/ralph/README.md`)
