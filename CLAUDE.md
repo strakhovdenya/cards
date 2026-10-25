@@ -291,13 +291,14 @@ workflows фабрики по полному commit тега v0.1.3 (`33fa44be�
   настройках репозитория должен оставаться выключенным — он блокирует SARIF-загрузку этого advanced
   setup.
 - **Eval** (`acceptance-verifier-eval.yml`) — только ручной запуск, читает кейсы только с main.
-  Golden set в `.github/verifier/golden` (`verifier.goldenDir`) **подготовлен, но eval ещё не
-  запускался** (#81): три кейса на реальном PR #80 — `80` (PASS), `80-model-fail` (FAIL
+  Golden set в `.github/verifier/golden` (`verifier.goldenDir`) **подготовлен (#81); единственный
+  eval (#82) не подтвердил совпадение вердиктов — 1 кейс из 3**: три кейса на реальном PR #80 — `80` (PASS), `80-model-fail` (FAIL
   `criterion_failed`/`AC-4`) и `80-out-of-scope` (FAIL `out_of_scope_file`). Ожидания утвердил
   владелец. Происхождение снимков, хеши и проверка patch через `golden-mutation.js` описаны в
   README каталога. `approval.json` в кейсах нет, поэтому spec approval набором не покрыт;
   `spec-approval` в профиле остаётся включённым. Eval v0.1.3 делает два прогона модели на каждый
-  кейс, так что прогон трёх кейсов — шесть платных вызовов.
+  кейс, так что прогон трёх кейсов — шесть платных вызовов. Итоги и источники — в
+  [factory-acceptance.md](project-management/verification/factory-acceptance.md).
 
 **Trusted-конфиги** читаются фабрикой **с main**, а не из PR: `.github/verifier/` (`owners.json`,
 `required-checks.json`, `allowed-models.json`, `tampering-scan.json`, `risk-zones.json`,
@@ -313,11 +314,17 @@ workflows фабрики по полному commit тега v0.1.3 (`33fa44be�
 spec approval, Judge и Factory separation; #76 — CodeQL (job в `ci.yml` и имя
 `Analyze (javascript-typescript)` в `required-checks.json`). Итоговую приёмку координирует #77,
 у которого нет собственного PR. #81 подготовил golden set, его структурный тест, ADR-006 и
-ссылки на руководства тега. #82 после merge #81 в main выполняет отдельно разрешённый владельцем
-eval и один ограниченный живой прогон Ralph на отдельной контрольной issue, а результаты записывает в
-протокол `project-management/verification/factory-acceptance.md`. До #82 golden eval и живой Ralph
-на Cards **не подтверждены**: подготовленный набор и зелёный структурный тест не означают совпадения
-вердиктов.
+ссылки на руководства тега. #82 выполнил разрешённый владельцем eval и живой прогон Ralph на контрольной issue #84; результаты
+и источники — в протоколе [project-management/verification/factory-acceptance.md](project-management/verification/factory-acceptance.md).
+
+Подтверждено: живой Ralph на Windows + WSL Ubuntu + Docker довёл #84 до PR (#87): шаги
+implement / self-review / code-review (реальный Skill `code-review`) / final-gate пройдены, CI на
+head зелёный, Acceptance Verifier дал PASS на том же head. Это второй платный запуск; первый
+завершился `agent_failed` из-за glob в gate-команде prettier (исправлено в #85/#86).
+
+**Не подтверждено:** golden eval не прошёл (matched 1 из 3: false FAIL на `80`, NEEDS_HUMAN на
+`80-model-fail`), поэтому режим verifier остаётся advisory. Spec approval golden set не покрывает;
+стоимость USD и сверка argv `buildClaudeArgs` недоступны; результат относится к одной платформе.
 
 ## Context management
 
