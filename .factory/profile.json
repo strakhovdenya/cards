@@ -9,7 +9,7 @@
       "dependencySync": [{ "argv": ["npm", "install", "--ignore-scripts"], "cwd": "." }],
       "gate": [
         { "argv": ["node", "node_modules/eslint/bin/eslint.js", ".", "--max-warnings=0"], "cwd": "." },
-        { "argv": ["node", "node_modules/prettier/bin/prettier.cjs", "--check", "src/**/*.{js,jsx,ts,tsx,css,md,json}"], "cwd": "." },
+        { "argv": ["node", "node_modules/prettier/bin/prettier.cjs", "--check", "src"], "cwd": "." },
         { "argv": ["node", "node_modules/typescript/bin/tsc", "--noEmit"], "cwd": "." },
         { "argv": ["node", "node_modules/vitest/vitest.mjs", "run"], "cwd": "." },
         { "argv": ["node", "node_modules/next/dist/bin/next", "build"], "cwd": "." }
