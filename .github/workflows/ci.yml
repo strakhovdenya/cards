@@ -59,3 +59,43 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+
+  factory-separation-core:
+    name: Factory separation core
+    # Cross-side change gate of the installed dark-factory: a PR that changes
+    # both the spec side and the verifier side needs the factory-cross-change
+    # label, set by a trusted owner. The reusable workflow reads the side
+    # patterns, owners.json and the package.json pin from the default branch;
+    # the classifier comes from the factory at the SHA below. Pin: the full
+    # commit of the v0.1.3 tag that package.json pins, in BOTH places, the same
+    # commit as the other factory wrappers.
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    uses: strakhovdenya/dark-factory/.github/workflows/factory-separation.yml@33fa44be6803ad8c2190c3a60cd6ce41ff42b5df
+    with:
+      factory-sha: 33fa44be6803ad8c2190c3a60cd6ce41ff42b5df
+
+  factory-separation:
+    # Keeps the public check context "Factory separation" used by
+    # required-checks.json: the reusable job above reports as
+    # "Factory separation core / Factory separation". This job only relays its
+    # result — success passes; failure, cancelled, skipped or anything else
+    # fails.
+    name: Factory separation
+    needs: factory-separation-core
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require a successful factory separation core
+        env:
+          CORE_RESULT: ${{ needs.factory-separation-core.result }}
+        run: |
+          if [ "$CORE_RESULT" != "success" ]; then
+            echo "::error::Factory separation core finished with result '$CORE_RESULT'; only success passes"
+            exit 1
+          fi
+          echo "Factory separation core succeeded"

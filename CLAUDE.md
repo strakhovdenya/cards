@@ -43,6 +43,7 @@ docs/           SQL-схемы, миграции и заметки по наст
 project-management/  DECISIONS.md, prd/, plan/
 src/__factory__/  интеграционный тест пакетного closure-gate хука на профиле Cards
 .factory/       профиль dark-factory (profile.json) и PRD-overlay (overlays/prd.json)
+.github/        workflows/ (CI и обёртки фабрики), verifier/ и calibration/ (trusted-конфиги)
 .claude/        settings.json (пакетные хуки), skills/ (проектные tracked + управляемые копии пакета),
                 agents/ (управляемые копии пакета)
 ```
@@ -246,12 +247,51 @@ Ralph — контроллер пакета, а не копия в репози�
   `CLAUDE_CODE_OAUTH_TOKEN`) — только в окружении процесса, никогда в файлах репозитория.
 - **Запуск:** `node node_modules/dark-factory/ralph/run.js --config .ralph/config.json`.
 
-**Граница этапов подключения.** #74 подключает пакет, профиль, setup и хуки. Acceptance Verifier
-и Calibration Judge (#75), CodeQL (#76) и, соответственно, полный `factory doctor` с exit 0
-появляются следующими задачами; до них отсутствие trusted-конфигов в `.github/verifier/` —
-ожидаемая граница этапа, а не поломка. Первый живой прогон Ralph на Cards — финальная проверка
-#77 после #75 и #76, с выбранной задачей, моделью и отдельно согласованными лимитами; он не
-является условием закрытия #74.
+## Acceptance Verifier и Calibration Judge (#75)
+
+Обе части работают через короткие обёртки в `.github/workflows/`, которые вызывают reusable
+workflows фабрики по полному commit тега v0.1.3 (`33fa44be…`, тот же, что в `package-lock.json`);
+`uses@` и `with.factory-sha` всегда совпадают и переносятся вместе при обновлении фабрики.
+
+- **Acceptance Verifier** (`acceptance-verifier.yml`, `workflow_run` после CI) проверяет PR против
+  его issue и публикует статус `Acceptance Verifier` и комментарий с вердиктом. Режим —
+  **advisory**: переменная `VERIFIER_ENFORCE` не задана, не-PASS вердикт статус не роняет, в branch
+  protection он не требуется. Включены ровно семь детерминированных проверок `verifier.checks`
+  профиля. Модель — переменная `VERIFIER_MODEL`, ключ — секрет `OPENAI_API_KEY` (только у обёрток
+  verifier, eval и Judge).
+- **Spec approval** (`spec-approval.yml`): владелец из `owners.json` ставит на issue метку
+  `spec-approved` — фабрика замораживает тело issue хешем. Правка тела после этого требует повторной
+  метки, иначе verifier даёт FAIL.
+- **Calibration Judge** (`calibration-judge.yml`, `judge.enabled: true`) только наблюдает:
+  автоматически разбирает раунд FAIL/NEEDS_HUMAN, только если владелец поставил метку `calibrate`
+  на PR или его issue (стартует при постановке метки или по завершении раунда verifier). Ручной
+  запуск (`workflow_dispatch` с номером PR) проверку вердикта и метки пропускает. Вердикты, статусы
+  и метки Judge не меняет. Модель — `CALIBRATION_JUDGE_MODEL`; `VERIFIER_MODEL` используется,
+  только если в записи раунда модель не указана.
+- **Factory separation** — job в `ci.yml`: `factory-separation-core` вызывает классификатор фабрики,
+  итоговый `Factory separation` пропускает только его точный `success`. PR, меняющий и сторону
+  спецификации, и сторону верификатора (`factory-separation.json`), требует метку
+  `factory-cross-change` от владельца. В отличие от обёрток ниже это `pull_request`-job: он
+  исполняется из `ci.yml` самого PR, а стороны и владельцев читает с main; пока на main нет
+  `factory-separation.json`, core пропускает классификацию с notice — такой зелёный статус не
+  доказывает работу классификатора.
+- **Eval** (`acceptance-verifier-eval.yml`) — только ручной запуск; golden set в
+  `.github/verifier/golden` появится в #77.
+
+**Trusted-конфиги** читаются фабрикой **с main**, а не из PR: `.github/verifier/` (`owners.json`,
+`required-checks.json`, `allowed-models.json`, `tampering-scan.json`, `risk-zones.json`,
+`factory-separation.json`, `issue-contract.overlay.json`) и `.github/calibration/`
+(`allowed-models.json`, `taxonomy.json` — полная копия словаря релиза, проектных значений в ней
+нет). Поэтому изменение конфига или обёртки действует только после merge, а обёртки на
+`workflow_run`/`issues` не проверяют PR, который их впервые добавляет. `required-checks.json`
+сейчас содержит четыре CI-проверки: `Check (lint + format + types)`, `Test (unit)`, `Build`,
+`Factory separation`. Имена этих job в `ci.yml` не переименовывать без правки списка.
+
+**Граница этапов подключения.** #74 подключил пакет, профиль, setup и хуки; #75 — verifier,
+spec approval, Judge и Factory separation. CodeQL (`Analyze (javascript-typescript)` в
+`required-checks.json`) добавляет #76. Golden set, ADR и первый живой прогон Ralph на Cards — #77
+после #74–#76, с выбранной задачей, моделью и отдельно согласованными лимитами. До них CodeQL,
+golden eval и живой Ralph не считаются подтверждёнными.
 
 ## Context management
 
