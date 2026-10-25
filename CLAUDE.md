@@ -41,9 +41,10 @@ src/
   constants/    userRoles
 docs/           SQL-схемы, миграции и заметки по настройке Supabase
 project-management/  DECISIONS.md, prd/, plan/
-src/__factory__/  интеграционный тест пакетного closure-gate хука на профиле Cards
+src/__factory__/  интеграционный тест пакетного closure-gate хука и структурный тест golden set
 .factory/       профиль dark-factory (profile.json) и PRD-overlay (overlays/prd.json)
-.github/        workflows/ (CI и обёртки фабрики), verifier/ и calibration/ (trusted-конфиги)
+.github/        workflows/ (CI и обёртки фабрики), verifier/ и calibration/ (trusted-конфиги),
+                verifier/golden/ (golden set verifier)
 .claude/        settings.json (пакетные хуки), skills/ (проектные tracked + управляемые копии пакета),
                 agents/ (управляемые копии пакета)
 ```
@@ -92,7 +93,9 @@ npx playwright install   # установить браузеры Playwright (о�
 Юнит-тесты покрывают: `src/utils/` (cardUtils, verbUtils — полностью), `src/strategies/` (все 9
 файлов — полностью), `src/services/` (cardService, tagService, nounService, verbService через мок
 `fetch`; timeService через мок `getServiceSupabase()`). `src/__factory__/closure-gate.test.ts` — интеграционный тест установленных хуков
-`closure-gate.js`/`skill-marker.js` фабрики на профиле Cards (без реальных git-команд). `speechService.ts` и `migrateData.ts` вне
+`closure-gate.js`/`skill-marker.js` фабрики на профиле Cards (без реальных git-команд).
+`src/__factory__/golden-set.test.ts` — структурная проверка golden set штатными `readCases`/`checkGoldenSet`
+пакета с отрицательными примерами (без модели, сети и git). `speechService.ts` и `migrateData.ts` вне
 скоупа: первый требует DOM-окружения (jsdom/happy-dom), второй — только приватная логика без
 публичных точек входа. `npm run test` — добавить к обязательным проверкам перед коммитом,
 если изменения затрагивают services/utils/strategies.
@@ -170,6 +173,11 @@ editor — против того же проекта, на котором раб
 Процессные скиллы, базовые JS-метаскиллы, агенты и хуки приходят из установленного пакета
 `dark-factory` (`devDependencies`, закреплён на `github:strakhovdenya/dark-factory#v0.1.3`,
 commit `33fa44be6803ad8c2190c3a60cd6ce41ff42b5df`). Проектные значения — в `.factory/profile.json`.
+Решение о подключении — ADR-006. Руководства закреплённого тега:
+[connecting-a-project.md](https://github.com/strakhovdenya/dark-factory/blob/v0.1.3/docs/connecting-a-project.md)
+(подключение и `doctor`) и
+[upgrading.md](https://github.com/strakhovdenya/dark-factory/blob/v0.1.3/docs/upgrading.md)
+(обновление на новый тег).
 
 **Provisioning.** Отдельного корневого `postinstall` нет: обычный `npm install`/`npm ci` запускает
 `postinstall` самой зависимости (`node_modules/dark-factory/bin/setup.js`), и тот раскладывает
@@ -282,8 +290,14 @@ workflows фабрики по полному commit тега v0.1.3 (`33fa44be�
   уязвимостей: найденные alerts — отдельная проверка Code scanning. CodeQL default setup в
   настройках репозитория должен оставаться выключенным — он блокирует SARIF-загрузку этого advanced
   setup.
-- **Eval** (`acceptance-verifier-eval.yml`) — только ручной запуск; golden set в
-  `.github/verifier/golden` появится в #77.
+- **Eval** (`acceptance-verifier-eval.yml`) — только ручной запуск, читает кейсы только с main.
+  Golden set в `.github/verifier/golden` (`verifier.goldenDir`) **подготовлен, но eval ещё не
+  запускался** (#81): три кейса на реальном PR #80 — `80` (PASS), `80-model-fail` (FAIL
+  `criterion_failed`/`AC-4`) и `80-out-of-scope` (FAIL `out_of_scope_file`). Ожидания утвердил
+  владелец. Происхождение снимков, хеши и проверка patch через `golden-mutation.js` описаны в
+  README каталога. `approval.json` в кейсах нет, поэтому spec approval набором не покрыт;
+  `spec-approval` в профиле остаётся включённым. Eval v0.1.3 делает два прогона модели на каждый
+  кейс, так что прогон трёх кейсов — шесть платных вызовов.
 
 **Trusted-конфиги** читаются фабрикой **с main**, а не из PR: `.github/verifier/` (`owners.json`,
 `required-checks.json`, `allowed-models.json`, `tampering-scan.json`, `risk-zones.json`,
@@ -297,9 +311,13 @@ workflows фабрики по полному commit тега v0.1.3 (`33fa44be�
 
 **Граница этапов подключения.** #74 подключил пакет, профиль, setup и хуки; #75 — verifier,
 spec approval, Judge и Factory separation; #76 — CodeQL (job в `ci.yml` и имя
-`Analyze (javascript-typescript)` в `required-checks.json`). Golden set, ADR и первый живой прогон
-Ralph на Cards — #77 после #74–#76, с выбранной задачей, моделью и отдельно согласованными
-лимитами. До неё golden eval и живой Ralph не считаются подтверждёнными.
+`Analyze (javascript-typescript)` в `required-checks.json`). Итоговую приёмку координирует #77,
+у которого нет собственного PR. #81 подготовил golden set, его структурный тест, ADR-006 и
+ссылки на руководства тега. #82 после merge #81 в main выполняет отдельно разрешённый владельцем
+eval и один ограниченный живой прогон Ralph на отдельной контрольной issue, а результаты записывает в
+протокол `project-management/verification/factory-acceptance.md`. До #82 golden eval и живой Ralph
+на Cards **не подтверждены**: подготовленный набор и зелёный структурный тест не означают совпадения
+вердиктов.
 
 ## Context management
 
