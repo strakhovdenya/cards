@@ -99,3 +99,25 @@ jobs:
             exit 1
           fi
           echo "Factory separation core succeeded"
+
+  codeql:
+    # Static security analysis of JavaScript/TypeScript. build-mode none: no
+    # install or build is needed. always() keeps it running after failed or
+    # skipped needs (factory-separation is skipped on push). Success means the
+    # analysis ran and uploaded results, not that there are no alerts — those
+    # are reported separately by GitHub Code scanning. Default setup must stay
+    # disabled, otherwise it blocks the SARIF upload of this advanced setup.
+    name: Analyze (javascript-typescript)
+    needs: [check, test, build, factory-separation]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
