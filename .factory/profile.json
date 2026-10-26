@@ -41,7 +41,7 @@
     }
   ],
   "ruleFiles": ["CLAUDE.md"],
-  "overlays": { "prd": "prd.json" },
+  "overlays": { "prd": "prd.json", "plan": "plan.json" },
   "docs": { "prd": "project-management/prd", "plans": "project-management/plan", "adr": "project-management/DECISIONS.md" },
   "hooks": {
     "lint": [
