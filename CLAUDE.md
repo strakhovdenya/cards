@@ -41,8 +41,8 @@ src/
   constants/    userRoles
 docs/           SQL-схемы, миграции и заметки по настройке Supabase
 project-management/  DECISIONS.md, prd/, plan/
-src/__factory__/  интеграционный тест пакетного closure-gate хука и структурный тест golden set
-.factory/       профиль dark-factory (profile.json) и PRD-overlay (overlays/prd.json)
+src/__factory__/  интеграционный тест пакетного closure-gate хука, структурные тесты golden set и оверлеев шаблонов
+.factory/       профиль dark-factory (profile.json) и оверлеи шаблонов (overlays/prd.json, overlays/plan.json)
 .github/        workflows/ (CI и обёртки фабрики), verifier/ и calibration/ (trusted-конфиги),
                 verifier/golden/ (golden set verifier)
 .claude/        settings.json (пакетные хуки), skills/ (проектные tracked + управляемые копии пакета),
@@ -203,6 +203,15 @@ tracked-файлы: старая копия с тем же именем — ко
 пока нужные скиллы не отмечены в сессии. Скиллы, на которые ссылается issue (`Docs to Read`),
 читаются обязательно.
 
+**Оверлеи шаблонов.** Проектные секции PRD и плана лежат только в `.factory/overlays/prd.json` и
+`.factory/overlays/plan.json` (подключены ключами `overlays.prd` и `overlays.plan` профиля).
+Скилл `prd`/`plan` велит модели вызвать `node_modules/dark-factory/skills/templates.js <prd|plan>
+--project <корень>`; вывод — базовые секции пакета и после них секции оверлея. Управляемые копии
+`SKILL.md` в `.claude/skills/` не правятся. Оверлей только добавляет секции: заголовок не должен
+совпадать с базовым или его русским алиасом. Файл `plan.json` создаётся раньше, чем ключ
+`overlays.plan` появляется в профиле. Состав шаблонов проверяет
+`src/__factory__/template-overlays.test.ts`.
+
 **Хуки.** `.claude/settings.json` содержит шесть записей пяти пакетных хуков ровно в форме
 `node_modules/dark-factory/hooks/README.md`: гейты `closure-gate.js` (Bash и
 `mcp__github__issue_write`) и `skill-gate.js` (Write|Edit) заканчиваются на `|| exit 2`, помощники
@@ -225,6 +234,25 @@ tracked-копий → профиль, `package.json` и поимённые ис
 подключить settings-хуки. Ignored личные файлы (`.claude/ralph/config.json`, `state.json`,
 `.ralph-runs/`, `.claude/settings.local.json`, `scripts/*.log`) при этом не удаляются.
 Симлинк `.claude/skills/metaskills` setup не принадлежит и не удаляется.
+
+## Постановка issue
+
+Структура issue задаётся контрактом пакета (скилл `issues`), проектные правила Cards — здесь.
+
+- **Служебные метки не выбираются.** `ralph-blocked` и `ralph-needs-db-change` ставит только
+  контроллер Ralph. `spec-approved`, `calibrate`, `factory-cross-change`, `manual-verified` и
+  `test-removal-approved` ставит только владелец: верификатор игнорирует их, если поставил не он.
+  При создании issue ни одна из этих меток не ставится.
+- **Key Invariants сверяются с проектом.** Перед записью Key Invariants новой задачи сверь их с
+  разделами «Архитектурные правила» и «Изменения схемы БД»: демо-режим только на чтение (гость
+  не создаёт, не изменяет и не удаляет данные), изоляция пользователей через RLS не ослабевает,
+  доступ к Supabase остаётся в `src/services`, аддитивные миграции. Совместимость задеплоенного
+  кода обязательна: прод и preview делят одну базу, поэтому код, уже выкаченный на `main`, должен
+  работать с базой на каждом шаге выкатки.
+- **Задача со схемой БД.** Описывай её как требующую правки схемы по ADR-002 (`docs/**` правит и
+  применяет человек, порядок «аддитивная миграция → код → выкатка → удаление старого отдельной
+  задачей»). Ralph по ней ответит `BLOCKED-DB-CHANGE`; метку `ralph-needs-db-change` сам не ставь
+  — её ставит контроллер.
 
 ## Документация
 
