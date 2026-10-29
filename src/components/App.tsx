@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   BottomNavigation,
@@ -121,6 +121,14 @@ export function App({
     }
   };
 
+  // Заменяет одну карточку по id: состав набора не меняется,
+  // поэтому учебная сессия сохраняет порядок и позицию
+  const handleCardUpdate = useCallback((updatedCard: CardType) => {
+    setCards((prev) =>
+      prev.map((card) => (card.id === updatedCard.id ? updatedCard : card))
+    );
+  }, []);
+
   const handleViewModeChange = (newMode: ViewMode) => {
     setViewMode(newMode);
     onViewModeChange?.(newMode);
@@ -160,16 +168,7 @@ export function App({
               <CircularProgress />
             </Box>
           ) : viewMode === 'viewer' ? (
-            <CardViewer
-              cards={cards}
-              onCardUpdate={(updatedCard) => {
-                setCards((prev) =>
-                  prev.map((card) =>
-                    card.id === updatedCard.id ? updatedCard : card
-                  )
-                );
-              }}
-            />
+            <CardViewer cards={cards} onCardUpdate={handleCardUpdate} />
           ) : (
             <CardEditor
               cards={cards}

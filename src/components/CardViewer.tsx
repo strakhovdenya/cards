@@ -14,6 +14,11 @@ interface CardViewerProps {
 // Гибкий просмотрщик слайдов карточек
 const adaptiveCardStrategy = new AdaptiveCardStrategy();
 
+const toggleLearned = (id: string, learned: boolean) =>
+  ClientCardService.updateCardWithResult(id, { learned });
+
+const refetchCard = (id: string) => ClientCardService.getCardById(id);
+
 export function CardViewer({
   cards,
   onCardUpdate,
@@ -24,13 +29,8 @@ export function CardViewer({
       cards={cards}
       strategy={adaptiveCardStrategy}
       onCardUpdate={onCardUpdate}
-      toggleLearnedService={
-        isGuest
-          ? undefined
-          : async (id: string, learned: boolean) => {
-              await ClientCardService.toggleLearnedStatus(id, learned);
-            }
-      }
+      toggleLearnedService={isGuest ? undefined : toggleLearned}
+      refetchCard={isGuest ? undefined : refetchCard}
       isGuest={isGuest}
     />
   );
