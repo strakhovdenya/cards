@@ -134,3 +134,49 @@ describe('getConjugationForPerson', () => {
     expect(getConjugationForPerson(emptyVerb, 'ich')).toBeNull();
   });
 });
+
+describe('ClientVerbService mutation results', () => {
+  const verbRequest = {
+    infinitive: 'laufen',
+    translation: 'бегать',
+    conjugations: mockVerb.conjugations,
+  };
+
+  const jsonResponse = (body: unknown, status: number) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+  it('create verb returns unknown on rejected fetch', async () => {
+    mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    const result = await ClientVerbService.createVerbWithResult(verbRequest);
+    expect(result.status).toBe('unknown');
+    expect(result).toMatchObject({ httpStatus: null });
+  });
+
+  it('create verb returns success', async () => {
+    const sentVerb = { id: '1', ...verbRequest };
+    mockFetch.mockResolvedValue(jsonResponse({ data: sentVerb }, 201));
+    const result = await ClientVerbService.createVerbWithResult(verbRequest);
+    expect(result).toEqual({ status: 'success', data: sentVerb });
+  });
+
+  it('update verb returns rejected with server message', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ error: 'Verb not found' }, 404));
+    const result = await ClientVerbService.updateVerbWithResult('1', {
+      learned: true,
+    });
+    expect(result).toEqual({
+      status: 'rejected',
+      message: 'Verb not found',
+      httpStatus: 404,
+    });
+  });
+
+  it('delete verb returns unknown on gateway html', async () => {
+    mockFetch.mockResolvedValue(new Response('<html></html>', { status: 502 }));
+    const result = await ClientVerbService.deleteVerbWithResult('1');
+    expect(result).toMatchObject({ status: 'unknown', httpStatus: 502 });
+  });
+});
