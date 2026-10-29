@@ -34,7 +34,9 @@ const cards = [makeCard('1', 'Haus'), makeCard('2', 'Baum')];
 const strategy = new BasicCardStrategy();
 
 const setup = (extra: ReactElement | null = null, isGuest = false) => {
-  const toggleLearnedService = vi.fn().mockResolvedValue(undefined);
+  const toggleLearnedService = vi
+    .fn()
+    .mockResolvedValue({ status: 'success', data: null });
   const onCardUpdate = vi.fn();
   const user = userEvent.setup();
   render(

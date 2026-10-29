@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Typography,
@@ -24,8 +25,8 @@ import {
   Keyboard,
   Settings,
 } from '@mui/icons-material';
-import { ClientCardService } from '@/services/cardService';
 import { ClientTagService } from '@/services/tagService';
+import { reconcile, type MutationResult } from '@/services/mutationResult';
 import { UniversalCard } from './UniversalCard';
 import { TagFilter } from './TagFilter';
 import { SpeechSettings } from './SpeechSettings';
@@ -38,20 +39,66 @@ interface UniversalCardViewerProps<T extends CardData = CardData> {
   cards: T[];
   strategy: CardStrategy<T>;
   onCardUpdate?: (updatedCard: T) => void;
-  toggleLearnedService?: (id: string, learned: boolean) => Promise<void>;
+  // Отправляет явное целевое значение, поэтому повтор безопасен
+  toggleLearnedService?: (
+    id: string,
+    learned: boolean
+  ) => Promise<MutationResult<unknown>>;
+  // Перечитывает одну карточку для сверки неизвестного результата
+  refetchCard?: (id: string) => Promise<Pick<CardData, 'learned'>>;
   isGuest?: boolean;
 }
+
+// Сессия хранит только идентификаторы: сами карточки всегда берутся из props.
+// setKey — состав набора; пока он не меняется, порядок и позиция сохраняются
+interface Session {
+  setKey: string;
+  order: string[];
+  index: number;
+}
+
+interface LearnedStatus {
+  cardId: string;
+  severity: 'error' | 'warning';
+  message: string;
+}
+
+const MSG_UNCONFIRMED =
+  'Сохранение не подтверждено. Проверяем статус на сервере…';
+const MSG_UNVERIFIED =
+  'Сохранение не подтверждено: не удалось проверить статус на сервере.';
+const MSG_NOT_APPLIED =
+  'По данным сервера отметка не сохранена, значение обновлено.';
+
+const toSetKey = (ids: string[]) => [...ids].sort().join('\n');
+
+const createSession = (setKey: string, ids: string[]): Session => ({
+  setKey,
+  order: ids,
+  index: 0,
+});
+
+const shuffleIds = (ids: string[]) => [...ids].sort(() => Math.random() - 0.5);
+
+// Исключение сервиса не доказывает, что запись не выполнена
+const toUnknownResult = (error: unknown): MutationResult<unknown> => {
+  console.error('Error toggling learned status:', error);
+  return {
+    status: 'unknown',
+    message: 'Результат операции неизвестен.',
+    httpStatus: null,
+  };
+};
 
 export function UniversalCardViewer<T extends CardData>({
   cards,
   strategy,
   onCardUpdate,
   toggleLearnedService,
+  refetchCard,
   isGuest = false,
 }: UniversalCardViewerProps<T>) {
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [shuffledCards, setShuffledCards] = useState<T[]>([]);
   const [frontSide, setFrontSide] = useState<FrontSide>('german');
   const [showKeyboardHints, setShowKeyboardHints] = useState(false);
   const [speechSettingsOpen, setSpeechSettingsOpen] = useState(false);
@@ -62,7 +109,45 @@ export function UniversalCardViewer<T extends CardData>({
   // Состояние для фильтрации по тегам
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
-  const [filteredCards, setFilteredCards] = useState<T[]>([]);
+
+  const filteredCards = useMemo(() => {
+    if (selectedTagIds.size === 0) return cards;
+    return cards.filter((card) => {
+      const tags = strategy.getTags(card);
+      return tags?.some((tag) => selectedTagIds.has(tag.id)) ?? false;
+    });
+  }, [cards, selectedTagIds, strategy]);
+
+  const cardsById = useMemo(
+    () => new Map(filteredCards.map((card) => [card.id, card])),
+    [filteredCards]
+  );
+  const filteredIds = useMemo(() => [...cardsById.keys()], [cardsById]);
+  const setKey = useMemo(() => toSetKey(filteredIds), [filteredIds]);
+
+  const [session, setSession] = useState<Session>(() =>
+    createSession(setKey, filteredIds)
+  );
+  const [pendingCardId, setPendingCardId] = useState<string | null>(null);
+  const [learnedStatus, setLearnedStatus] = useState<LearnedStatus | null>(
+    null
+  );
+  // Синхронная защита от повторного вызова до перерисовки (автоповтор Enter)
+  const toggleInFlightRef = useRef(false);
+  const latestCardsRef = useRef(cards);
+
+  useEffect(() => {
+    latestCardsRef.current = cards;
+  }, [cards]);
+
+  // Набор сменился (фильтр, загрузка, добавление, удаление) — новая сессия.
+  // Новый массив с теми же карточками (например, после отметки) её не трогает
+  if (session.setKey !== setKey) {
+    setSession(createSession(setKey, filteredIds));
+    setIsFlipped(false);
+  }
+
+  const sessionSize = session.order.length;
 
   // На десктопе показываем подсказки по умолчанию, на мобильном - скрываем
   useEffect(() => {
@@ -81,29 +166,6 @@ export function UniversalCardViewer<T extends CardData>({
     };
     void loadTags();
   }, [isGuest]);
-
-  // Фильтрация карточек по выбранным тегам
-  useEffect(() => {
-    if (selectedTagIds.size === 0) {
-      setFilteredCards(cards);
-    } else {
-      const filtered = cards.filter((card) => {
-        const tags = strategy.getTags(card);
-        return tags?.some((tag) => selectedTagIds.has(tag.id)) ?? false;
-      });
-      setFilteredCards(filtered);
-    }
-  }, [cards, selectedTagIds, strategy]);
-
-  useEffect(() => {
-    if (filteredCards.length > 0) {
-      setShuffledCards([...filteredCards]);
-      setCurrentCardIndex(0);
-    } else {
-      setShuffledCards([]);
-      setCurrentCardIndex(0);
-    }
-  }, [filteredCards]);
 
   // Функции для управления фильтрацией по тегам
   const handleTagToggle = useCallback((tagId: string) => {
@@ -126,7 +188,7 @@ export function UniversalCardViewer<T extends CardData>({
     setSelectedTagIds(new Set());
   }, []);
 
-  const currentCard = shuffledCards[currentCardIndex];
+  const currentCard = cardsById.get(session.order[session.index]);
 
   // Мемоизируем теги для оптимизации
   const cardTags = useMemo(() => {
@@ -172,51 +234,120 @@ export function UniversalCardViewer<T extends CardData>({
 
   const handleNext = useCallback(() => {
     setIsFlipped(false);
-    setCurrentCardIndex((prev) => (prev + 1) % shuffledCards.length);
-  }, [shuffledCards.length]);
+    setSession((prev) => ({
+      ...prev,
+      index: (prev.index + 1) % prev.order.length,
+    }));
+  }, []);
 
   const handlePrevious = useCallback(() => {
     setIsFlipped(false);
-    setCurrentCardIndex(
-      (prev) => (prev - 1 + shuffledCards.length) % shuffledCards.length
-    );
-  }, [shuffledCards.length]);
+    setSession((prev) => ({
+      ...prev,
+      index: (prev.index - 1 + prev.order.length) % prev.order.length,
+    }));
+  }, []);
 
   const handleShuffle = useCallback(() => {
-    const shuffled = [...shuffledCards].sort(() => Math.random() - 0.5);
-    setShuffledCards(shuffled);
-    setCurrentCardIndex(0);
+    setSession((prev) => ({
+      ...prev,
+      order: shuffleIds(prev.order),
+      index: 0,
+    }));
     setIsFlipped(false);
-  }, [shuffledCards]);
+  }, []);
+
+  // Значение применяется к актуальной версии карточки из props, а не к
+  // снимку до запроса: обновления родителя за время ожидания не теряются
+  const applyLearned = useCallback(
+    (cardId: string, learned: boolean) => {
+      const latest = latestCardsRef.current.find((card) => card.id === cardId);
+      if (latest && onCardUpdate) onCardUpdate({ ...latest, learned });
+    },
+    [onCardUpdate]
+  );
+
+  // Сверка неизвестного результата: перечитывается только эта карточка,
+  // набор и позиция сессии не пересобираются
+  const reconcileLearned = useCallback(
+    async (cardId: string, target: boolean) => {
+      if (!refetchCard) {
+        setLearnedStatus({
+          cardId,
+          severity: 'warning',
+          message: MSG_UNVERIFIED,
+        });
+        return;
+      }
+      try {
+        const { found } = await reconcile(
+          () => refetchCard(cardId),
+          (serverCard) => serverCard.learned === target
+        );
+        if (found) {
+          setLearnedStatus(null);
+          return;
+        }
+        applyLearned(cardId, !target);
+        setLearnedStatus({
+          cardId,
+          severity: 'error',
+          message: MSG_NOT_APPLIED,
+        });
+      } catch (error) {
+        console.error('Error reconciling learned status:', error);
+        setLearnedStatus({
+          cardId,
+          severity: 'warning',
+          message: MSG_UNVERIFIED,
+        });
+      }
+    },
+    [applyLearned, refetchCard]
+  );
 
   const handleToggleLearned = useCallback(async () => {
-    if (!currentCard || !onCardUpdate || isGuest) return;
+    if (!currentCard || !onCardUpdate || !toggleLearnedService) return;
+    if (isGuest || toggleInFlightRef.current) return;
 
-    // Оптимистичное обновление UI
-    const optimisticCard = { ...currentCard, learned: !currentCard.learned };
-    const optimisticShuffledCards = shuffledCards.map((card) =>
-      card.id === currentCard.id ? optimisticCard : card
-    );
-    setShuffledCards(optimisticShuffledCards);
-    onCardUpdate(optimisticCard);
+    const cardId = currentCard.id;
+    const target = !currentCard.learned;
+    toggleInFlightRef.current = true;
+    setPendingCardId(cardId);
+    setLearnedStatus(null);
+    applyLearned(cardId, target);
 
     try {
-      // Используем переданный сервис или дефолтный
-      if (toggleLearnedService) {
-        await toggleLearnedService(currentCard.id, !currentCard.learned);
-      } else {
-        await ClientCardService.toggleLearnedStatus(
-          currentCard.id,
-          !currentCard.learned
-        );
+      const result = await toggleLearnedService(cardId, target).catch(
+        toUnknownResult
+      );
+      if (result.status === 'rejected') {
+        applyLearned(cardId, !target);
+        setLearnedStatus({
+          cardId,
+          severity: 'error',
+          message: `Не удалось сохранить отметку: ${result.message}`,
+        });
+      } else if (result.status === 'unknown') {
+        setLearnedStatus({
+          cardId,
+          severity: 'warning',
+          message: MSG_UNCONFIRMED,
+        });
+        await reconcileLearned(cardId, target);
       }
-    } catch (error) {
-      console.error('Error toggling learned status:', error);
-      // Откатываем изменения при ошибке
-      setShuffledCards(shuffledCards);
-      onCardUpdate(currentCard);
+    } finally {
+      toggleInFlightRef.current = false;
+      setPendingCardId(null);
     }
-  }, [currentCard, onCardUpdate, shuffledCards, toggleLearnedService, isGuest]);
+  }, [
+    currentCard,
+    onCardUpdate,
+    toggleLearnedService,
+    isGuest,
+    applyLearned,
+    reconcileLearned,
+  ]);
 
   const toggleKeyboardHints = useCallback(() => {
     setShowKeyboardHints((prev) => !prev);
@@ -227,7 +358,7 @@ export function UniversalCardViewer<T extends CardData>({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (shouldIgnoreShortcut(event)) return;
 
-      const canNavigate = shuffledCards.length > 1;
+      const canNavigate = sessionSize > 1;
 
       switch (event.key) {
         case 'ArrowLeft':
@@ -285,7 +416,7 @@ export function UniversalCardViewer<T extends CardData>({
     handleFlip,
     handleShuffle,
     handleToggleLearned,
-    shuffledCards.length,
+    sessionSize,
   ]);
 
   if (!currentCard) {
@@ -357,7 +488,7 @@ export function UniversalCardViewer<T extends CardData>({
           {/* Индикатор прогресса */}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Chip
-              label={`${currentCardIndex + 1} из ${shuffledCards.length}`}
+              label={`${session.index + 1} из ${sessionSize}`}
               color="primary"
               variant="outlined"
               size="small"
@@ -449,11 +580,23 @@ export function UniversalCardViewer<T extends CardData>({
             currentCard.learned ? <CheckCircle /> : <RadioButtonUnchecked />
           }
           size="medium"
-          disabled={isGuest}
+          disabled={isGuest || !toggleLearnedService || pendingCardId !== null}
         >
           {currentCard.learned ? 'Выучено' : 'Отметить как выученное'}
         </Button>
       </Box>
+
+      {learnedStatus?.cardId === currentCard.id ? (
+        <Alert
+          severity={learnedStatus.severity}
+          onClose={() => {
+            setLearnedStatus(null);
+          }}
+          sx={{ mb: { xs: 1, sm: 2 }, width: '100%' }}
+        >
+          {learnedStatus.message}
+        </Alert>
+      ) : null}
 
       {/* Основная подсказка */}
       <Box sx={{ mb: { xs: 1.5, sm: 2 }, textAlign: 'center' }}>
@@ -554,7 +697,7 @@ export function UniversalCardViewer<T extends CardData>({
               variant="caption"
               sx={{ fontWeight: '500', color: 'primary.main' }}
             >
-              📊 Показано {shuffledCards.length} из {cards.length} карточек
+              📊 Показано {sessionSize} из {cards.length} карточек
             </Typography>
           </Box>
         )}
@@ -566,7 +709,7 @@ export function UniversalCardViewer<T extends CardData>({
           variant="outlined"
           onClick={handlePrevious}
           startIcon={<ArrowBack />}
-          disabled={shuffledCards.length <= 1}
+          disabled={sessionSize <= 1}
           size="medium"
         >
           Назад
@@ -586,7 +729,7 @@ export function UniversalCardViewer<T extends CardData>({
           variant="outlined"
           onClick={handleNext}
           endIcon={<ArrowForward />}
-          disabled={shuffledCards.length <= 1}
+          disabled={sessionSize <= 1}
           size="medium"
         >
           Вперёд
@@ -599,7 +742,7 @@ export function UniversalCardViewer<T extends CardData>({
         onClick={handleShuffle}
         startIcon={<Shuffle />}
         color="secondary"
-        disabled={shuffledCards.length <= 1}
+        disabled={sessionSize <= 1}
         size="medium"
       >
         Перемешать
