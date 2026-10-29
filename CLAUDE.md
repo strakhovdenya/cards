@@ -100,6 +100,16 @@ npx playwright install   # установить браузеры Playwright (о�
 публичных точек входа. `npm run test` — добавить к обязательным проверкам перед коммитом,
 если изменения затрагивают services/utils/strategies.
 
+**Компонентные тесты.** Файлы `*.test.tsx` (или `*.spec.tsx`) идут в окружении `happy-dom`
+(проект `component` в `vitest.config.ts`), рендер — через `@testing-library/react` и
+`@testing-library/user-event`; серверные `*.test.ts` остаются в окружении `node` (проект `unit`).
+Тестам DOM-логики в `*.test.ts` нужен комментарий `// @vitest-environment happy-dom` первой
+строкой. Сеть и Supabase в тестах не используются: сервисы мокаются через `vi.mock`. Ограничение
+для Ralph: агент не умеет устанавливать пакеты, зависимости синхронизирует контроллер после
+прохода агента, поэтому до синхронизации компонентные тесты на новых библиотеках не
+запускаются. Общая проверка адресата клавиатурных событий — `src/utils/keyboardEventUtils.ts`
+(`shouldIgnoreShortcut`); новые обработчики горячих клавиш обязаны вызывать её.
+
 ## Архитектурные правила
 
 - **Доступ к данным живёт в `src/services`.** Компоненты и роуты не обращаются к Supabase
@@ -196,7 +206,11 @@ tracked-файлы: старая копия с тем же именем — ко
 
 - любой `.js`/`.mjs`/`.cjs`/`.ts`/`.tsx`/`.jsx` — `js-conventions`, `js-gof`,
   `js-data-structures`, `error-handling`, `modern-javascript`;
-- `src/**/*.test.ts` — дополнительно `vitest` (профиль);
+- `src/**/*.test.ts` и `src/**/*.test.tsx` — дополнительно `vitest` (профиль);
+- `src/components/**/*.tsx` и `src/app/**/*.tsx` — дополнительно `vercel-react-best-practices`,
+  `material-ui-styling`, `material-ui-nextjs`, `ui-ux-pro-max` (профиль; срабатывает на любую правку такого файла,
+  различить правку стилей и логики правило не может);
+- `src/hooks/**/*.{ts,tsx}` — дополнительно `vercel-react-best-practices` (профиль);
 - `project-management/DECISIONS.md` (`docs.adr`) — `adr`.
 
 Загружай скиллы через Skill до правки файла, а не после: `skill-gate.js` блокирует Write/Edit,

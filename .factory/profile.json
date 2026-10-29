@@ -35,9 +35,37 @@
   "skillRules": [
     {
       "path": "src",
-      "extensions": [".test.ts"],
+      "extensions": [".test.ts", ".test.tsx"],
       "label": "tests (vitest)",
       "skills": ["vitest"]
+    },
+    {
+      "path": "src/components",
+      "extensions": [".tsx"],
+      "label": "frontend components",
+      "skills": [
+        "vercel-react-best-practices",
+        "material-ui-styling",
+        "material-ui-nextjs",
+        "ui-ux-pro-max"
+      ]
+    },
+    {
+      "path": "src/app",
+      "extensions": [".tsx"],
+      "label": "frontend pages",
+      "skills": [
+        "vercel-react-best-practices",
+        "material-ui-styling",
+        "material-ui-nextjs",
+        "ui-ux-pro-max"
+      ]
+    },
+    {
+      "path": "src/hooks",
+      "extensions": [".ts", ".tsx"],
+      "label": "react hooks",
+      "skills": ["vercel-react-best-practices"]
     }
   ],
   "ruleFiles": ["CLAUDE.md"],
