@@ -37,6 +37,86 @@ const setup = async () => {
   return { useAuth, ClientTagService };
 };
 
+describe('useAuth reload', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mocks.isAdmin.mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it('reload clears error on success', async () => {
+    mocks.getCurrentUser.mockRejectedValueOnce(new Error('Нет соединения'));
+    const { useAuth } = await setup();
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => {
+      expect(result.current.error).toBe('Нет соединения');
+    });
+    expect(result.current.user).toBeNull();
+
+    mocks.getCurrentUser.mockResolvedValue(makeSession('user-1'));
+    await act(async () => {
+      await result.current.reload();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.user).not.toBeNull();
+    expect(result.current.profile).not.toBeNull();
+  });
+
+  it('reload failure keeps error state', async () => {
+    mocks.getCurrentUser.mockRejectedValueOnce(new Error('Нет соединения'));
+    const { useAuth } = await setup();
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => {
+      expect(result.current.error).toBe('Нет соединения');
+    });
+
+    mocks.getCurrentUser.mockRejectedValue(new Error('Сервер недоступен'));
+    await act(async () => {
+      await result.current.reload();
+    });
+
+    expect(result.current.error).toBe('Сервер недоступен');
+    expect(result.current.user).toBeNull();
+    expect(result.current.loading).toBe(false);
+  });
+});
+
+describe('useAuth missing profile', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it('missing profile reports error reason', async () => {
+    mocks.getCurrentUser.mockResolvedValue({
+      user: { id: 'user-1' },
+      profile: null,
+    });
+    const { useAuth } = await setup();
+    const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBe('Профиль пользователя не найден');
+    expect(result.current.profile).toBeNull();
+    expect(mocks.isAdmin).not.toHaveBeenCalled();
+  });
+});
+
 describe('useAuth tag cache', () => {
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});

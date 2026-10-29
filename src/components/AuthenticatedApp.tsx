@@ -49,6 +49,7 @@ import { VerbViewer } from './VerbViewer';
 import { VerbStudy } from './VerbStudy';
 import { CardEditor } from './CardEditor';
 import { TimeTraining } from './TimeTraining';
+import { UserLoadError } from './UserLoadError';
 import { UserMenu } from './navigation/UserMenu';
 import { StudyModeSelector } from './navigation/StudyModeSelector';
 import { EditModeSelector } from './navigation/EditModeSelector';
@@ -92,6 +93,7 @@ export function AuthenticatedApp() {
     error,
     setError,
     handleSignOut,
+    reload,
   } = useAuth();
   const {
     cards,
@@ -182,16 +184,7 @@ export function AuthenticatedApp() {
 
   if (!user || !profile) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <Typography>Ошибка загрузки данных пользователя</Typography>
-      </Box>
+      <UserLoadError error={error} onRetry={reload} onSignOut={handleSignOut} />
     );
   }
 
