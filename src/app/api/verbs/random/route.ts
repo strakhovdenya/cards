@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-server';
 import { getServiceSupabase } from '@/lib/supabase';
@@ -34,7 +35,7 @@ const respondWithRandomVerb = ({ data, error }: VerbRows) => {
     );
   }
 
-  const randomIndex = Math.floor(Math.random() * data.length);
+  const randomIndex = randomInt(data.length);
   const verb = transformDatabaseVerb(data[randomIndex] as DatabaseVerb);
   return NextResponse.json<ApiResponse<Verb>>({
     data: verb,
