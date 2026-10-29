@@ -72,10 +72,13 @@ const ConjugationDisplay = styled(Box, {
 }));
 
 interface VerbTrainingProps {
-  // Компонент больше не принимает onBack, так как навигация происходит через меню
+  // Гость читает глаголы демо-аккаунта (guest=1)
+  isGuest?: boolean;
 }
 
-export const VerbTraining: React.FC<VerbTrainingProps> = () => {
+export const VerbTraining: React.FC<VerbTrainingProps> = ({
+  isGuest = false,
+}) => {
   const [currentVerb, setCurrentVerb] = useState<Verb | null>(null);
   const [currentPerson, setCurrentPerson] = useState<string | null>(null);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
@@ -101,14 +104,10 @@ export const VerbTraining: React.FC<VerbTrainingProps> = () => {
     setIsAnswerVisible(false);
 
     try {
-      const verb = await getRandomVerb();
-      if (verb) {
-        setCurrentVerb(verb);
-        setCurrentPerson(getRandomPerson());
-        // Не увеличиваем stats.total здесь!
-      } else {
-        setError('Не удалось загрузить глагол');
-      }
+      const verb = await getRandomVerb({ guest: isGuest });
+      // Пустой набор (404) — не ошибка: показывается пустое состояние
+      setCurrentVerb(verb);
+      setCurrentPerson(verb ? getRandomPerson() : null);
     } catch (error) {
       console.error('Error loading verb:', error);
       setError('Ошибка при загрузке глагола');

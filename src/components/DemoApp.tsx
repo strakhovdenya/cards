@@ -7,28 +7,24 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import {
-  Box,
-  Typography,
-  ToggleButtonGroup,
-  ToggleButton,
-  Alert,
-  Button,
-  CircularProgress,
-  Paper,
-  Stack,
-} from '@mui/material';
+import { Box, Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { CenteredColumn } from './layout/CenteredColumn';
-import { Style, Book, School, AccessTime } from '@mui/icons-material';
+import { AppShell } from './AppShell';
+import { StudyNavigation } from './navigation/StudyNavigation';
 import { CardViewer } from './CardViewer';
 import { ArticlesTrainer } from './ArticlesTrainer';
 import { VerbViewer } from './VerbViewer';
+import { VerbTraining } from './VerbTraining';
+import { VerbStudy } from './VerbStudy';
 import { TimeTraining } from './TimeTraining';
+import { useDemoProgress } from '@/hooks/useDemoProgress';
 import { ClientCardService } from '@/services/cardService';
 import { ClientVerbService } from '@/services/verbService';
+import {
+  getStudyScreenSubtitle,
+  type StudyScreen,
+} from '@/utils/navigationUtils';
 import type { Card, Verb } from '@/types';
-
-type DemoMode = 'cards' | 'articles' | 'verbs' | 'time';
 
 const LOAD_ERROR_MESSAGE = 'Не удалось загрузить демо-данные';
 
@@ -125,86 +121,71 @@ function DataSection({
 }
 
 export function DemoApp() {
-  const [mode, setMode] = useState<DemoMode>('cards');
+  const [screen, setScreen] = useState<StudyScreen>('cards');
+  const [isStudyMenuOpen, setIsStudyMenuOpen] = useState(false);
   const cards = useGuestSection<Card>(fetchGuestCards, 'cards');
   const verbs = useGuestSection<Verb>(fetchGuestVerbs, 'verbs');
+  const progress = useDemoProgress(cards.data);
+
+  const screens: Record<StudyScreen, () => ReactNode> = {
+    cards: () => (
+      <DataSection
+        isLoading={cards.isLoading}
+        error={cards.error}
+        onRetry={() => void cards.reload()}
+      >
+        <CardViewer
+          cards={progress.cards}
+          isGuest
+          onGuestToggleLearned={progress.toggleLearned}
+        />
+      </DataSection>
+    ),
+    articles: () => <ArticlesTrainer isGuest />,
+    'verbs-view': () => (
+      <DataSection
+        isLoading={verbs.isLoading}
+        error={verbs.error}
+        onRetry={() => void verbs.reload()}
+      >
+        <VerbViewer verbs={verbs.data} />
+      </DataSection>
+    ),
+    'verbs-training': () => <VerbTraining isGuest />,
+    'verbs-study': () => <VerbStudy isGuest />,
+    time: () => <TimeTraining isGuest />,
+  };
 
   return (
-    <CenteredColumn sx={{ py: 4, px: 2 }}>
-      <Paper
-        elevation={1}
-        sx={{
-          p: { xs: 2, sm: 3 },
-          mb: 3,
-          borderRadius: 3,
-          background: 'linear-gradient(180deg, #ffffff 0%, #f7f9fb 100%)',
-        }}
-      >
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          Demo режим
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Пример работы без логина. Данные читаются из специального
-          demo-аккаунта и доступны только для просмотра.
-        </Typography>
-      </Paper>
-
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          mb: 3,
-        }}
-      >
-        <ToggleButtonGroup
-          value={mode}
-          exclusive
-          onChange={(_event, value: DemoMode | null) => {
-            if (value) setMode(value);
+    <AppShell
+      subtitle={getStudyScreenSubtitle(screen)}
+      headerEnd={
+        <Chip
+          label="Гость"
+          size="small"
+          sx={{
+            flexShrink: 0,
+            color: 'inherit',
+            bgcolor: 'rgba(255,255,255,0.15)',
+            fontWeight: 600,
           }}
-          color="primary"
-        >
-          <ToggleButton value="cards" sx={{ gap: 1 }}>
-            <Style fontSize="small" />
-            Карточки
-          </ToggleButton>
-          <ToggleButton value="articles" sx={{ gap: 1 }}>
-            <Book fontSize="small" />
-            Артикли
-          </ToggleButton>
-          <ToggleButton value="verbs" sx={{ gap: 1 }}>
-            <School fontSize="small" />
-            Глаголы
-          </ToggleButton>
-          <ToggleButton value="time" sx={{ gap: 1 }}>
-            <AccessTime fontSize="small" />
-            Время
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
-      <Stack spacing={3}>
-        {mode === 'cards' && (
-          <DataSection
-            isLoading={cards.isLoading}
-            error={cards.error}
-            onRetry={() => void cards.reload()}
-          >
-            <CardViewer cards={cards.data} isGuest />
-          </DataSection>
-        )}
-        {mode === 'articles' && <ArticlesTrainer isGuest />}
-        {mode === 'verbs' && (
-          <DataSection
-            isLoading={verbs.isLoading}
-            error={verbs.error}
-            onRetry={() => void verbs.reload()}
-          >
-            <VerbViewer verbs={verbs.data} />
-          </DataSection>
-        )}
-        {mode === 'time' && <TimeTraining isGuest />}
-      </Stack>
-    </CenteredColumn>
+        />
+      }
+      navigationValue="study"
+      onStudyClick={() => {
+        setIsStudyMenuOpen(true);
+      }}
+      onEditClick={() => undefined}
+      isEditDisabled
+    >
+      <StudyNavigation
+        open={isStudyMenuOpen}
+        onClose={() => {
+          setIsStudyMenuOpen(false);
+        }}
+        onSelect={setScreen}
+      />
+      <CenteredColumn sx={{ py: 2, px: 2 }}>{screens[screen]()}</CenteredColumn>
+    </AppShell>
   );
 }

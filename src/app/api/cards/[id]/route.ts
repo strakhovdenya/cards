@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth-server';
+import { authErrorResponse, getAuthenticatedUser } from '@/lib/auth-server';
 import type {
   UpdateCardRequest,
   ApiResponse,
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/cards/[id] - обновить карточку
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, supabase } = await getAuthenticatedUser();
+    const { user, supabase } = await getAuthenticatedUser({ mode: 'write' });
     const { id } = await params;
     const body = (await request.json()) as UpdateCardRequest;
 
@@ -207,12 +207,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error updating card:', error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
 
     return NextResponse.json<ApiResponse<null>>(
       { error: 'Internal server error' },
@@ -224,7 +220,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/cards/[id] - удалить карточку
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, supabase } = await getAuthenticatedUser();
+    const { user, supabase } = await getAuthenticatedUser({ mode: 'write' });
     const { id } = await params;
 
     const { error } = await supabase
@@ -243,12 +239,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error deleting card:', error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
 
     return NextResponse.json<ApiResponse<null>>(
       { error: 'Internal server error' },

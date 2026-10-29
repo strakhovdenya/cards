@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth-server';
+import { authErrorResponse, getAuthenticatedUser } from '@/lib/auth-server';
 import type {
   UpdateVerbRequest,
   DatabaseVerb,
@@ -25,6 +25,24 @@ const transformDatabaseVerb = (dbVerb: DatabaseVerb) => ({
   createdAt: new Date(dbVerb.created_at),
   updatedAt: new Date(dbVerb.updated_at),
 });
+
+const UPDATABLE_VERB_FIELDS = [
+  'infinitive',
+  'translation',
+  'conjugations',
+  'examples',
+  'learned',
+] as const;
+
+// В базу уходят только редактируемые поля: владелец, id и даты из тела
+// запроса не принимаются
+const pickVerbUpdate = (body: UpdateVerbRequest): UpdateVerbRequest => {
+  const update: Record<string, unknown> = {};
+  for (const field of UPDATABLE_VERB_FIELDS) {
+    if (body[field] !== undefined) update[field] = body[field];
+  }
+  return update as UpdateVerbRequest;
+};
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -75,7 +93,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, supabase } = await getAuthenticatedUser();
+    const { user, supabase } = await getAuthenticatedUser({ mode: 'write' });
     const { id } = await params;
     const body = (await request.json()) as UpdateVerbRequest;
 
@@ -94,10 +112,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const update = pickVerbUpdate(body);
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json(
+        { error: 'Нет полей для обновления' },
+        { status: 400 }
+      );
+    }
+
     // Обновляем глагол только если он принадлежит текущему пользователю
     const { data, error } = (await supabase
       .from('verbs')
-      .update(body)
+      .update(update)
       .eq('id', id)
       .eq('user_id', user.id)
       .select()
@@ -126,12 +152,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error in PUT /api/verbs/[id]:', error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
 
     return NextResponse.json<ApiResponse<null>>(
       { error: 'Internal server error' },
@@ -142,7 +164,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, supabase } = await getAuthenticatedUser();
+    const { user, supabase } = await getAuthenticatedUser({ mode: 'write' });
     const { id } = await params;
 
     // Удаляем глагол только если он принадлежит текущему пользователю
@@ -166,12 +188,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error in DELETE /api/verbs/[id]:', error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
 
     return NextResponse.json<ApiResponse<null>>(
       { error: 'Internal server error' },

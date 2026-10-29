@@ -47,6 +47,8 @@ interface UniversalCardViewerProps<T extends CardData = CardData> {
   // Перечитывает одну карточку для сверки неизвестного результата
   refetchCard?: (id: string) => Promise<Pick<CardData, 'learned'>>;
   isGuest?: boolean;
+  // Отметка гостя: синхронно и только на устройстве, без запросов к серверу
+  onGuestToggleLearned?: (id: string, learned: boolean) => void;
 }
 
 // Сессия хранит только идентификаторы: сами карточки всегда берутся из props.
@@ -97,6 +99,7 @@ export function UniversalCardViewer<T extends CardData>({
   toggleLearnedService,
   refetchCard,
   isGuest = false,
+  onGuestToggleLearned,
 }: UniversalCardViewerProps<T>) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [frontSide, setFrontSide] = useState<FrontSide>('german');
@@ -307,8 +310,14 @@ export function UniversalCardViewer<T extends CardData>({
   );
 
   const handleToggleLearned = useCallback(async () => {
-    if (!currentCard || !onCardUpdate || !toggleLearnedService) return;
-    if (isGuest || toggleInFlightRef.current) return;
+    if (!currentCard) return;
+    // Гостю серверная отметка недоступна, даже если сервис передан
+    if (isGuest) {
+      onGuestToggleLearned?.(currentCard.id, !currentCard.learned);
+      return;
+    }
+    if (!onCardUpdate || !toggleLearnedService) return;
+    if (toggleInFlightRef.current) return;
 
     const cardId = currentCard.id;
     const target = !currentCard.learned;
@@ -345,6 +354,7 @@ export function UniversalCardViewer<T extends CardData>({
     onCardUpdate,
     toggleLearnedService,
     isGuest,
+    onGuestToggleLearned,
     applyLearned,
     reconcileLearned,
   ]);
@@ -580,7 +590,11 @@ export function UniversalCardViewer<T extends CardData>({
             currentCard.learned ? <CheckCircle /> : <RadioButtonUnchecked />
           }
           size="medium"
-          disabled={isGuest || !toggleLearnedService || pendingCardId !== null}
+          disabled={
+            isGuest
+              ? !onGuestToggleLearned
+              : !toggleLearnedService || pendingCardId !== null
+          }
         >
           {currentCard.learned ? 'Выучено' : 'Отметить как выученное'}
         </Button>

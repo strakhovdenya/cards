@@ -30,9 +30,11 @@ noun articles, verb conjugation and telling the time, and it has real users beyo
 - **Rate limiting** on public guest endpoints and `/auth/**`: a shared sliding-window limiter
   backed by Upstash Redis, with an automatic in-memory fallback if Redis is unreachable (see
   [ADR-005](./project-management/DECISIONS.md#adr-005--rate-limiting-upstash-redis-с-in-memory-деградацией)).
-- **Public read-only demo mode** (`/demo`) — a real, unauthenticated visitor sees live data
-  through a guest account with every mutation (create/edit/delete/mark-as-learned) disabled at the
-  UI layer, not just hidden.
+- **Public read-only demo mode** (`/demo`) — a real, unauthenticated visitor gets the same app
+  shell as a signed-in user with all six study screens (flashcards, articles, verb browser, verb
+  conjugation training, infinitive study, telling time). Editing and import stay visible but
+  unavailable, and the server itself rejects every write that is not from a verified, non-demo
+  user (see [ADR-007](./project-management/DECISIONS.md)).
 - **Traceable task planning:** every change ships from a written GitHub Issue (context, affected
   files, invariants, acceptance criteria, test requirements) on a dedicated branch, through a PR
   reviewed against a live Vercel preview before merge — see [Development workflow](#development-workflow).
@@ -69,7 +71,7 @@ noun articles, verb conjugation and telling the time, and it has real users beyo
 | Card / verb editing & bulk import | Implemented | Manual CRUD plus paste-and-parse bulk import (see [Editing & content management](#editing--content-management)). |
 | Tagging | Implemented | Tag-based filtering across every study mode; tag CRUD via a dedicated manager. |
 | Auth & invite-only signup | Implemented | Supabase Auth; first account becomes admin, everyone after needs an admin-issued, expiring invite code. |
-| Public read-only demo | Implemented | `/demo` — no login, mutations disabled at the UI layer. |
+| Public read-only demo | Implemented | `/demo` — no login, six study screens, editing/import unavailable, writes rejected server-side (401/403); "learned" marks stay on the device. |
 | Rate limiting | Implemented | Upstash Redis sliding window, in-memory fallback. |
 | CI/CD | Implemented | GitHub Actions: check, test, build on every push/PR; Vercel auto-deploys `main`. |
 | Automated dependency/code scanning | Not yet | Would be the next hardening step if this repo grew a real user base beyond a personal project. |
@@ -146,7 +148,7 @@ multiple-choice vs. sentence assembly) that a shared abstraction would mostly be
   flips between German and Russian (either side can be the front, toggled per session), with
   keyboard shortcuts (`←`/`→` navigate, `Space` flip, `S` shuffle, `Enter` mark learned, `F` swap
   front side), tag-based filtering, per-card text-to-speech, and a persisted "learned" flag per
-  card (disabled in demo mode). Card content itself is produced by `AdaptiveCardStrategy`, so a
+  card (in demo mode the mark is kept only in the visitor's browser). Card content itself is produced by `AdaptiveCardStrategy`, so a
   noun card shows its article and plural alongside the base word without `CardViewer` knowing
   nouns exist as a special case.
 - **Articles trainer** (`ArticlesTrainer`) — a multiple-choice drill for German noun articles
@@ -184,9 +186,16 @@ multiple-choice vs. sentence assembly) that a shared abstraction would mostly be
 - **First account becomes admin** (`checkIfAdminsExist()`); every account created after that
   requires an admin-issued invite code with an expiry timestamp, optionally locked to a specific
   email address. Admins manage invites through `InviteManager`.
-- **Demo mode is read-only at the UI layer, not just by convention:** every mutation control
-  (add/edit/delete, mark-as-learned, tag management) is disabled for the guest session serving
-  `/demo`, on top of whatever Supabase RLS already restricts for that account.
+- **Demo mode is read-only on the server, not just in the interface:**
+  - the guest sees six study screens — flashcards, articles, verb browser, conjugation training,
+    infinitive study and telling time; the "Editing" tab is shown but disabled, and editors, bulk
+    import, the tag manager and invites are never mounted for the guest;
+  - a guest's "learned" marks are stored only in that browser's `localStorage`: they never reach
+    the server or the shared demo data and are not carried over into an account after sign-in;
+  - every mutating API handler first calls `getAuthenticatedUser({ mode: 'write' })`, which verifies
+    the user with Supabase Auth (`auth.getUser()`, not the cookie session): no verified user → 401,
+    the demo account → 403; request flags such as `guest`, `user_id` or `role` grant nothing.
+    Supabase RLS stays the row-level isolation boundary underneath.
 
 ### Security & reliability
 

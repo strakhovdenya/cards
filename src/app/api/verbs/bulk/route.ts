@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteClient } from '@/lib/auth-server';
-import { cookies } from 'next/headers';
+import { authErrorResponse, getAuthenticatedUser } from '@/lib/auth-server';
 import {
   isDuplicateGermanWord,
   extractGermanWords,
@@ -33,18 +32,7 @@ interface DbVerb {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createRouteClient(cookieStore);
-
-    // Проверяем аутентификацию
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
-    }
+    const { user, supabase } = await getAuthenticatedUser({ mode: 'write' });
 
     // Получаем данные из запроса
     const body = (await request.json()) as BulkCreateVerbsRequest;
@@ -200,6 +188,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error('Ошибка массового импорта глаголов:', error);
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: 'Внутренняя ошибка сервера' },
       { status: 500 }

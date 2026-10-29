@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth-server';
+import { authErrorResponse, getAuthenticatedUser } from '@/lib/auth-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import {
   isDuplicateGermanWord,
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Авторизация
-    const { user, supabase } = await getAuthenticatedUser();
+    const { user, supabase } = await getAuthenticatedUser({ mode: 'write' });
 
     const body = (await request.json()) as CreateVerbRequest;
 
@@ -185,12 +185,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in POST /api/verbs:', error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
 
     return NextResponse.json<ApiResponse<null>>(
       { error: 'Internal server error' },
