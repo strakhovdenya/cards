@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { getCurrentUser, signOut, isAdmin, type Profile } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
+import { ClientTagService } from '@/services/tagService';
+
+// Кэш тегов общий на модуль, поэтому и id пользователя, которому он
+// принадлежит, хранится на уровне модуля, а не отдельного экземпляра хука.
+let lastUserId: string | null = null;
 
 export function useAuth() {
   const [loading, setLoading] = useState(true);
@@ -27,6 +32,11 @@ export function useAuth() {
         return;
       }
 
+      if (lastUserId !== null && lastUserId !== currentUser.id) {
+        ClientTagService.clearCache();
+      }
+      lastUserId = currentUser.id;
+
       setUser(currentUser);
       setProfile(currentProfile);
 
@@ -48,6 +58,7 @@ export function useAuth() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      ClientTagService.clearCache();
       router.push('/auth');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Ошибка выхода');
