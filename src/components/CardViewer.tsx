@@ -9,6 +9,7 @@ interface CardViewerProps {
   cards: CardType[];
   onCardUpdate?: (updatedCard: CardType) => void;
   isGuest?: boolean;
+  onGuestToggleLearned?: (id: string, learned: boolean) => void;
 }
 
 // Гибкий просмотрщик слайдов карточек
@@ -23,6 +24,7 @@ export function CardViewer({
   cards,
   onCardUpdate,
   isGuest = false,
+  onGuestToggleLearned,
 }: CardViewerProps) {
   return (
     <UniversalCardViewer
@@ -32,6 +34,7 @@ export function CardViewer({
       toggleLearnedService={isGuest ? undefined : toggleLearned}
       refetchCard={isGuest ? undefined : refetchCard}
       isGuest={isGuest}
+      onGuestToggleLearned={isGuest ? onGuestToggleLearned : undefined}
     />
   );
 }

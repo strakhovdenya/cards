@@ -100,11 +100,11 @@ const SpeechButton = styled(IconButton)(({ theme }) => ({
 }));
 
 interface VerbStudyProps {
-  // Компонент для изучения инфинитивов глаголов
-  // Пока не требует дополнительных пропсов
+  // Гость читает глаголы демо-аккаунта (guest=1)
+  isGuest?: boolean;
 }
 
-export const VerbStudy: React.FC<VerbStudyProps> = () => {
+export const VerbStudy: React.FC<VerbStudyProps> = ({ isGuest = false }) => {
   const [currentVerb, setCurrentVerb] = useState<Verb | null>(null);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -135,7 +135,7 @@ export const VerbStudy: React.FC<VerbStudyProps> = () => {
     setError(null);
 
     try {
-      const verbs = await getVerbs();
+      const verbs = await getVerbs({ guest: isGuest });
       setAllVerbs(verbs);
       setShuffledVerbs([...verbs]);
       setCurrentVerbIndex(0);

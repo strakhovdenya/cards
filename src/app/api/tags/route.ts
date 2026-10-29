@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth-server';
+import { authErrorResponse, getAuthenticatedUser } from '@/lib/auth-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import type {
   CreateTagRequest,
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 // POST /api/tags - создать новый тег
 export async function POST(request: NextRequest) {
   try {
-    const { supabase } = await getAuthenticatedUser();
+    const { supabase } = await getAuthenticatedUser({ mode: 'write' });
     const body = (await request.json()) as CreateTagRequest;
 
     // Валидация
@@ -155,12 +155,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating tag:', error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json<ApiResponse<null>>(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authResponse = authErrorResponse(error);
+    if (authResponse) return authResponse;
 
     if (
       error instanceof Error &&

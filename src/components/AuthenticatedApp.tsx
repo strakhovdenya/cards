@@ -2,34 +2,18 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { SwitchTransition } from 'react-transition-group';
 import {
-  AppBar,
-  Toolbar,
-  Typography,
   Box,
   CircularProgress,
   Alert,
   IconButton,
-  Paper,
-  BottomNavigation,
-  BottomNavigationAction,
-  Fade,
   Collapse,
 } from '@mui/material';
 import { CenteredColumn } from './layout/CenteredColumn';
-import {
-  ArrowBack,
-  AutoStories,
-  School,
-  Style,
-  Edit,
-  School as SchoolIcon,
-  KeyboardArrowDown,
-  Upload,
-  Book,
-} from '@mui/icons-material';
+import { ArrowBack, Upload } from '@mui/icons-material';
+import { AppShell } from './AppShell';
 import { ModeSelectSheet } from './navigation/ModeSelectSheet';
+import { StudyNavigation } from './navigation/StudyNavigation';
 import { App } from './App';
 import { ArticlesTrainer } from './ArticlesTrainer';
 import { InviteManager } from './auth/InviteManager';
@@ -45,7 +29,6 @@ import { CardEditor } from './CardEditor';
 import { TimeTraining } from './TimeTraining';
 import { UserLoadError } from './UserLoadError';
 import { UserMenu } from './navigation/UserMenu';
-import { StudyModeSelector } from './navigation/StudyModeSelector';
 import { EditModeSelector } from './navigation/EditModeSelector';
 import { useAuth } from '@/hooks/useAuth';
 import { useCards } from '@/hooks/useCards';
@@ -53,6 +36,8 @@ import { useVerbs } from '@/hooks/useVerbs';
 
 import {
   getSubtitleText,
+  STUDY_SCREENS,
+  type StudyScreen,
   type ViewMode,
   type MainViewMode,
   type StudyMode,
@@ -66,8 +51,6 @@ export function AuthenticatedApp() {
   const [studyMode, setStudyMode] = useState<StudyMode>('cards');
   const [verbMode, setVerbMode] = useState<VerbMode>('view');
   const [isStudyDialogOpen, setIsStudyDialogOpen] = useState(false);
-  const [isVerbModeDialogOpen, setIsVerbModeDialogOpen] = useState(false);
-  const [isWordsSubmenuOpen, setIsWordsSubmenuOpen] = useState(false);
   const [wordsMode, setWordsMode] = useState<WordsMode>('cards');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
@@ -108,18 +91,16 @@ export function AuthenticatedApp() {
     setIsEditDialogOpen(true);
   };
 
-  const handleStudyModeSelect = (mode: 'cards' | 'verbs' | 'time') => {
+  const handleStudyScreenSelect = (screen: StudyScreen) => {
+    const next = STUDY_SCREENS[screen];
     setMainViewMode('study');
-    setStudyMode(mode);
-    setIsStudyDialogOpen(false);
+    setViewMode('viewer');
+    setStudyMode(next.studyMode);
+    setWordsMode(next.wordsMode);
+    setVerbMode(next.verbMode);
 
-    if (mode === 'cards') {
-      // Открываем подменю "Слова"
-      setIsWordsSubmenuOpen(true);
-    } else if (mode === 'verbs') {
-      setIsVerbModeDialogOpen(true);
-    } else if (mode === 'time') {
-      setViewMode('viewer');
+    if (screen === 'verbs-view') {
+      void loadVerbs();
     }
   };
 
@@ -132,17 +113,6 @@ export function AuthenticatedApp() {
       void loadCards();
     } else if (mode === 'verbs') {
       setViewMode('verbs');
-      void loadVerbs();
-    }
-  };
-
-  const handleVerbModeSelect = (mode: 'view' | 'training' | 'study') => {
-    setVerbMode(mode);
-    setMainViewMode('study');
-    setStudyMode('verbs');
-    setIsVerbModeDialogOpen(false);
-
-    if (mode === 'view') {
       void loadVerbs();
     }
   };
@@ -167,8 +137,6 @@ export function AuthenticatedApp() {
       <UserLoadError error={error} onRetry={reload} onSignOut={handleSignOut} />
     );
   }
-
-  const titleText = 'German Word Cards';
 
   const subtitleText = getSubtitleText({
     viewMode,
@@ -234,144 +202,60 @@ export function AuthenticatedApp() {
     edit: () => (editContent[viewMode] ?? renderCardsViewer)(),
   };
 
+  const isInvites = viewMode === 'invites';
+
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: 'background.default',
-      }}
-    >
-      {/* Заголовок с меню пользователя */}
-      <AppBar
-        position="static"
-        elevation={0}
-        sx={(theme) => ({
-          background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-        })}
-      >
-        <Toolbar disableGutters sx={{ px: 2, py: 1 }}>
-          <CenteredColumn
+    <AppShell
+      subtitle={subtitleText}
+      headerStart={
+        <Collapse
+          in={isInvites}
+          orientation="horizontal"
+          timeout={250}
+          unmountOnExit
+        >
+          <IconButton
+            color="inherit"
+            disabled={!isInvites}
+            onClick={() => {
+              setViewMode('viewer');
+            }}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              width: '100%',
-              gap: 1.5,
+              mr: 1,
+              pointerEvents: isInvites ? 'auto' : 'none',
             }}
           >
-            <Collapse
-              in={viewMode === 'invites'}
-              orientation="horizontal"
-              timeout={250}
-              unmountOnExit
-            >
-              <IconButton
-                color="inherit"
-                disabled={viewMode !== 'invites'}
-                onClick={() => {
-                  setViewMode('viewer');
-                }}
-                sx={{
-                  mr: 1,
-                  pointerEvents: viewMode === 'invites' ? 'auto' : 'none',
-                }}
-              >
-                <ArrowBack />
-              </IconButton>
-            </Collapse>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                flexShrink: 0,
-                borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AutoStories fontSize="small" />
-            </Box>
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-              <SwitchTransition mode="out-in">
-                <Fade key={subtitleText} timeout={200}>
-                  <Box>
-                    <Typography
-                      variant="h6"
-                      component="div"
-                      noWrap
-                      sx={{ fontWeight: 700, lineHeight: 1.25 }}
-                    >
-                      {titleText}
-                    </Typography>
-                    {subtitleText && (
-                      <Typography
-                        variant="caption"
-                        component="div"
-                        noWrap
-                        sx={{ opacity: 0.85, lineHeight: 1.25 }}
-                      >
-                        {subtitleText}
-                      </Typography>
-                    )}
-                  </Box>
-                </Fade>
-              </SwitchTransition>
-            </Box>
-
-            {/* Информация о пользователе */}
-            <UserMenu
-              profile={profile}
-              isUserAdmin={isUserAdmin}
-              onSignOut={handleSignOut}
-              onInvitesClick={() => {
-                setViewMode('invites');
-              }}
-            />
-          </CenteredColumn>
-        </Toolbar>
-      </AppBar>
-
-      {/* Диалог выбора режима изучения */}
-      <StudyModeSelector
+            <ArrowBack />
+          </IconButton>
+        </Collapse>
+      }
+      headerEnd={
+        <UserMenu
+          profile={profile}
+          isUserAdmin={isUserAdmin}
+          onSignOut={handleSignOut}
+          onInvitesClick={() => {
+            setViewMode('invites');
+          }}
+        />
+      }
+      navigationValue={
+        mainViewMode === 'edit' && viewMode === 'viewer'
+          ? 'study'
+          : mainViewMode
+      }
+      onStudyClick={handleStudyClick}
+      onEditClick={handleEditClick}
+      showNavigation={!isInvites}
+      bottomSpacing={isUserAdmin ? 14 : 8}
+    >
+      {/* Меню «Изучение»: карточки, артикли, три режима глаголов, время */}
+      <StudyNavigation
         open={isStudyDialogOpen}
         onClose={() => {
           setIsStudyDialogOpen(false);
         }}
-        onModeSelect={handleStudyModeSelect}
-      />
-
-      {/* Диалог подменю "Слова" */}
-      <ModeSelectSheet
-        open={isWordsSubmenuOpen}
-        onClose={() => {
-          setIsWordsSubmenuOpen(false);
-        }}
-        title="Слова"
-        items={[
-          {
-            icon: <Style />,
-            primary: 'Карточки',
-            secondary: 'Изучение немецких слов с помощью карточек',
-            onClick: () => {
-              setIsWordsSubmenuOpen(false);
-              setWordsMode('cards');
-              setViewMode('viewer');
-            },
-          },
-          {
-            icon: <Book />,
-            primary: 'Артикли',
-            secondary: 'Изучение артиклей (в разработке)',
-            onClick: () => {
-              setIsWordsSubmenuOpen(false);
-              setWordsMode('articles');
-              setViewMode('viewer');
-            },
-          },
-        ]}
+        onSelect={handleStudyScreenSelect}
       />
 
       {/* Диалог выбора режима редактирования */}
@@ -387,41 +271,6 @@ export function AuthenticatedApp() {
         onImportMenuOpen={() => {
           setIsImportMenuOpen(true);
         }}
-      />
-
-      {/* Диалог выбора режима глаголов */}
-      <ModeSelectSheet
-        open={isVerbModeDialogOpen}
-        onClose={() => {
-          setIsVerbModeDialogOpen(false);
-        }}
-        title="Выберите режим глаголов"
-        items={[
-          {
-            icon: <Style />,
-            primary: 'Просмотр',
-            secondary: 'Просмотр всех глаголов и их спряжений',
-            onClick: () => {
-              handleVerbModeSelect('view');
-            },
-          },
-          {
-            icon: <School />,
-            primary: 'Тренировка',
-            secondary: 'Интерактивная тренировка спряжений',
-            onClick: () => {
-              handleVerbModeSelect('training');
-            },
-          },
-          {
-            icon: <Book />,
-            primary: 'Изучение',
-            secondary: 'Изучение инфинитивов глаголов и их переводов',
-            onClick: () => {
-              handleVerbModeSelect('study');
-            },
-          },
-        ]}
       />
 
       {/* Диалог меню импорта */}
@@ -544,94 +393,27 @@ export function AuthenticatedApp() {
         availableTags={availableTags}
       />
 
-      {/* Основной контент */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          pb: viewMode !== 'invites' ? 8 : isUserAdmin ? 14 : 8,
-        }}
-      >
-        {error && (
-          <CenteredColumn sx={{ pt: 2, px: 2 }}>
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              onClose={() => {
-                setError(null);
-              }}
-            >
-              {error}
-            </Alert>
-          </CenteredColumn>
-        )}
-
-        <CenteredColumn sx={{ py: 2, px: 2 }}>
-          {viewMode === 'invites' ? (
-            <InviteManager userId={user.id} />
-          ) : (
-            mainContent[mainViewMode]()
-          )}
+      {error && (
+        <CenteredColumn sx={{ pt: 2, px: 2 }}>
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            onClose={() => {
+              setError(null);
+            }}
+          >
+            {error}
+          </Alert>
         </CenteredColumn>
-      </Box>
-
-      {/* Нижняя панель навигации */}
-      {viewMode !== 'invites' && (
-        <Paper
-          sx={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            borderTop: 1,
-            borderColor: 'divider',
-            boxShadow: '0 -2px 4px rgba(0,0,0,0.1)',
-            pb: 'env(safe-area-inset-bottom)',
-          }}
-          elevation={0}
-        >
-          <CenteredColumn>
-            <BottomNavigation
-              value={
-                mainViewMode === 'edit' && viewMode === 'viewer'
-                  ? 'study'
-                  : mainViewMode
-              }
-              onChange={(event, newValue) => {
-                if (newValue === 'study') {
-                  handleStudyClick();
-                } else if (newValue === 'edit') {
-                  handleEditClick();
-                } else {
-                  setMainViewMode(newValue as MainViewMode);
-                }
-              }}
-              showLabels
-            >
-              <BottomNavigationAction
-                label="Изучение"
-                value="study"
-                icon={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <SchoolIcon />
-                    <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
-                  </Box>
-                }
-              />
-              <BottomNavigationAction
-                label="Редактирование"
-                value="edit"
-                icon={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Edit />
-                    <KeyboardArrowDown sx={{ fontSize: '0.8rem' }} />
-                  </Box>
-                }
-              />
-            </BottomNavigation>
-          </CenteredColumn>
-        </Paper>
       )}
-    </Box>
+
+      <CenteredColumn sx={{ py: 2, px: 2 }}>
+        {isInvites ? (
+          <InviteManager userId={user.id} />
+        ) : (
+          mainContent[mainViewMode]()
+        )}
+      </CenteredColumn>
+    </AppShell>
   );
 }

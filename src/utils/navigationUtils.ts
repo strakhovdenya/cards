@@ -38,3 +38,37 @@ export const getSubtitleText = ({
   if (mainViewMode === 'study') return STUDY_SUBTITLES[studyMode](wordsMode);
   return EDIT_SUBTITLES[viewMode] ?? null;
 };
+
+// Учебный экран — одна точка навигации «Изучение»; общий для приложения и демо
+export type StudyScreen =
+  | 'cards'
+  | 'articles'
+  | 'verbs-view'
+  | 'verbs-training'
+  | 'verbs-study'
+  | 'time';
+
+export type StudyScreenState = Pick<
+  NavigationState,
+  'studyMode' | 'wordsMode' | 'verbMode'
+>;
+
+export const STUDY_SCREENS: Readonly<Record<StudyScreen, StudyScreenState>> = {
+  cards: { studyMode: 'cards', wordsMode: 'cards', verbMode: 'view' },
+  articles: { studyMode: 'cards', wordsMode: 'articles', verbMode: 'view' },
+  'verbs-view': { studyMode: 'verbs', wordsMode: 'cards', verbMode: 'view' },
+  'verbs-training': {
+    studyMode: 'verbs',
+    wordsMode: 'cards',
+    verbMode: 'training',
+  },
+  'verbs-study': { studyMode: 'verbs', wordsMode: 'cards', verbMode: 'study' },
+  time: { studyMode: 'time', wordsMode: 'cards', verbMode: 'view' },
+};
+
+export const getStudyScreenSubtitle = (screen: StudyScreen): string | null =>
+  getSubtitleText({
+    viewMode: 'viewer',
+    mainViewMode: 'study',
+    ...STUDY_SCREENS[screen],
+  });
