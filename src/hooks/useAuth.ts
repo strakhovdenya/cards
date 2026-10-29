@@ -40,11 +40,14 @@ export function useAuth() {
       setUser(currentUser);
       setProfile(currentProfile);
 
-      // Проверяем права админа
-      if (currentProfile) {
-        const adminStatus = await isAdmin(currentUser.id);
-        setIsUserAdmin(adminStatus || currentProfile.role === 'admin');
+      if (!currentProfile) {
+        setError('Профиль пользователя не найден');
+        return;
       }
+
+      // Проверяем права админа
+      const adminStatus = await isAdmin(currentUser.id);
+      setIsUserAdmin(adminStatus || currentProfile.role === 'admin');
     } catch (error) {
       console.error('Error loading user:', error);
       setError(
@@ -78,5 +81,6 @@ export function useAuth() {
     error,
     setError,
     handleSignOut,
+    reload: loadUserAndProfile,
   };
 }
