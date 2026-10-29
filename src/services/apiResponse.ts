@@ -75,10 +75,7 @@ export async function apiFetch(
 ): Promise<Response> {
   try {
     return await fetch(url, init);
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw error;
-    }
+  } catch {
     const isMutation = isMutationInit(init);
     throw new ApiRequestError(
       isMutation
