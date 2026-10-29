@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ClientCardService } from '@/services/cardService';
+import { ApiRequestError } from '@/services/apiResponse';
 import type { Card } from '@/types';
 
 const mockCard: Card = {
@@ -85,7 +86,11 @@ describe('ClientCardService.createCard', () => {
     mockFetch.mockResolvedValue(makeFetchResponse({ error: message }, false));
     await expect(
       ClientCardService.createCard('Hund', 'собака')
-    ).rejects.toThrow(new Error(message));
+    ).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      message,
+      outcome: 'rejected',
+    });
   });
 });
 
@@ -122,5 +127,16 @@ describe('ClientCardService.deleteCard', () => {
     await expect(ClientCardService.deleteCard('1')).rejects.toThrow(
       'Not found'
     );
+  });
+});
+
+describe('ClientCardService network failures', () => {
+  it('rejected fetch on mutation is unknown outcome', async () => {
+    mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+    const error = await ClientCardService.createCard('Hund', 'собака').catch(
+      (caught: unknown) => caught
+    );
+    expect(error).toBeInstanceOf(ApiRequestError);
+    expect((error as ApiRequestError).outcome).toBe('unknown');
   });
 });
