@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   Box,
   Typography,
   ToggleButtonGroup,
   ToggleButton,
   Alert,
+  Button,
   CircularProgress,
   Paper,
   Stack,
@@ -23,38 +30,104 @@ import type { Card, Verb } from '@/types';
 
 type DemoMode = 'cards' | 'articles' | 'verbs' | 'time';
 
-export function DemoApp() {
-  const [mode, setMode] = useState<DemoMode>('cards');
-  const [cards, setCards] = useState<Card[]>([]);
-  const [verbs, setVerbs] = useState<Verb[]>([]);
-  const [loading, setLoading] = useState(true);
+const LOAD_ERROR_MESSAGE = 'Не удалось загрузить демо-данные';
+
+interface SectionState<T> {
+  data: T[];
+  isLoading: boolean;
+  error: string | null;
+  reload: () => Promise<void>;
+}
+
+function useGuestSection<T>(
+  fetchItems: () => Promise<T[]>,
+  logLabel: string
+): SectionState<T> {
+  const [data, setData] = useState<T[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const latestRequestId = useRef(0);
+
+  const reload = useCallback(async () => {
+    latestRequestId.current += 1;
+    const requestId = latestRequestId.current;
+    const isStale = () => requestId !== latestRequestId.current;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const items = await fetchItems();
+      if (!isStale()) setData(items);
+    } catch (loadError) {
+      console.error(`Failed to load demo ${logLabel}`, loadError);
+      if (isStale()) return;
+      setError(
+        loadError instanceof Error ? loadError.message : LOAD_ERROR_MESSAGE
+      );
+    } finally {
+      if (!isStale()) setIsLoading(false);
+    }
+  }, [fetchItems, logLabel]);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [cardData, verbData] = await Promise.all([
-          ClientCardService.getCards({ guest: true }),
-          ClientVerbService.getVerbs({ guest: true }),
-        ]);
-        setCards(cardData);
-        setVerbs(verbData);
-      } catch (err) {
-        console.error('Failed to load demo cards', err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Не удалось загрузить демо-данные'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+    void reload();
+  }, [reload]);
 
-    void load();
-  }, []);
+  return { data, isLoading, error, reload };
+}
+
+const fetchGuestCards = () => ClientCardService.getCards({ guest: true });
+const fetchGuestVerbs = () => ClientVerbService.getVerbs({ guest: true });
+
+interface DataSectionProps {
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  children: ReactNode;
+}
+
+function DataSection({
+  isLoading,
+  error,
+  onRetry,
+  children,
+}: DataSectionProps) {
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '40vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={onRetry}>
+            Повторить
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+export function DemoApp() {
+  const [mode, setMode] = useState<DemoMode>('cards');
+  const cards = useGuestSection<Card>(fetchGuestCards, 'cards');
+  const verbs = useGuestSection<Verb>(fetchGuestVerbs, 'verbs');
 
   return (
     <CenteredColumn sx={{ py: 4, px: 2 }}>
@@ -110,37 +183,28 @@ export function DemoApp() {
         </ToggleButtonGroup>
       </Box>
 
-      {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          onClose={() => {
-            setError(null);
-          }}
-        >
-          {error}
-        </Alert>
-      )}
-
-      {loading ? (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '40vh',
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Stack spacing={3}>
-          {mode === 'cards' && <CardViewer cards={cards} isGuest />}
-          {mode === 'articles' && <ArticlesTrainer isGuest />}
-          {mode === 'verbs' && <VerbViewer verbs={verbs} />}
-          {mode === 'time' && <TimeTraining isGuest />}
-        </Stack>
-      )}
+      <Stack spacing={3}>
+        {mode === 'cards' && (
+          <DataSection
+            isLoading={cards.isLoading}
+            error={cards.error}
+            onRetry={() => void cards.reload()}
+          >
+            <CardViewer cards={cards.data} isGuest />
+          </DataSection>
+        )}
+        {mode === 'articles' && <ArticlesTrainer isGuest />}
+        {mode === 'verbs' && (
+          <DataSection
+            isLoading={verbs.isLoading}
+            error={verbs.error}
+            onRetry={() => void verbs.reload()}
+          >
+            <VerbViewer verbs={verbs.data} />
+          </DataSection>
+        )}
+        {mode === 'time' && <TimeTraining isGuest />}
+      </Stack>
     </CenteredColumn>
   );
 }
