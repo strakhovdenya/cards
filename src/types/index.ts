@@ -75,6 +75,16 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// Позиция пакетного создания, которая не применена полностью; форма — как в
+// ответе POST /api/cards/bulk
+export interface BulkCardFailure {
+  index: number;
+  germanWord: string;
+  reason: string;
+  // true — карточка создана, но что-то пошло не так после создания
+  created: boolean;
+}
+
 // Типы для вопросов времени
 export interface TimeQuestion {
   id: string;

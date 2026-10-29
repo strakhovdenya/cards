@@ -6,6 +6,10 @@ import type {
   BulkCreateVerbsRequest,
 } from '@/types';
 import { apiFetch, apiRequest, parseApiResponse } from '@/services/apiResponse';
+import {
+  requestMutation,
+  type MutationResult,
+} from '@/services/mutationResult';
 
 interface ServiceOptions {
   guest?: boolean;
@@ -19,6 +23,20 @@ const buildUrl = (path: string, options?: ServiceOptions) => {
   return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
 };
 
+const jsonInit = (method: string, payload: unknown): RequestInit => ({
+  method,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include',
+  body: JSON.stringify(payload),
+});
+
+const DELETE_INIT: RequestInit = {
+  method: 'DELETE',
+  credentials: 'include',
+};
+
 // Клиентский сервис для работы с глаголами
 export class ClientVerbService {
   // Получить глаголы текущего пользователя
@@ -30,14 +48,13 @@ export class ClientVerbService {
 
   // Создать новый глагол
   static async createVerb(verbData: CreateVerbRequest): Promise<Verb> {
-    return apiRequest<Verb>(API_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(verbData),
-    });
+    return apiRequest<Verb>(API_BASE_URL, jsonInit('POST', verbData));
+  }
+
+  static async createVerbWithResult(
+    verbData: CreateVerbRequest
+  ): Promise<MutationResult<Verb>> {
+    return requestMutation<Verb>(API_BASE_URL, jsonInit('POST', verbData));
   }
 
   // Массовое создание глаголов
@@ -46,14 +63,10 @@ export class ClientVerbService {
       verbs,
     };
 
-    return apiRequest<Verb[]>(`${API_BASE_URL}/bulk`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(bulkRequest),
-    });
+    return apiRequest<Verb[]>(
+      `${API_BASE_URL}/bulk`,
+      jsonInit('POST', bulkRequest)
+    );
   }
 
   // Получить глагол по ID
@@ -85,22 +98,26 @@ export class ClientVerbService {
     id: string,
     updates: UpdateVerbRequest
   ): Promise<Verb> {
-    return apiRequest<Verb>(`${API_BASE_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(updates),
-    });
+    return apiRequest<Verb>(`${API_BASE_URL}/${id}`, jsonInit('PUT', updates));
+  }
+
+  static async updateVerbWithResult(
+    id: string,
+    updates: UpdateVerbRequest
+  ): Promise<MutationResult<Verb>> {
+    return requestMutation<Verb>(
+      `${API_BASE_URL}/${id}`,
+      jsonInit('PUT', updates)
+    );
   }
 
   // Удалить глагол
   static async deleteVerb(id: string): Promise<void> {
-    await apiRequest<null>(`${API_BASE_URL}/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
+    await apiRequest<null>(`${API_BASE_URL}/${id}`, DELETE_INIT);
+  }
+
+  static async deleteVerbWithResult(id: string): Promise<MutationResult<null>> {
+    return requestMutation<null>(`${API_BASE_URL}/${id}`, DELETE_INIT);
   }
 
   // Получить случайный глагол для тренировки
