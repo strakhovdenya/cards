@@ -14,12 +14,6 @@ import {
   Paper,
   BottomNavigation,
   BottomNavigationAction,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  Button,
-  DialogActions,
   Fade,
   Collapse,
 } from '@mui/material';
@@ -76,7 +70,6 @@ export function AuthenticatedApp() {
   const [isWordsSubmenuOpen, setIsWordsSubmenuOpen] = useState(false);
   const [wordsMode, setWordsMode] = useState<WordsMode>('cards');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isVerbEditDialogOpen, setIsVerbEditDialogOpen] = useState(false);
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isBulkVerbImportOpen, setIsBulkVerbImportOpen] = useState(false);
@@ -105,20 +98,7 @@ export function AuthenticatedApp() {
     handleDeleteCard,
     handleBulkImport,
   } = useCards();
-  const {
-    verbs,
-    editingVerb,
-    verbFormData,
-    loadVerbs,
-    handleVerbUpdate,
-    handleAddVerb,
-    handleEditVerb,
-    handleVerbFormChange,
-    handleConjugationChange,
-    handleVerbSubmit,
-    handleVerbDelete,
-    handleBulkVerbImport,
-  } = useVerbs();
+  const { verbs, loadVerbs, handleBulkVerbImport } = useVerbs();
 
   const handleStudyClick = () => {
     setIsStudyDialogOpen(true);
@@ -217,10 +197,9 @@ export function AuthenticatedApp() {
     view: () => (
       <VerbViewer
         verbs={verbs}
-        onVerbUpdate={handleVerbUpdate}
-        onVerbDelete={handleVerbDelete}
-        onAddVerb={handleAddVerb}
-        onEditVerb={handleEditVerb}
+        onAddVerb={() => {
+          handleEditModeSelect('verbs');
+        }}
       />
     ),
   };
@@ -444,96 +423,6 @@ export function AuthenticatedApp() {
           },
         ]}
       />
-
-      {/* Диалог редактирования глаголов */}
-      <Dialog
-        open={isVerbEditDialogOpen}
-        onClose={() => {
-          setIsVerbEditDialogOpen(false);
-        }}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingVerb ? 'Редактировать глагол' : 'Добавить глагол'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Инфинитив"
-              value={verbFormData.infinitive}
-              onChange={(e) => {
-                handleVerbFormChange('infinitive', e.target.value);
-              }}
-              fullWidth
-            />
-            <TextField
-              label="Перевод"
-              value={verbFormData.translation}
-              onChange={(e) => {
-                handleVerbFormChange('translation', e.target.value);
-              }}
-              fullWidth
-            />
-
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              Спряжения
-            </Typography>
-
-            {verbFormData.conjugations.map((conjugation, index) => (
-              <Box
-                key={index}
-                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-              >
-                <Typography variant="subtitle2" color="primary">
-                  {conjugation.person}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    label="Форма"
-                    value={conjugation.form}
-                    onChange={(e) => {
-                      handleConjugationChange(index, 'form', e.target.value);
-                    }}
-                    size="small"
-                    sx={{ flex: 1 }}
-                  />
-                  <TextField
-                    label="Перевод"
-                    value={conjugation.translation}
-                    onChange={(e) => {
-                      handleConjugationChange(
-                        index,
-                        'translation',
-                        e.target.value
-                      );
-                    }}
-                    size="small"
-                    sx={{ flex: 1 }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setIsVerbEditDialogOpen(false);
-            }}
-          >
-            Отмена
-          </Button>
-          <Button
-            onClick={() => {
-              void handleVerbSubmit();
-            }}
-            variant="contained"
-          >
-            {editingVerb ? 'Сохранить' : 'Добавить'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Диалог меню импорта */}
       <ModeSelectSheet
