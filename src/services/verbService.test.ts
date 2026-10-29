@@ -101,7 +101,7 @@ describe('ClientVerbService.createVerb', () => {
         translation: 'бегать',
         conjugations: [],
       })
-    ).rejects.toThrow(new Error(message));
+    ).rejects.toThrow(message);
   });
 });
 

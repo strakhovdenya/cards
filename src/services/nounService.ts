@@ -1,4 +1,5 @@
-import type { ApiResponse, Card } from '@/types';
+import type { Card } from '@/types';
+import { apiRequest } from '@/services/apiResponse';
 
 interface ServiceOptions {
   guest?: boolean;
@@ -11,25 +12,10 @@ const buildUrl = (path: string, options?: ServiceOptions) => {
   return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
 };
 
-async function handleApiResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const errorData = (await response.json()) as ApiResponse<null>;
-    throw new Error(errorData.error ?? 'Ошибка API');
-  }
-
-  const data = (await response.json()) as ApiResponse<T>;
-  if (data.error) {
-    throw new Error(data.error);
-  }
-
-  return data.data!;
-}
-
 export class ClientNounService {
   static async getNouns(options?: ServiceOptions): Promise<Card[]> {
-    const response = await fetch(buildUrl(API_BASE_URL, options), {
+    return apiRequest<Card[]>(buildUrl(API_BASE_URL, options), {
       credentials: 'include',
     });
-    return handleApiResponse<Card[]>(response);
   }
 }

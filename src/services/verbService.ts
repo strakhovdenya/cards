@@ -3,9 +3,9 @@ import type {
   CreateVerbRequest,
   UpdateVerbRequest,
   VerbConjugation,
-  ApiResponse,
   BulkCreateVerbsRequest,
 } from '@/types';
+import { apiFetch, apiRequest, parseApiResponse } from '@/services/apiResponse';
 
 interface ServiceOptions {
   guest?: boolean;
@@ -19,34 +19,18 @@ const buildUrl = (path: string, options?: ServiceOptions) => {
   return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
 };
 
-// Утилита для обработки ответов API
-async function handleApiResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const errorData = (await response.json()) as ApiResponse<null>;
-    throw new Error(errorData.error ?? 'Ошибка API');
-  }
-
-  const data = (await response.json()) as ApiResponse<T>;
-  if (data.error) {
-    throw new Error(data.error);
-  }
-
-  return data.data!;
-}
-
 // Клиентский сервис для работы с глаголами
 export class ClientVerbService {
   // Получить глаголы текущего пользователя
   static async getVerbs(options?: ServiceOptions): Promise<Verb[]> {
-    const response = await fetch(buildUrl(API_BASE_URL, options), {
+    return apiRequest<Verb[]>(buildUrl(API_BASE_URL, options), {
       credentials: 'include', // Важно для передачи cookies с сессией
     });
-    return handleApiResponse<Verb[]>(response);
   }
 
   // Создать новый глагол
   static async createVerb(verbData: CreateVerbRequest): Promise<Verb> {
-    const response = await fetch(API_BASE_URL, {
+    return apiRequest<Verb>(API_BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,7 +38,6 @@ export class ClientVerbService {
       credentials: 'include',
       body: JSON.stringify(verbData),
     });
-    return handleApiResponse<Verb>(response);
   }
 
   // Массовое создание глаголов
@@ -63,7 +46,7 @@ export class ClientVerbService {
       verbs,
     };
 
-    const response = await fetch(`${API_BASE_URL}/bulk`, {
+    return apiRequest<Verb[]>(`${API_BASE_URL}/bulk`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -71,8 +54,6 @@ export class ClientVerbService {
       credentials: 'include',
       body: JSON.stringify(bulkRequest),
     });
-
-    return handleApiResponse<Verb[]>(response);
   }
 
   // Получить глагол по ID
@@ -81,15 +62,18 @@ export class ClientVerbService {
     options?: ServiceOptions
   ): Promise<Verb | null> {
     try {
-      const response = await fetch(buildUrl(`${API_BASE_URL}/${id}`, options), {
-        credentials: 'include',
-      });
+      const response = await apiFetch(
+        buildUrl(`${API_BASE_URL}/${id}`, options),
+        {
+          credentials: 'include',
+        }
+      );
 
       if (response.status === 404) {
         return null;
       }
 
-      return handleApiResponse<Verb>(response);
+      return parseApiResponse<Verb>(response, false);
     } catch (error) {
       console.error('Error in getVerbById:', error);
       throw error;
@@ -101,7 +85,7 @@ export class ClientVerbService {
     id: string,
     updates: UpdateVerbRequest
   ): Promise<Verb> {
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
+    return apiRequest<Verb>(`${API_BASE_URL}/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -109,22 +93,20 @@ export class ClientVerbService {
       credentials: 'include',
       body: JSON.stringify(updates),
     });
-    return handleApiResponse<Verb>(response);
   }
 
   // Удалить глагол
   static async deleteVerb(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
+    await apiRequest<null>(`${API_BASE_URL}/${id}`, {
       method: 'DELETE',
       credentials: 'include',
     });
-    await handleApiResponse<null>(response);
   }
 
   // Получить случайный глагол для тренировки
   static async getRandomVerb(options?: ServiceOptions): Promise<Verb | null> {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         buildUrl(`${API_BASE_URL}/random`, options),
         {
           credentials: 'include',
@@ -135,7 +117,7 @@ export class ClientVerbService {
         return null;
       }
 
-      return handleApiResponse<Verb>(response);
+      return parseApiResponse<Verb>(response, false);
     } catch (error) {
       console.error('Error in getRandomVerb:', error);
       throw error;
@@ -147,13 +129,12 @@ export class ClientVerbService {
     learned: boolean,
     options?: ServiceOptions
   ): Promise<Verb[]> {
-    const response = await fetch(
+    return apiRequest<Verb[]>(
       buildUrl(`${API_BASE_URL}/by-learned-status?learned=${learned}`, options),
       {
         credentials: 'include',
       }
     );
-    return handleApiResponse<Verb[]>(response);
   }
 
   // Поиск глаголов по инфинитиву
@@ -161,7 +142,7 @@ export class ClientVerbService {
     query: string,
     options?: ServiceOptions
   ): Promise<Verb[]> {
-    const response = await fetch(
+    return apiRequest<Verb[]>(
       buildUrl(
         `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`,
         options
@@ -170,7 +151,6 @@ export class ClientVerbService {
         credentials: 'include',
       }
     );
-    return handleApiResponse<Verb[]>(response);
   }
 
   // Пометить глагол как изученный/не изученный

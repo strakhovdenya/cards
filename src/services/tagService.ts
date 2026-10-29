@@ -1,9 +1,5 @@
-import type {
-  Tag,
-  CreateTagRequest,
-  UpdateTagRequest,
-  ApiResponse,
-} from '@/types';
+import type { Tag, CreateTagRequest, UpdateTagRequest } from '@/types';
+import { apiRequest } from '@/services/apiResponse';
 
 interface ServiceOptions {
   guest?: boolean;
@@ -21,21 +17,6 @@ const buildUrl = (path: string, options?: ServiceOptions) => {
 let tagsCache: Tag[] | null = null;
 let cacheTimestamp: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 минут
-
-// Утилита для обработки ответов API
-async function handleApiResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const errorData = (await response.json()) as ApiResponse<null>;
-    throw new Error(errorData.error ?? 'Ошибка API');
-  }
-
-  const data = (await response.json()) as ApiResponse<T>;
-  if (data.error) {
-    throw new Error(data.error);
-  }
-
-  return data.data!;
-}
 
 // Функция для проверки актуальности кеша
 function isCacheValid(): boolean {
@@ -66,10 +47,9 @@ export class ClientTagService {
 
     console.log('Fetching tags from API...');
     // Загружаем теги из API
-    const response = await fetch(buildUrl(API_BASE_URL, options), {
+    const tags = await apiRequest<Tag[]>(buildUrl(API_BASE_URL, options), {
       credentials: 'include', // Важно для передачи cookies с сессией
     });
-    const tags = await handleApiResponse<Tag[]>(response);
 
     if (canCache) {
       // Обновляем кеш
@@ -88,7 +68,7 @@ export class ClientTagService {
       color,
     };
 
-    const response = await fetch(API_BASE_URL, {
+    const newTag = await apiRequest<Tag>(API_BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -96,7 +76,6 @@ export class ClientTagService {
       credentials: 'include', // Важно для передачи cookies с сессией
       body: JSON.stringify(tagData),
     });
-    const newTag = await handleApiResponse<Tag>(response);
 
     console.log('Created new tag:', newTag.name);
     // Инвалидируем кеш после создания тега
@@ -107,10 +86,9 @@ export class ClientTagService {
 
   // Получить тег по ID
   static async getTagById(tagId: string): Promise<Tag> {
-    const response = await fetch(`${API_BASE_URL}/${tagId}`, {
+    return apiRequest<Tag>(`${API_BASE_URL}/${tagId}`, {
       credentials: 'include',
     });
-    return handleApiResponse<Tag>(response);
   }
 
   // Обновить тег
@@ -118,7 +96,7 @@ export class ClientTagService {
     tagId: string,
     updates: UpdateTagRequest
   ): Promise<Tag> {
-    const response = await fetch(`${API_BASE_URL}/${tagId}`, {
+    const updatedTag = await apiRequest<Tag>(`${API_BASE_URL}/${tagId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -126,7 +104,6 @@ export class ClientTagService {
       credentials: 'include',
       body: JSON.stringify(updates),
     });
-    const updatedTag = await handleApiResponse<Tag>(response);
 
     console.log('Updated tag:', updatedTag.name);
     // Инвалидируем кеш после обновления тега
@@ -137,11 +114,10 @@ export class ClientTagService {
 
   // Удалить тег
   static async deleteTag(tagId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/${tagId}`, {
+    await apiRequest<null>(`${API_BASE_URL}/${tagId}`, {
       method: 'DELETE',
       credentials: 'include',
     });
-    await handleApiResponse<null>(response);
 
     console.log('Deleted tag with ID:', tagId);
     // Инвалидируем кеш после удаления тега

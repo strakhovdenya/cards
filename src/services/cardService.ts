@@ -3,9 +3,9 @@ import type {
   CreateCardRequest,
   BulkCreateCardsRequest,
   UpdateCardRequest,
-  ApiResponse,
   CardFormData,
 } from '@/types';
+import { apiRequest } from '@/services/apiResponse';
 
 // Базовый URL для API
 const API_BASE_URL = '/api/cards';
@@ -19,29 +19,13 @@ const buildUrl = (path: string, options?: ServiceOptions) => {
   return `${path}${path.includes('?') ? '&' : '?'}guest=1`;
 };
 
-// Утилита для обработки ответов API
-async function handleApiResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const errorData = (await response.json()) as ApiResponse<null>;
-    throw new Error(errorData.error ?? 'Ошибка API');
-  }
-
-  const data = (await response.json()) as ApiResponse<T>;
-  if (data.error) {
-    throw new Error(data.error);
-  }
-
-  return data.data!;
-}
-
 // Клиентский сервис для работы с карточками
 export class ClientCardService {
   // Получить карточки текущего пользователя
   static async getCards(options?: ServiceOptions): Promise<Card[]> {
-    const response = await fetch(buildUrl(API_BASE_URL, options), {
+    return apiRequest<Card[]>(buildUrl(API_BASE_URL, options), {
       credentials: 'include', // Важно для передачи cookies с сессией
     });
-    return handleApiResponse<Card[]>(response);
   }
 
   // Создать новую карточку (упрощенная версия)
@@ -56,7 +40,7 @@ export class ClientCardService {
       tagIds: tagIds ?? [],
     };
 
-    const response = await fetch(API_BASE_URL, {
+    return apiRequest<Card>(API_BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -64,7 +48,6 @@ export class ClientCardService {
       credentials: 'include',
       body: JSON.stringify(cardData),
     });
-    return handleApiResponse<Card>(response);
   }
 
   // Массовое создание карточек
@@ -82,7 +65,7 @@ export class ClientCardService {
       cards: cardsData,
     };
 
-    const response = await fetch(`${API_BASE_URL}/bulk`, {
+    return apiRequest<Card[]>(`${API_BASE_URL}/bulk`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -90,8 +73,6 @@ export class ClientCardService {
       credentials: 'include',
       body: JSON.stringify(bulkRequest),
     });
-
-    return handleApiResponse<Card[]>(response);
   }
 
   // Получить карточку по ID
@@ -99,13 +80,9 @@ export class ClientCardService {
     cardId: string,
     options?: ServiceOptions
   ): Promise<Card> {
-    const response = await fetch(
-      buildUrl(`${API_BASE_URL}/${cardId}`, options),
-      {
-        credentials: 'include',
-      }
-    );
-    return handleApiResponse<Card>(response);
+    return apiRequest<Card>(buildUrl(`${API_BASE_URL}/${cardId}`, options), {
+      credentials: 'include',
+    });
   }
 
   // Обновить карточку
@@ -113,7 +90,7 @@ export class ClientCardService {
     cardId: string,
     updates: UpdateCardRequest
   ): Promise<Card> {
-    const response = await fetch(`${API_BASE_URL}/${cardId}`, {
+    return apiRequest<Card>(`${API_BASE_URL}/${cardId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -121,16 +98,14 @@ export class ClientCardService {
       credentials: 'include',
       body: JSON.stringify(updates),
     });
-    return handleApiResponse<Card>(response);
   }
 
   // Удалить карточку
   static async deleteCard(cardId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/${cardId}`, {
+    await apiRequest<null>(`${API_BASE_URL}/${cardId}`, {
       method: 'DELETE',
       credentials: 'include',
     });
-    await handleApiResponse<null>(response);
   }
 
   // Пометить карточку как выученную/не выученную
