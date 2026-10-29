@@ -30,6 +30,7 @@ import { UniversalCard } from './UniversalCard';
 import { TagFilter } from './TagFilter';
 import { SpeechSettings } from './SpeechSettings';
 import { FrontSideToggle, type FrontSide } from './navigation/FrontSideToggle';
+import { shouldIgnoreShortcut } from '@/utils/keyboardEventUtils';
 import type { Tag } from '@/types';
 import type { CardStrategy, CardData } from '@/types/cardStrategy';
 
@@ -224,6 +225,8 @@ export function UniversalCardViewer<T extends CardData>({
   // Клавиатурные сокращения для быстрой навигации
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreShortcut(event)) return;
+
       const canNavigate = shuffledCards.length > 1;
 
       switch (event.key) {

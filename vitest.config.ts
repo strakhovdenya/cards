@@ -3,8 +3,24 @@ import path from 'path';
 
 export default defineConfig({
   test: {
-    environment: 'node',
-    include: ['src/**/*.{test,spec}.ts'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'node',
+          include: ['src/**/*.{test,spec}.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'component',
+          environment: 'happy-dom',
+          include: ['src/**/*.{test,spec}.tsx'],
+        },
+      },
+    ],
   },
   resolve: {
     alias: {
