@@ -35,10 +35,7 @@ function hasExampleContent(examples: VerbExamples | undefined): boolean {
 
 interface VerbViewerProps {
   verbs: Verb[];
-  onVerbUpdate?: (updatedVerb: Verb) => void;
-  onVerbDelete?: (id: string) => void;
   onAddVerb?: () => void;
-  onEditVerb?: (verb: Verb) => void;
 }
 
 export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
