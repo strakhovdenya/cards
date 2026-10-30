@@ -32,6 +32,7 @@ import { TagFilter } from './TagFilter';
 import { SpeechSettings } from './SpeechSettings';
 import { FrontSideToggle, type FrontSide } from './navigation/FrontSideToggle';
 import { shouldIgnoreShortcut } from '@/utils/keyboardEventUtils';
+import { shuffle } from '@/utils/shuffle';
 import type { Tag } from '@/types';
 import type { CardStrategy, CardData } from '@/types/cardStrategy';
 
@@ -79,8 +80,6 @@ const createSession = (setKey: string, ids: string[]): Session => ({
   order: ids,
   index: 0,
 });
-
-const shuffleIds = (ids: string[]) => [...ids].sort(() => Math.random() - 0.5);
 
 // Исключение сервиса не доказывает, что запись не выполнена
 const toUnknownResult = (error: unknown): MutationResult<unknown> => {
@@ -254,7 +253,7 @@ export function UniversalCardViewer<T extends CardData>({
   const handleShuffle = useCallback(() => {
     setSession((prev) => ({
       ...prev,
-      order: shuffleIds(prev.order),
+      order: shuffle(prev.order),
       index: 0,
     }));
     setIsFlipped(false);

@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import type { TimeQuestion } from '@/services/timeService';
+import { shuffle } from '@/utils/shuffle';
 import { SpeechButton } from './SpeechButton';
 
 const TrainingCard = styled(Card)(() => ({
@@ -100,7 +101,7 @@ export const TimeTraining: React.FC<TimeTrainingProps> = ({
   // Перемешанный пул слов для текущего вопроса
   const shuffledWordPool = useMemo(() => {
     if (!currentQuestion) return [];
-    return [...currentQuestion.word_pool].sort(() => Math.random() - 0.5);
+    return shuffle(currentQuestion.word_pool);
   }, [currentQuestion]);
 
   // Правильный ответ для текущего режима
