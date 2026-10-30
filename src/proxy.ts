@@ -1,7 +1,7 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import type { Invite, SupabaseResponse } from '@/types';
+import type { SupabaseResponse } from '@/types';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 // 60 requests per minute per IP for public guest API endpoints
@@ -98,14 +98,11 @@ export async function proxy(req: NextRequest) {
   // Проверяем блокировку регистрации для /auth/signup
   if (req.nextUrl.pathname === '/auth/signup') {
     try {
-      // Проверяем, есть ли уже админы
-      const { data: admins, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'admin')
-        .limit(1);
+      const { data: adminsExist, error } = (await supabase.rpc(
+        'admins_exist'
+      )) as SupabaseResponse<boolean>;
 
-      if (!error && admins && admins.length > 0) {
+      if (!error && adminsExist === true) {
         // Если есть админы, проверяем наличие валидного инвайт-кода
         const inviteCode = req.nextUrl.searchParams.get('invite');
 
@@ -114,22 +111,12 @@ export async function proxy(req: NextRequest) {
           return NextResponse.redirect(new URL('/auth?blocked=true', req.url));
         }
 
-        // Проверяем валидность инвайт-кода
-        const inviteResult = (await supabase
-          .from('invites')
-          .select('*')
-          .eq('invite_code', inviteCode)
-          .eq('used', false)
-          .single()) as SupabaseResponse<Invite>;
+        const { data: isValid, error: inviteError } = (await supabase.rpc(
+          'invite_code_is_valid',
+          { code: inviteCode }
+        )) as SupabaseResponse<boolean>;
 
-        const invite = inviteResult.data;
-        const inviteError = inviteResult.error;
-
-        if (
-          inviteError ||
-          !invite ||
-          new Date(invite.expires_at) < new Date()
-        ) {
+        if (inviteError || isValid !== true) {
           // Перенаправляем на страницу входа, если инвайт-код недействителен
           return NextResponse.redirect(new URL('/auth?invalid=true', req.url));
         }
