@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import { VerbCard } from './VerbCard';
 import type { Verb, VerbExamples } from '@/types';
+import { shouldIgnoreShortcut } from '@/utils/keyboardEventUtils';
 
 function hasExampleContent(examples: VerbExamples | undefined): boolean {
   return (
@@ -95,6 +96,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
   // Обработка клавиатуры
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreShortcut(event)) return;
       if (shuffledVerbs.length === 0) return;
 
       switch (event.key) {

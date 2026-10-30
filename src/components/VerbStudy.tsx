@@ -33,6 +33,7 @@ import { styled, alpha } from '@mui/material/styles';
 import type { Verb } from '@/types';
 import { getVerbs } from '@/services/verbService';
 import { useSpeech } from '@/services/speechService';
+import { shouldIgnoreShortcut } from '@/utils/keyboardEventUtils';
 import { FrontSideToggle, type FrontSide } from './navigation/FrontSideToggle';
 
 const StudyCard = styled(Card)(() => ({
@@ -248,6 +249,8 @@ export const VerbStudy: React.FC<VerbStudyProps> = ({ isGuest = false }) => {
   // Клавиатурные сокращения для быстрой навигации
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreShortcut(event)) return;
+
       const canNavigate = shuffledVerbs.length > 1;
 
       switch (event.key) {
