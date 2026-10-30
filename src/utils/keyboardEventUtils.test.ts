@@ -54,6 +54,44 @@ describe('shouldIgnoreShortcut', () => {
     expect(press(element, 'Enter')).toBe(false);
   });
 
+  it('ignores modifier combos', () => {
+    for (const modifier of ['ctrlKey', 'metaKey', 'altKey']) {
+      const event = { key: 'p', target: document.body, [modifier]: true };
+      expect(shouldIgnoreShortcut(event), modifier).toBe(true);
+    }
+    expect(press(document.body, 'p')).toBe(false);
+  });
+
+  it('ignores repeated activation keys', () => {
+    const target = document.body;
+    for (const key of ['Enter', ' ', 'Escape']) {
+      expect(shouldIgnoreShortcut({ key, target, repeat: true }), key).toBe(
+        true
+      );
+      expect(shouldIgnoreShortcut({ key, target, repeat: false }), key).toBe(
+        false
+      );
+    }
+    expect(shouldIgnoreShortcut({ key: 'a', target, repeat: true })).toBe(
+      false
+    );
+  });
+
+  it('ignores arrows on composite widgets', () => {
+    const widgets = [
+      '<div id="t" role="tab" tabindex="0"></div>',
+      '<div id="t" role="slider" tabindex="0"></div>',
+      '<div id="t" role="radio" tabindex="0"></div>',
+    ];
+    for (const html of widgets) {
+      const target = mount(html, '#t');
+      expect(press(target, 'ArrowLeft'), html).toBe(true);
+      expect(press(target, 'ArrowRight'), html).toBe(true);
+    }
+    expect(press(document.body, 'ArrowLeft')).toBe(false);
+    expect(press(document.body, 'ArrowRight')).toBe(false);
+  });
+
   it('does not ignore events without an element target', () => {
     expect(press(window, 'Enter')).toBe(false);
   });

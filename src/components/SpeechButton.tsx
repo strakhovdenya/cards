@@ -5,6 +5,7 @@ import { IconButton, Tooltip } from '@mui/material';
 import { VolumeUp } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useSpeech } from '@/services/speechService';
+import { shouldIgnoreShortcut } from '@/utils/keyboardEventUtils';
 
 const StyledSpeechButton = styled(IconButton)(({ theme }) => ({
   position: 'absolute',
@@ -83,6 +84,8 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
     if (!enableHotkey) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreShortcut(event)) return;
+
       if (event.key === 'p' || event.key === 'P') {
         event.preventDefault();
         void handleSpeak();
