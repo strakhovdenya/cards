@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import {
   Box,
   Button,
@@ -97,6 +103,8 @@ export const TimeTraining: React.FC<TimeTrainingProps> = ({
     correct: 0,
     incorrect: 0,
   });
+  const requestIdRef = useRef(0);
+  const hasCheckedRef = useRef(false);
 
   // Перемешанный пул слов для текущего вопроса
   const shuffledWordPool = useMemo(() => {
@@ -141,19 +149,26 @@ export const TimeTraining: React.FC<TimeTrainingProps> = ({
     setIsCorrect(null);
     setSelectedWords([]);
 
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    const isStale = () => requestId !== requestIdRef.current;
+
     try {
       const response = await fetch(
         isGuest ? '/api/time/random?guest=1' : '/api/time/random'
       );
       const question = await handleApiResponse(response);
+      if (isStale()) return;
+      hasCheckedRef.current = false;
       setCurrentQuestion(question);
     } catch (error) {
+      if (isStale()) return;
       console.error('Error loading question:', error);
       setError(
         `Ошибка при загрузке вопроса: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
       );
     } finally {
-      setIsLoading(false);
+      if (!isStale()) setIsLoading(false);
     }
   }, [isGuest]);
 
@@ -195,7 +210,9 @@ export const TimeTraining: React.FC<TimeTrainingProps> = ({
     setIsCorrect(isAnswerCorrect);
     setIsAnswerVisible(true);
 
-    // Обновляем статистику
+    // В статистику идёт только первая проверка вопроса
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
     setStats((prev) => ({
       ...prev,
       total: prev.total + 1,
