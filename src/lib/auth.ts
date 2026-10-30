@@ -44,8 +44,17 @@ interface ProfileRole {
   role: 'admin' | 'user';
 }
 
-interface ProfileId {
-  id: string;
+async function isInviteCodeValid(code: string): Promise<boolean> {
+  const { data, error } = await getSupabase().rpc('invite_code_is_valid', {
+    code,
+  });
+
+  if (error) {
+    console.error('Error validating invite code:', error);
+    return false;
+  }
+
+  return data === true;
 }
 
 export async function signInWithEmail(email: string, password: string) {
@@ -73,38 +82,10 @@ export async function signUpWithEmail(signUpData: SignUpData) {
       throw new Error('Требуется код приглашения для регистрации');
     }
 
-    // Проверяем валидность инвайт-кода
-    const inviteResult = (await getSupabase()
-      .from('invites')
-      .select('*')
-      .eq('invite_code', inviteCode)
-      .eq('used', false)
-      .single()) as SupabaseResponse<Invite>;
+    const isValid = await isInviteCodeValid(inviteCode);
 
-    const invite = inviteResult.data;
-    const inviteError = inviteResult.error;
-
-    if (inviteError || !invite) {
+    if (!isValid) {
       throw new Error('Неверный или использованный код приглашения');
-    }
-
-    // Проверяем срок действия
-    if (new Date(invite.expires_at) < new Date()) {
-      throw new Error('Срок действия кода приглашения истек');
-    }
-
-    // Проверяем email (если указан в приглашении)
-    if (
-      invite.email &&
-      invite.email.trim().toLowerCase() !== email.trim().toLowerCase()
-    ) {
-      console.error('Email mismatch:', {
-        inviteEmail: invite.email,
-        providedEmail: email,
-        inviteEmailTrimmed: invite.email.trim().toLowerCase(),
-        providedEmailTrimmed: email.trim().toLowerCase(),
-      });
-      throw new Error('Код приглашения предназначен для другого email');
     }
   }
 
@@ -113,9 +94,11 @@ export async function signUpWithEmail(signUpData: SignUpData) {
     email,
     password,
     options: {
+      // invite_code читает триггер проверки приглашения в БД и сам его удаляет
       data: {
         first_name: firstName,
         last_name: lastName,
+        ...(!isMainAdmin && inviteCode ? { invite_code: inviteCode } : {}),
       },
     },
   });
@@ -124,22 +107,7 @@ export async function signUpWithEmail(signUpData: SignUpData) {
     throw new Error(error.message);
   }
 
-  // Если регистрация успешна и есть пользователь
-  if (data.user) {
-    // Профиль создается автоматически через триггер в базе данных
-    // Просто отмечаем инвайт-код как использованный, если он был предоставлен
-    if (!isMainAdmin && inviteCode) {
-      await getSupabase()
-        .from('invites')
-        .update({
-          used: true,
-          used_by: data.user.id,
-          used_at: new Date().toISOString(),
-        })
-        .eq('invite_code', inviteCode);
-    }
-  }
-
+  // Профиль и отметка «приглашение использовано» — на стороне БД (триггеры)
   return { data, error: null };
 }
 
@@ -328,21 +296,14 @@ export async function isAdmin(userId: string): Promise<boolean> {
 
 export async function checkIfAdminsExist(): Promise<boolean> {
   try {
-    const adminResult = (await getSupabase()
-      .from('profiles')
-      .select('id')
-      .eq('role', ROLE_ADMIN)
-      .limit(1)) as SupabaseListResponse<ProfileId>;
-
-    const data: ProfileId[] | null = adminResult.data;
-    const error = adminResult.error;
+    const { data, error } = await getSupabase().rpc('admins_exist');
 
     if (error) {
       console.error('Error checking for admins:', error);
       return false;
     }
 
-    return Boolean(data && data.length > 0);
+    return data === true;
   } catch (error) {
     console.error('Error checking for admins:', error);
     return false;
@@ -351,26 +312,7 @@ export async function checkIfAdminsExist(): Promise<boolean> {
 
 export async function validateInviteCode(code: string): Promise<boolean> {
   try {
-    const { data, error } = await getSupabase()
-      .from('invites')
-      .select('*')
-      .eq('invite_code', code)
-      .eq('used', false);
-
-    if (error) {
-      console.error('Error validating invite code:', error);
-      return false;
-    }
-
-    // Проверяем что нашлась хотя бы одна запись
-    if (!data || data.length === 0) {
-      return false;
-    }
-
-    const invite = data[0] as unknown as Invite;
-
-    // Проверяем срок действия
-    return new Date(invite.expires_at) > new Date();
+    return await isInviteCodeValid(code);
   } catch (error) {
     console.error('Error validating invite code:', error);
     return false;
