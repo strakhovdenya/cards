@@ -26,6 +26,7 @@ import {
 import { VerbCard } from './VerbCard';
 import type { Verb, VerbExamples } from '@/types';
 import { shouldIgnoreShortcut } from '@/utils/keyboardEventUtils';
+import { shuffle } from '@/utils/shuffle';
 
 function hasExampleContent(examples: VerbExamples | undefined): boolean {
   return (
@@ -82,7 +83,7 @@ export function VerbViewer({ verbs, onAddVerb }: VerbViewerProps) {
   }, [shuffledVerbs.length]);
 
   const handleShuffle = useCallback(() => {
-    const shuffled = [...shuffledVerbs].sort(() => Math.random() - 0.5);
+    const shuffled = shuffle(shuffledVerbs);
     setShuffledVerbs(shuffled);
     setCurrentVerbIndex(0);
     setIsCardFlipped(false); // Сбрасываем переворот при перемешивании

@@ -34,6 +34,7 @@ import type { Verb } from '@/types';
 import { getVerbs } from '@/services/verbService';
 import { useSpeech } from '@/services/speechService';
 import { shouldIgnoreShortcut } from '@/utils/keyboardEventUtils';
+import { shuffle } from '@/utils/shuffle';
 import { FrontSideToggle, type FrontSide } from './navigation/FrontSideToggle';
 
 const StudyCard = styled(Card)(() => ({
@@ -163,7 +164,7 @@ export const VerbStudy: React.FC<VerbStudyProps> = ({ isGuest = false }) => {
   }, [shuffledVerbs, currentVerbIndex]);
 
   const handleShuffle = useCallback(() => {
-    const shuffled = [...allVerbs].sort(() => Math.random() - 0.5);
+    const shuffled = shuffle(allVerbs);
     setShuffledVerbs(shuffled);
     setCurrentVerbIndex(0);
     setCurrentVerb(shuffled[0]);

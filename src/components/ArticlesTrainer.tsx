@@ -6,6 +6,7 @@ import { ArrowBack, ArrowForward, Shuffle } from '@mui/icons-material';
 import { ClientNounService } from '@/services/nounService';
 import { ClientTagService } from '@/services/tagService';
 import { TagFilter } from './TagFilter';
+import { shuffle } from '@/utils/shuffle';
 import type { Card, Tag } from '@/types';
 
 interface ArticlesTrainerProps {
@@ -82,7 +83,7 @@ export function ArticlesTrainer({ isGuest = false }: ArticlesTrainerProps) {
 
   // Перестраиваем порядок при изменении фильтра
   useEffect(() => {
-    const next = [...filtered].sort(() => Math.random() - 0.5);
+    const next = shuffle(filtered);
     setOrdered(next);
     setCurrentIndex(0);
     setCorrectCount(0);
@@ -171,9 +172,9 @@ export function ArticlesTrainer({ isGuest = false }: ArticlesTrainerProps) {
     setSelectedArticle(null);
   }, [ordered.length]);
 
-  const shuffle = useCallback(() => {
+  const handleShuffle = useCallback(() => {
     // Перестраиваем список согласно текущей фильтрации и рандомному порядку
-    const next = [...filtered].sort(() => Math.random() - 0.5);
+    const next = shuffle(filtered);
     setOrdered(next);
     setCurrentIndex(0);
     setCorrectCount(0);
@@ -364,7 +365,7 @@ export function ArticlesTrainer({ isGuest = false }: ArticlesTrainerProps) {
         <Button
           variant="outlined"
           startIcon={<Shuffle />}
-          onClick={shuffle}
+          onClick={handleShuffle}
           disabled={filtered.length <= 1}
           color="error"
           sx={{
